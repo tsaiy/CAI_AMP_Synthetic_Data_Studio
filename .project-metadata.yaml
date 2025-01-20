@@ -1,0 +1,78 @@
+
+name: Synthetic Data Generation
+description: |
+  This AMP demonstrates how we can generate synthetic data for finetuning, ground truth for LLM use case evaluation, embedding finetuning etc.
+
+author: Cloudera Inc.
+specification_version: 1.0
+prototype_version: 1.0
+date: "2024-10-30"
+
+
+environment_variables:
+  AWS_ACCESS_KEY_ID:
+    default: "your access key"
+    description: >-
+      AWS Key ID. Check the Amazon Bedrock documentation for information about role access
+  AWS_SECRET_ACCESS_KEY:
+    default: "your secret access key"
+    description: >-
+      AWS Secret Key
+  AWS_DEFAULT_REGION:
+    default: "us-east-1"
+    description: >-
+      AWS region
+  hf_token:
+    default: "your huggingface token"
+    description: >-
+      hf_token
+  hf_username:
+    default: "your huggingface username"
+    description: >-
+      hf_username
+  
+
+
+# runtimes
+runtimes:
+  - editor: JupyterLab
+    kernel: Python 3.10
+    edition: Standard
+
+  - editor: PBJ Workbench
+    kernel: Python 3.10
+    edition: Standard
+    
+tasks:
+  # - type: run_session
+  #   name: Install Dependencies
+  #   script: setup.py
+  #   short_summary: Install Dependencies
+  #   kernel: python3
+  #   cpu: 2
+  #   memory: 4
+    
+  - type: create_job
+    name: Build Client Application
+    entity_label: build_client_app
+    script: build/build_client.py
+    arguments: None
+    cpu: 2
+    memory: 2
+    short_summary: Create job to build client application
+    environment:
+      TASK_TYPE: CREATE/RUN_JOB
+
+  - type: run_job
+    entity_label: build_client_app
+    short_summary: Run job to build client application
+
+  - type: start_application
+    name: Synthetic data-gen demo
+    subdomain: synthetic-data-generator
+    script: build/start_application.py
+    long_summary: Launching client/server application
+    cpu: 2
+    memory: 8
+    environment_variables:
+      TASK_TYPE: START_APPLICATION

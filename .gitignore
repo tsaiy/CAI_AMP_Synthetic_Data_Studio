@@ -1,0 +1,58 @@
+__pycache__
+.history
+metadata.db
+document_upload
+cml_test.ipynb
+/app/khauneesh_test.ipynb
+.env
+*.pyc
+__pycache__/
+# Client
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+.vite
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Workbench runtime
+.Rprofile
+.bash_history
+.cache/
+.conda/
+.config/
+.ipython/
+.jupyter/
+.local/
+.npm/
+.pip/
+.ssh/
+
+# Datasets
+qa_pairs*
+*.pyc
+Khauneesh/
+*job_args*
+
+# DB
+*metadata.db-shm
+*metadata.db-wal

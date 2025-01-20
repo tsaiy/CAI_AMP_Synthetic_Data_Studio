@@ -1,0 +1,9 @@
+#root {
+  height: 100vh;
+  padding: 0;
+  margin: 0;
+}
+
+.ant-form-item-tooltip {
+  color: #1677ff !important;
+}
