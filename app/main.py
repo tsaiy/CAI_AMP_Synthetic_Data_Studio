@@ -265,7 +265,7 @@ async def generate_examples(request: SynthesisRequest):
         else:
             script_path = "app/run_job.py"
         
-        script_path = script_path
+        
         random_id = uuid.uuid4().hex[:4]  # Generate a random 8-character ID
         
         if request.display_name:
@@ -378,7 +378,7 @@ async def evaluate_examples(request: EvaluationRequest):
         else:
             script_path = "app/run_eval_job.py"
         
-        script_path = script_path
+        
         random_id = uuid.uuid4().hex[:4]  # Generate a random 8-character ID
         
         if request.display_name:
@@ -462,7 +462,7 @@ async def export_results(request:Export_synth):
         else:
             script_path = "app/run_export_job.py"
         
-        script_path = script_path
+       
         random_id = uuid.uuid4().hex[:4]  # Generate a random 8-character ID
 
 

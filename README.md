@@ -1,52 +1,89 @@
 # Synthetic Data Generation Application
 
-An application for generating high-quality synthetic datasets for various fine-tuning techniques. The application currently specializes in code generation and SQL query synthesis, with support for custom use cases.
+> An application for generating high-quality synthetic datasets for various fine-tuning techniques. The application currently specializes in code generation and SQL query synthesis, with support for custom use cases.
+
+## Table of Contents
+- [Features](#features)
+- [Architecture](#architecture)
+- [Installation](#installation)
+- [API Endpoints](#api-endpoints)
+- [Usage Examples](#usage-examples)
+- [Legal Notice](#legal-notice)
 
 ## Features
 
 ### Data Generation
 - Support for multiple fine-tuning techniques:
-  - Supervised Fine-Tuning (SFT) --> Currently Live
-  - PPO (Proximal Policy Optimization) --> WIP
-  - ORPO (Odds Ratio Preference Optimization) --> WIP
-  - DPO (Direct Preference Optimization) --> WIP
-  - KTO (Kahneman-Tversky Optimisation ) --> WIP
+  - ✅ Supervised Fine-Tuning (SFT) - Currently Live
+  - 🚧 PPO (Proximal Policy Optimization) - WIP
+  - 🚧 ORPO (Odds Ratio Preference Optimization) - WIP
+  - 🚧 DPO (Direct Preference Optimization) - WIP
+  - 🚧 KTO (Kahneman-Tversky Optimisation) - WIP
 
 ### Use Cases
-- **Code Generation**: Generate diverse programming question-answer pairs across multiple domains, complete with detailed explanations and working code examples. The system creates scenarios that test both theoretical understanding and practical implementation skills, producing high-quality training data for code-assistance models.
-  
 
-- **Text-to-SQL**: This use case allows to generate data as prompt and SQL pair on custom data schemas which can be used to further fine-tune models for enhanced tetx2sql performance on OSS models. 
+#### Code Generation
+Generate diverse programming question-answer pairs across multiple domains, complete with detailed explanations and working code examples. The system creates scenarios that test both theoretical understanding and practical implementation skills, producing high-quality training data for code-assistance models.
 
+#### Text-to-SQL
+Generate data as prompt and SQL pairs on custom data schemas which can be used to further fine-tune models for enhanced text2sql performance on OSS models.
 
-- **Custom Use Cases**: Flexible framework for implementing additional use cases
+#### Custom Use Cases
+Flexible framework for implementing additional use cases which allows users to create their own workflow.
 
 ### Model Integration
-- AWS Bedrock Integration
-    - Claude 3 Family (Haiku, Sonnet, Opus)
-    - Llama 3 Models
-    - Mistral Models
-- Cloudera AI Inference (CAII) Support
-    - Llama 3 (8B Instruct)
-    - Mistral-7B
+
+#### AWS Bedrock Integration
+- Claude 3 Family 
+- Llama 3 Models
+- Mistral Models
+
+#### Cloudera AI Inference (CAII) Support
+
 
 ### Evaluation
 - Built-in evaluation capabilities for generated datasets
 - Customizable evaluation prompts
 - Scoring system with detailed justifications
 
-### Output Mode
-- Preview Mode(dislayed on Front-End) for prompts <= 25
-- Batch Mode via Cloudera ML Jobs
+### Output Modes
+- Preview Mode (displayed on Front-End) for prompts solution pairs <= 25
+- Batch Mode via Cloudera ML Jobs (User can run this only in Cloudera environment)
 
 ## Architecture
 
-The application is built using:
+Built using:
 - Backend: FastAPI
 - Frontend: React
 - Database: SQLite (for metadata storage)
 
-## API Endpoints
+## Installation
+
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   ```
+
+2. Configure environment variables:
+   ```bash
+   # AWS Bedrock credentials (in CML environment)
+   export AWS_ACCESS_KEY_ID="your key"
+   export AWS_SECRET_ACCESS_KEY="your secret key"
+   export AWS_DEFAULT_REGION="aws region"
+   ```
+   > Note: If using AWS Bedrock, ensure you have access to the LLM you intend to use.
+
+3. Build the application:
+   ```bash
+   python build_client.py
+   ```
+
+4. Start the application:
+   ```bash
+   python start_application.py
+   ```
+
+## API Endpoints(backend)
 
 ### Data Generation
 - `/synthesis/generate`: Generate synthetic Q&A pairs
@@ -81,7 +118,7 @@ The application is built using:
             "solution": "# Example solution code..."
         }
     ],
-    "export_type": ["local", "huggingface"],
+   
     "model_params": {
         "temperature": 0.0,
         "top_p": 1.0,
@@ -105,7 +142,7 @@ The application is built using:
             "solution": "SELECT * FROM employees;"
         }
     ],
-    "export_type": ["local", "huggingface"],
+   
     "model_params": {
         "temperature": 0.0,
         "top_p": 1.0,
@@ -114,23 +151,9 @@ The application is built using:
 }
 ```
 
-## Installation
+## Legal Notice
 
-1. Clone the repository
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-3. Set up environment variables for AWS Bedrock and CAII credentials
-
-4. Start the application(backend):
-```bash
-uvicorn app.main:app --reload
-```
-
-## IMPORTANT
-Please read the following before proceeding. This AMP includes or otherwise depends on certain third party software packages. Information about such third party software packages are made available in the notice file associated with this AMP. By configuring and launching this AMP, you will cause such third party software packages to be downloaded and installed into your environment, in some instances, from third parties' websites. For each third party software package, please see the notice file and the applicable websites for more information, including the applicable license terms.
+**IMPORTANT**: Please read the following before proceeding. This AMP includes or otherwise depends on certain third party software packages. Information about such third party software packages are made available in the notice file associated with this AMP. By configuring and launching this AMP, you will cause such third party software packages to be downloaded and installed into your environment, in some instances, from third parties' websites. For each third party software package, please see the notice file and the applicable websites for more information, including the applicable license terms.
 
 If you do not wish to download and install the third party software packages, do not configure, launch or otherwise use this AMP. By configuring, launching or otherwise using the AMP, you acknowledge the foregoing statement and agree that Cloudera is not responsible or liable in any way for the third party software packages.
 
