@@ -43,7 +43,14 @@ from app.services.aws_bedrock import get_bedrock_client
 import cmlapi
 client_cml = cmlapi.default_client()
 project_id = os.getenv("CDSW_PROJECT_ID")
-runtime_identifier = "docker.repository.cloudera.com/cloudera/cdsw/ml-runtime-jupyterlab-python3.10-standard:2024.10.1-b12"
+base_job_name = 'Synthetic_data_base_job'
+base_job_id = client_cml.list_jobs(project_id,
+                                   search_filter='{"name":"%s"}' % base_job_name).jobs[0].id
+template_job = client_cml.get_job(
+    project_id=project_id,
+    job_id=base_job_id
+)
+runtime_identifier = template_job.runtime_identifier
 
 
 
@@ -254,8 +261,12 @@ async def generate_examples(request: SynthesisRequest):
   
     is_demo = request.is_demo
     if is_demo== True:
+        if request.input_path:
+            return await synthesis_service.generate_result(request,is_demo)
+        else:
+            return await synthesis_service.generate_examples(request,is_demo)
    
-        return await synthesis_service.generate_examples(request,is_demo)
+        
     else:
         # Convert to JSON for job arguments
         json_str = request.model_dump_json()  # This gives us a JSON string directly
@@ -300,10 +311,24 @@ async def generate_examples(request: SynthesisRequest):
         )
         job_run = client_cml.create_job_run(cmlapi.CreateJobRunRequest(), project_id=project_id, job_id=created_job.id)
 
+        if request.input_path:
+            file_path = request.input_path
+            with open(file_path, 'r') as file:
+                    inputs = json.load(file)
+            total_count = len(inputs)
+            examples_str = PromptHandler.get_default_single_generate_example(request.use_case,request.examples)
+            topics = []
+            num_questions = None
+        else:
+            total_count = request.num_questions*len(request.topics)
+            examples_str = PromptHandler.get_default_example(request.use_case,request.examples)
+            topics = request.topics
+            num_questions = request.num_questions
+
         custom_prompt_str = PromptHandler.get_default_custom_prompt(request.use_case, request.custom_prompt)  
-        examples_str = PromptHandler.get_default_example(request.use_case,request.examples)
+       
         schema_str = PromptHandler.get_default_schema(request.use_case, request.schema)
-        total_count = request.num_questions*len(request.topics)
+        
         model_params = request.model_params or ModelParameters()
         metadata = {
                 'model_id': request.model_id,
@@ -312,8 +337,8 @@ async def generate_examples(request: SynthesisRequest):
                 'final_prompt': custom_prompt_str,
                 'model_parameters': model_params.model_dump(),
                 'display_name': request.display_name,
-                'num_questions':request.num_questions,
-                'topics': request.topics,
+                'num_questions':num_questions,
+                'topics': topics,
                 'examples': examples_str,
                 "total_count":total_count,
                 'schema': schema_str,

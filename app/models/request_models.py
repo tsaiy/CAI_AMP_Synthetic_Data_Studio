@@ -111,6 +111,7 @@ class SynthesisRequest(BaseModel):
     caii_endpoint: Optional[str] = None
     topics: Optional[List[str]] = None  # If None, will use default topics
     doc_paths: Optional[List[str]] = None
+    input_path: Optional[str] = None
     examples: Optional[List[Example]] = Field(default=None)  # If None, will use default examples
     schema: Optional[str] = None  # Added schema field
     custom_prompt: Optional[str] = None 

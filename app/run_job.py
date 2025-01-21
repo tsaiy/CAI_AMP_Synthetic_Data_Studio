@@ -44,7 +44,11 @@ async def run_synthesis(request, job_name):
     try:
         
         job = SynthesisService()
-        result = await job.generate_examples(request, job_name, is_demo=False, )
+        if request.input_path:
+            result =  await job.generate_result(request,job_name, is_demo=False)
+        else:
+            result =  await job.generate_examples(request,job_name, is_demo=False)
+        
         return result
     except Exception as e:
         print(f"Error in synthesis: {e}")

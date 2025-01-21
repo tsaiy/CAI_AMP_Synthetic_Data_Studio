@@ -39,9 +39,7 @@ runtimes:
     kernel: Python 3.10
     edition: Standard
 
-  - editor: PBJ Workbench
-    kernel: Python 3.10
-    edition: Standard
+ 
     
 tasks:
   # - type: run_session
@@ -51,6 +49,19 @@ tasks:
   #   kernel: python3
   #   cpu: 2
   #   memory: 4
+
+  - type: create_job
+    name: Synthetic_data_base_job
+    short_summary: Create Template Job for creating synthetic datasets.
+    entity_label: synthetic_data_job_template
+    script: app/text_examples.py
+    arguments: None
+    long_summary: Create Template Job for creating synthetic datasets.
+    cpu: 1
+    memory: 2
+    environment:
+      TASK_TYPE: CREATE/RUN_JOB
+      
     
   - type: create_job
     name: Build Client Application
@@ -68,7 +79,7 @@ tasks:
     short_summary: Run job to build client application
 
   - type: start_application
-    name: Synthetic data-gen demo
+    name: Synthetic Data Studio
     subdomain: synthetic-data-generator
     script: build/start_application.py
     long_summary: Launching client/server application

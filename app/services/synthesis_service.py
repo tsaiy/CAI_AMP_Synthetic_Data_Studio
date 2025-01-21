@@ -74,25 +74,7 @@ class SynthesisService:
         error_handler.setFormatter(formatter)
         self.logger.addHandler(error_handler)
 
-    def _flatten_results(self, data: Dict) -> List[Dict]:
-        """
-        Flatten the nested results structure into a list of records
-        with category information preserved
-        """
-        flattened = []
-        
-        # Handle the results section
-        if "results" in data and isinstance(data["results"], dict):
-            for category, questions in data["results"].items():
-                for question_data in questions:
-                    record = {
-                        "Topic": category,
-                        "question": question_data["question"],
-                        "solution": question_data["solution"]
-                    }
-                    flattened.append(record)
-        
-        return flattened
+    
 
     def process_single_topic(self, topic: str, model_handler: any, request: SynthesisRequest, num_questions: int) -> Tuple[str, List[Dict], List[str], List[Dict]]:
         topic_results = []
@@ -363,37 +345,129 @@ class SynthesisService:
             len(pair["question"].strip()) > 0 and
             len(pair["solution"].strip()) > 0
         )
-
-    async def _save_results(
-        self,
-        output: List,
-        errors: List[str],
-        file_path: str,
+    
+    async def process_single_input(self, input, model_handler, request):
+        prompt = PromptBuilder.build_generate_result_prompt(
+            model_id=request.model_id,
+            use_case=request.use_case,
+            input=input,
+            examples=request.examples or [],
+            schema=request.schema,
+            custom_prompt=request.custom_prompt,
+        )
         
-    ) -> Optional[str]:
-        """Save results to file or S3"""
+        result = model_handler.generate_response(prompt)
+        return {"question": input, "solution": result}
+
+    async def generate_result(self, request: SynthesisRequest , job_name = None, is_demo: bool = True) -> Dict:
         try:
-           
-            if errors:
-                for error in errors:
-                    self.logger.error(f"Error in output: {str(error)}", exc_info=True)
-
-            
-            export_paths = {}
-            
-            print(output)
-
-            with open(file_path, "w") as f:
-                json.dump(output, indent=2, fp=f)
-            export_paths['local']= file_path
-            self.logger.info(f"Results saved locally to {file_path}")
-
-               
-            return export_paths
+            self.logger.info(f"Starting example generation - Demo Mode: {is_demo}")
                 
+            # Use default parameters if none provided
+            model_params = request.model_params or ModelParameters()
+            
+            # Create model handler
+            self.logger.info("Creating model handler")
+            model_handler = create_handler(request.model_id, self.bedrock_client, model_params = model_params, inference_type = request.inference_type, caii_endpoint =  request.caii_endpoint, custom_p = True)
+
+            file_path = request.input_path
+            with open(file_path, 'r') as file:
+                inputs = json.load(file)
+            MAX_WORKERS = 5
+            
+            
+            # Create thread pool
+            loop = asyncio.get_event_loop()
+            with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+                # Create futures for each input
+                input_futures = [
+                    loop.run_in_executor(
+                        executor,
+                        lambda x: asyncio.run(self.process_single_input(x, model_handler, request)),
+                        input
+                    )
+                    for input in inputs
+                ]
+                
+                # Wait for all futures to complete
+                final_output = await asyncio.gather(*input_futures)
+         
+
+            timestamp = datetime.now(timezone.utc).isoformat()
+            time_file = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%f')[:-3] 
+            mode_suffix = "test" if is_demo else "final"
+            model_name = get_model_family(request.model_id).split('.')[-1]
+            file_path = f"qa_pairs_{model_name}_{time_file}_{mode_suffix}.json"
+            
+            
+            output_path = {}
+            try:
+                with open(file_path, "w") as f:
+                    json.dump(final_output, indent=2, fp=f)
+            except Exception as e:
+                self.logger.error(f"Error saving results: {str(e)}", exc_info=True)
+                
+            
+
+            output_path['local']= file_path
+
+            custom_prompt_str = PromptHandler.get_default_custom_prompt(request.use_case, request.custom_prompt)  
+            examples_str = PromptHandler.get_default_single_generate_example(request.use_case,request.examples)
+            schema_str = PromptHandler.get_default_schema(request.use_case, request.schema)
+            
+            metadata = {
+                'timestamp': timestamp,
+                'model_id': request.model_id,
+                'inference_type': request.inference_type,
+                'use_case': request.use_case,
+                'final_prompt': custom_prompt_str,
+                'model_parameters': model_params.model_dump(),
+                'generate_file_name': os.path.basename(output_path['local']),
+                'display_name': request.display_name,
+                'output_path': output_path,
+                
+                'examples': examples_str,
+                "total_count":len(inputs),
+                'schema': schema_str
+                
+            }
+            
+            
+            if is_demo:
+                
+                self.db.save_generation_metadata(metadata)
+                return {
+                    "status": "completed" if final_output else "failed",
+                    "results": final_output,
+                    "export_path": output_path
+                }
+            else:
+                # extract_timestamp = lambda filename: '_'.join(filename.split('_')[-3:-1])
+                # time_stamp = extract_timestamp(metadata.get('generate_file_name'))
+                job_status = "success"
+                generate_file_name = os.path.basename(output_path['local'])
+                
+                self.db.update_job_generate(job_name,generate_file_name, output_path['local'], timestamp, job_status)
+                self.db.backup_and_restore_db()
+                return {
+                    "status": "completed" if final_output else "failed",
+                    "export_path": output_path
+                }
+
         except Exception as e:
-            self.logger.error(f"Error saving results: {str(e)}", exc_info=True)
-            return None
+            self.logger.error(f"Generation failed: {str(e)}", exc_info=True)
+            if is_demo:
+                raise APIError(str(e))  # Let middleware decide status code
+            else:
+                time_stamp = datetime.now(timezone.utc).isoformat()
+                job_status = "failure"
+                file_name = ''
+                output_path = ''
+                self.db.update_job_generate(job_name, file_name, output_path, time_stamp, job_status)
+                raise  # Just re-raise the original exception
+
+
+
 
     def get_health_check(self) -> Dict:
         """Get service health status"""

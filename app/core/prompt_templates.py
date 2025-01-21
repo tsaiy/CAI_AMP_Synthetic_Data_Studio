@@ -230,6 +230,63 @@ class PromptHandler:
                     return examples
         
         return PromptHandler.format_examples_eval(examples)
+    
+
+    @staticmethod
+    def get_default_single_generate_example(use_case: UseCase, examples) -> str:
+        
+        
+        if examples == [] or examples == None:
+                
+                if use_case == UseCase.CODE_GENERATION:
+                    examples = [
+                  """#Here's how to create and modify a list in Python:
+                  # Create an empty list\n
+                  my_list = []
+                  #  Add elements using append\n
+                  my_list.append(1)\n
+                  my_list.append(2)\n\n
+                  # # Create a list with initial elements
+                  my_list = [1, 2, 3]
+                  """,
+
+                  """#Here's how to implement a basic stack:class Stack:
+                  def __init__(self):
+                    self.items = []
+                  def push(self, item):
+                    self.items.append(item)
+                  def pop(self):
+                    if not self.is_empty():
+                    return self.items.pop()
+                  def is_empty(self):
+                    return len(self.items) == 0"""
+                
+                    
+                        ]
+                    return "\n\n".join(examples)
+                    
+                
+                elif use_case == UseCase.TEXT2SQL:
+
+                    examples = [ """
+                                SELECT e.name, d.department_name
+                                FROM employees e
+                                JOIN departments d ON 
+                                e.department_id = d.id;""",
+
+                                """SELECT *
+                                  FROM employees
+                                  WHERE salary > 50000;"""
+                    ]
+                    return "\n\n".join(examples)
+                    
+                elif use_case == UseCase.CUSTOM:
+                    examples = []
+                    return " "
+                   
+        
+        return "\n\n".join(examples)
+        
         
         
 
@@ -410,6 +467,78 @@ class ModelPrompts:
         else:
             final_prompt =  "\n" + final_instruction 
         return final_prompt   
+    
+    @staticmethod
+    def generate_result_prompt(model_id: str,
+        use_case: UseCase,
+        input: str,
+        examples: List[str],
+        schema = Optional[str],
+        custom_prompt = Optional[str]
+    ) -> str:
+        
+        
+        examples_str = PromptHandler.get_default_single_generate_example(use_case, examples)
+        
+        #print(examples, '\n', examples_str)
+        schema_str = PromptHandler.get_default_schema(use_case, schema)
+        custom_prompt_str = PromptHandler.get_default_custom_prompt(use_case, custom_prompt)
+
+        base_prompt = f"""<examples>
+                {examples_str}
+                </examples>
+                """
+        base_prompt += '\n' + "You are a very helpful assistant who follows instructions very carefully and generates response based on that."
+
+        
+        base_prompt += custom_prompt_str
+
+        
+
+        if use_case == UseCase.CODE_GENERATION:
+            base_prompt += f"""Give a programming solution for following based on the instructions provided above :
+                        <input>{input}</input>"""
+
+            
+        elif use_case == UseCase.TEXT2SQL:
+            base_prompt += f"""Using this database schema:
+                            {schema_str}
+                            Create  a SQL query for about the following:
+                            <input>{input}</input>"""
+
+        elif use_case == UseCase.CUSTOM:
+            base_prompt+= f"""Create a solution about the following based on above instructions:
+                        <input>{input}</input>""" 
+            
+        model_family = get_model_family(model_id)
+        
+        if model_family== ModelFamily.LLAMA:
+            
+            final_prompt = "<|begin_of_text|><|start_header_id|>user<|end_header_id|>" + '\n'  + base_prompt  + '\n' + "<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
+
+        elif model_family== ModelFamily.MISTRAL:
+            system_prompt = "[INST]"
+            final_prompt = system_prompt +  "\n" + base_prompt + '\n' +  '[/INST]'
+
+        elif model_family == ModelFamily.CLAUDE:
+            final_prompt = base_prompt  
+        elif model_family== ModelFamily.QWEN:
+            system_prompt = "You are Qwen, created by Alibaba Cloud. You are a helpful assistant."
+            
+            final_prompt = f'''<|im_start|>system
+                                {system_prompt}<|im_end|>
+                                <|im_start|>user
+                                {base_prompt}
+                                <|im_end|>
+                                <|im_start|>assistant
+                                '''
+            
+        else:
+            final_prompt = base_prompt 
+        
+        return final_prompt
+
+
 
 class PromptBuilder:
     """Builds prompts based on model family, use case, and technique"""
@@ -440,6 +569,17 @@ class PromptBuilder:
     ) -> str:
         
         return ModelPrompts.get_eval_prompt(model_id, use_case,  question, solution, examples,custom_prompt)
+    
+    @staticmethod
+    def build_generate_result_prompt(model_id: str,
+        use_case: UseCase,
+        input: str,
+        examples: List[Example],
+        schema = Optional[str],
+        custom_prompt = Optional[str]
+    ) -> str:
+        
+        return ModelPrompts.generate_result_prompt(model_id, use_case, input, examples, schema, custom_prompt)
     
     @staticmethod
     def build_custom_prompt(model_id: str,
