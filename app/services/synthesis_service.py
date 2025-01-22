@@ -82,6 +82,8 @@ class SynthesisService:
         topic_errors = []
         questions_remaining = num_questions
         omit_questions = []
+        # output_key = request.output_key or "question"
+        # output_value = request.output_value or "solution"
 
         try:
             for batch_idx in range(0, num_questions, self.QUESTIONS_PER_BATCH):

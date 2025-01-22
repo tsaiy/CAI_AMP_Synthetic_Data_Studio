@@ -61,6 +61,7 @@ class Export_synth(BaseModel):
     # Export configuration
     export_type: List[str] = Field(default_factory=lambda: ["huggingface"])  # Accept multiple export types (e.g., ["s3", "huggingface"])
     file_path:str
+    display_name:Optional[str]
 
 
     # Hugging Face-specific fields
@@ -112,6 +113,8 @@ class SynthesisRequest(BaseModel):
     topics: Optional[List[str]] = None  # If None, will use default topics
     doc_paths: Optional[List[str]] = None
     input_path: Optional[str] = None
+    output_key: Optional[str] = None
+    output_value: Optional[str] = None
     examples: Optional[List[Example]] = Field(default=None)  # If None, will use default examples
     schema: Optional[str] = None  # Added schema field
     custom_prompt: Optional[str] = None 

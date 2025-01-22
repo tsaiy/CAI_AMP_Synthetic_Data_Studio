@@ -88,6 +88,21 @@ class DatabaseManager:
                        
                     )
                 """)
+
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS export_metadata (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        timestamp TEXT,
+                        display_export_name TEXT,
+                        display_name TEXT,
+                        local_export_path TEXT,
+                        hf_export_path TEXT,
+                        job_id TEXT,
+                        job_name TEXT UNIQUE,
+                        job_status TEXT
+                       
+                    )
+                """)
                 
                
                 
@@ -319,6 +334,177 @@ class DatabaseManager:
             print(f"Error saving evaluation metadata: {str(e)}")
             if conn:
                 conn.rollback()
+            raise
+
+    def save_export_metadata(self, metadata: Dict) -> int:
+        """Save export metadata to database with prepared transaction"""
+        try:
+          
+            # Use a single connection with enhanced settings
+            with self.get_connection() as conn:
+                conn.execute("BEGIN IMMEDIATE")
+                
+                cursor = conn.cursor()
+                
+                query = """
+                    INSERT INTO export_metadata (
+                        timestamp,
+                        display_export_name,
+                        display_name,
+                        local_export_path,
+                        hf_export_path,
+                        job_id,
+                        job_name,
+                        job_status
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """
+                
+                values = (
+                    metadata.get('timestamp', None),
+                    metadata.get('display_export_name', None),
+                    metadata.get('display_name'),
+                    metadata.get('local_export_path', None),
+                    metadata.get('hf_export_path', None),
+                    metadata.get('job_id', None),
+                    metadata.get('job_name', None),
+                    metadata.get('job_status', None)
+                )
+                
+                cursor.execute(query, values)
+                conn.commit()
+                return cursor.lastrowid
+                
+        except sqlite3.OperationalError as e:
+            if 'conn' in locals():
+                conn.rollback()
+            print(f"Database operation error in save_export_metadata: {e}")
+            raise
+            
+        except Exception as e:
+            if 'conn' in locals():
+                conn.rollback()
+            print(f"Error saving metadata to database: {str(e)}")
+            raise
+
+    def get_all_export_metadata(self) -> List[Dict]:
+        """Retrieve all export metadata entries"""
+        try:
+            with self.get_connection() as conn:
+                conn.execute("BEGIN")
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                
+                query = "SELECT * FROM export_metadata ORDER BY timestamp DESC"
+                cursor.execute(query)
+                
+                results = []
+                for row in cursor.fetchall():
+                    result = dict(row)
+                    # No JSON fields to parse in this table, so we can directly append
+                    results.append(result)
+                
+                conn.rollback()
+                return results
+                
+        except Exception as e:
+            print(f"Error retrieving all export metadata: {str(e)}")
+            return []
+
+
+    def get_pending_export_job_ids(self) -> List[str]:
+        """
+        Retrieve all job IDs from export_metadata where job_status is not 'ENGINE_SUCCEEDED'
+        
+        Returns:
+            List[str]: List of job IDs with pending or failed status
+        """
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                query = """
+                    SELECT job_id 
+                    FROM export_metadata 
+                    WHERE job_status != 'ENGINE_SUCCEEDED'
+                    AND job_id IS NOT NULL
+                """
+                
+                cursor.execute(query)
+                results = cursor.fetchall()
+                
+                # Extract job_ids from results tuples
+                job_ids = [row[0] for row in results]
+                
+                return job_ids
+                
+        except sqlite3.OperationalError as e:
+            print(f"Database operation error in get_pending_job_ids: {e}")
+            raise
+            
+        except Exception as e:
+            print(f"Error retrieving pending job IDs: {str(e)}")
+            raise
+
+    def update_job_statuses_export(self, job_status_updates: Dict[str, str]) -> Dict[str, int]:
+        """
+        Update all job statuses in a single database transaction using provided status updates.
+        
+        Args:
+            job_status_updates: Dictionary mapping job_ids to their new statuses {job_id: status}
+        
+        Returns:
+            Dict[str, int]: Summary of updates {status: count}
+        """
+        try:
+            if not job_status_updates:
+                return {"no_updates": 0}
+                
+            with self.get_connection() as conn:
+                conn.execute("BEGIN IMMEDIATE")
+                cursor = conn.cursor()
+                
+                # Build the CASE statement for the update query
+                case_statements = [
+                    f"WHEN job_id = ? THEN ?" 
+                    for _ in job_status_updates
+                ]
+                
+                # Flatten the job_id/status pairs for the query parameters
+                params = []
+                for job_id, status in job_status_updates.items():
+                    params.extend([job_id, status])
+                    
+                # Construct the full update query
+                update_query = f"""
+                    UPDATE export_metadata 
+                    SET job_status = CASE 
+                        {' '.join(case_statements)}
+                        ELSE job_status 
+                    END
+                    WHERE job_id IN ({','.join(['?'] * len(job_status_updates))})
+                """
+                
+                # Add the job_ids for the IN clause to params
+                params.extend(job_status_updates.keys())
+                
+                # Execute the bulk update
+                cursor.execute(update_query, params)
+                updated_count = cursor.rowcount
+                
+                conn.commit()
+                
+                return True
+                
+        except sqlite3.OperationalError as e:
+            if 'conn' in locals():
+                conn.rollback()
+            print(f"Database operation error in update_job_statuses_bulk: {e}")
+            raise
+            
+        except Exception as e:
+            if 'conn' in locals():
+                conn.rollback()
+            print(f"Error updating job statuses: {str(e)}")
             raise
 
     def update_job_evaluate(self, job_name: str, evaluate_file_name: str, local_export_path: str, timestamp: str, average_score: float, job_status:str):
