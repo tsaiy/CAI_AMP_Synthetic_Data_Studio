@@ -27,6 +27,7 @@ export interface Dataset {
   job_name: string;
   job_status: string;
   inference_type: string;
+  local_export_path: string;
 }
 
 export interface TopicEvaluationResult {

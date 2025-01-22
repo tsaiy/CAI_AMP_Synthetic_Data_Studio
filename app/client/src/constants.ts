@@ -2,7 +2,7 @@ import { ModelParameters, Pages } from "./types";
 
 export const LABELS = {
     [Pages.HOME]: 'Home',
-    [Pages.GENERATOR]: 'Generator',
+    [Pages.GENERATOR]: 'Generation',
     [Pages.EVALUATOR]: 'Evaluator',
     [Pages.DATASETS]: 'Datasets',
     [Pages.HISTORY]: 'History',

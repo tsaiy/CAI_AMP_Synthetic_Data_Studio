@@ -1,10 +1,11 @@
 import { Button, Form, Modal, Select } from "antd";
-import { DatasetResponse, ExportDatasetResponse } from "../../../api/Datasets/response";
+import { ExportDatasetResponse } from "../../../api/Datasets/response";
 import { useEffect, useState } from "react";
 import { DatasetExportRequest, HuggingFaceConfiguration } from "../../../api/Datasets/request";
 import { EXPORT_TYPE_LABELS, ExportType } from "../../../types";
 import HuggingFaceExport from "./HuggingFaceExport";
 import { usePostExportDataset } from "../../../api/Datasets/datasets";
+import { Dataset } from "../../../pages/Evaluator/types";
 
 export type ExportResult = {
     successMessage: ExportDatasetResponse | null;
@@ -12,7 +13,7 @@ export type ExportResult = {
 }
 
 export type ExportModalProps = {
-    datasetDetails: DatasetResponse;
+    datasetDetails: Dataset;
     isModalActive: boolean;
     setIsModalActive: (isActive: boolean) => void;
     setExportResult: (exportResult: ExportResult) => void;

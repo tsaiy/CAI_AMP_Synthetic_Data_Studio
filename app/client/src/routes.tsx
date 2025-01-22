@@ -1,10 +1,7 @@
 import { Navigate, createBrowserRouter } from "react-router-dom";
 import Layout from "./Container";
 import DataGenerator from "./pages/DataGenerator";
-import Evaluator from "./pages/Evaluator";
 import HomePage from "./pages/Home";
-import HistoryPage from "./pages/History";
-import RouteAccessControl from './components/RouteAccessControl'
 import { Pages } from "./types";
 import EvaluatorPage from "./pages/Evaluator";
 import ReevaluatorPage from "./pages/Evaluator/ReevaluatorPage";
@@ -31,7 +28,6 @@ const router = createBrowserRouter([
       //   ),
       //   loader: async () => null
       // },
-      { path: Pages.HISTORY, element: <HistoryPage key={Pages.HISTORY}/>, loader: async () => (null) },
       {
         path: `${Pages.EVALUATOR}/create/:generate_file_name`,
         element: <EvaluatorPage />,
@@ -48,7 +44,6 @@ const router = createBrowserRouter([
         element: <ReevaluatorPage />,
         loader: async () => null
       },
-      { path: Pages.HISTORY, element: <HistoryPage/>, loader: async () => (null) },
       // { path: Pages.DATASETS, element: <Datasets/>, loader: async () => (null) },
     ]
   },

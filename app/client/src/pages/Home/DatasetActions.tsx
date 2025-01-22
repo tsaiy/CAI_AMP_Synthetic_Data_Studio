@@ -2,7 +2,7 @@ import isEmpty from 'lodash/isEmpty';
 import { Button, Dropdown, Flex, MenuProps, Modal, Space, Typography } from "antd";
 import { Dataset } from "../Evaluator/types";
 import styled from "styled-components";
-import { FolderViewOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { ExportOutlined, FolderViewOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import FindInPageIcon from '@mui/icons-material/FindInPage';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -14,6 +14,7 @@ import DatasetDetailModal from '../../components/Datasets/DatasetDetails/Dataset
 import { DatasetResponse } from '../../api/Datasets/response';
 import { getFilesURL } from '../Evaluator/util';
 import { Pages } from "../../types";
+import React from 'react';
 
 const { Text } = Typography;
 
@@ -21,13 +22,14 @@ const ButtonGroup = styled(Flex)`
     margin-top: 15px !important;
 `
 
-interface Props {
+interface DatasetActionsProps {
     dataset: Dataset; 
-    refetch: () => void;   
+    refetch: () => void;
+    setToggleDatasetExportModal: (toggle: boolean) => void;   
 }
 
 
-const DatasetActions: React.FC<Props> = ({ dataset, refetch }) => {
+const DatasetActions: React.FC<DatasetActionsProps> = ({ dataset, refetch, setToggleDatasetExportModal }) => {
     const [showModal, setShowModal] = useState(false);
     const deleteDatasetReq = useDeleteDataset();
 
@@ -110,6 +112,16 @@ const DatasetActions: React.FC<Props> = ({ dataset, refetch }) => {
             </Link>
           ),
           icon: <QueryStatsIcon />,
+        },
+        {
+          key: '5',
+          label: (
+            <Text>
+              Export Dataset
+            </Text>
+          ),
+          onClick: () => setToggleDatasetExportModal(true),
+          icon: <ExportOutlined />
         },
         {
           key: '6',
