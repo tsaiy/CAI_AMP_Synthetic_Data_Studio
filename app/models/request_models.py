@@ -61,7 +61,7 @@ class Export_synth(BaseModel):
     # Export configuration
     export_type: List[str] = Field(default_factory=lambda: ["huggingface"])  # Accept multiple export types (e.g., ["s3", "huggingface"])
     file_path:str
-    display_name:Optional[str]
+    display_name:Optional[str]= None
 
 
     # Hugging Face-specific fields
