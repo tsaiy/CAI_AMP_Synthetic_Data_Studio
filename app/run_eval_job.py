@@ -53,9 +53,8 @@ async def run_eval(request, job_name):
 
 if __name__ == "__main__":
     try:
-        print(sys.argv[1], '\n')
-        print(sys.argv)
-        file_name = sys.argv[1]  # Get filename from arguments
+        #print(sys.argv[1], '\n')
+        file_name = os.environ.get('file_name', '')   # Get filename from arguments
 
         # Read JSON file
         with open(file_name, 'r') as f:

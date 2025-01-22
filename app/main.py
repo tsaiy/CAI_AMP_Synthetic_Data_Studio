@@ -307,7 +307,7 @@ async def generate_examples(request: SynthesisRequest):
             runtime_identifier=runtime_identifier,
             cpu=1,
             memory=2,
-            arguments= file_name
+            environment = {'file_name':file_name}
         )
 
         created_job = client_cml.create_job(project_id=project_id,
@@ -433,7 +433,7 @@ async def evaluate_examples(request: EvaluationRequest):
             runtime_identifier=runtime_identifier,
             cpu=1,
             memory=2,
-            arguments=file_name
+            environment = {'file_name':file_name}
         )
 
         created_job = client_cml.create_job(project_id=project_id,
@@ -508,7 +508,7 @@ async def export_results(request:Export_synth):
                 runtime_identifier=runtime_identifier,
                 cpu=1,
                 memory=2,
-                arguments=file_name
+                environment = {'file_name':file_name}
             )
 
         created_job = client_cml.create_job(project_id=project_id,
