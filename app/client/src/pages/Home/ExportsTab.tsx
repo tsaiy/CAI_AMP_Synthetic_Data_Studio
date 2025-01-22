@@ -3,6 +3,7 @@ import React from 'react';
 import { sortItemsByKey } from '../../utils/sortutils';
 import ExportResponse from '../../api/Export/response';
 import DateTime from '../../components/DateTime/DateTime';
+import { useGetExportJobs } from '../../api/Export/export';
 
 const columns: TableProps<ExportResponse>['columns'] = [
     {
@@ -37,10 +38,13 @@ const columns: TableProps<ExportResponse>['columns'] = [
 ];
 
 const ExportsTab: React.FC = () => {
+    const { isLoading, isError, data, error } = useGetExportJobs();
+
     return (
         <>
             <Table
                 columns={columns}
+                loading={isLoading}
                 expandable={{
                     expandedRowRender: (exportedDataset) => <p style={{ margin: 0 }}>{exportedDataset.exportType}</p>,
                     rowExpandable: () => false,
