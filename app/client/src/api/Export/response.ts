@@ -1,7 +1,5 @@
 
 export interface ExportResponse {
-    jobs: Job[];
-}export interface Job {
     display_export_name: string;
     display_name: string | null;
     hf_export_path: string;
@@ -13,4 +11,4 @@ export interface ExportResponse {
     timestamp: string;
 }
 
-export type JobStatus = "success" |  "failure" | "in progress";
+export type JobStatus = "success" | "failure" | "in progress";

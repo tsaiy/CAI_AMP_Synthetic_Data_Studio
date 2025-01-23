@@ -2,11 +2,11 @@ import { Table, TableProps } from 'antd';
 import React from 'react';
 import DateTime from '../../components/DateTime/DateTime';
 import { useGetExportJobs } from '../../api/Export/export';
-import { Job, JobStatus } from '../../api/Export/response';
+import { ExportResponse, JobStatus } from '../../api/Export/response';
 import { CheckCircleTwoTone, ExclamationCircleTwoTone, LoadingOutlined } from '@ant-design/icons';
 
 
-const columns: TableProps<Job>['columns'] = [
+const columns: TableProps<ExportResponse>['columns'] = [
     {
         key: 'display_name',
         title: 'Source Dataset',
@@ -50,11 +50,11 @@ const ExportsTab: React.FC = () => {
 
     return (
         <>
-            <Table<Job>
+            <Table<ExportResponse>
                 rowKey={row => row.id}
                 columns={columns}
                 loading={isLoading}
-                dataSource={data?.jobs || []}
+                dataSource={data || []}
             />
         </>
     );

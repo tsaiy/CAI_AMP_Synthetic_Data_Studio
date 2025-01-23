@@ -8,7 +8,7 @@ export const API_ENDPOINTS = {
     getExports: `${BASE_API_URL}/exports/history`,
 };
 
-async function getExportJobs(): Promise<ExportResponse> {
+async function getExportJobs(): Promise<ExportResponse[]> {
     let response;
 
     try {
@@ -21,7 +21,7 @@ async function getExportJobs(): Promise<ExportResponse> {
         return Promise.reject(error);
     }
 
-    const exportResponse: ExportResponse = await response.json();
+    const exportResponse: ExportResponse[] = await response.json();
     return exportResponse;
 };
 
