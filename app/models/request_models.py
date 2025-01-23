@@ -62,6 +62,8 @@ class Export_synth(BaseModel):
     export_type: List[str] = Field(default_factory=lambda: ["huggingface"])  # Accept multiple export types (e.g., ["s3", "huggingface"])
     file_path:str
     display_name:Optional[str]= None
+    output_key: Optional[str] = 'Prompt'
+    output_value: Optional[str] = 'Completion'
 
 
     # Hugging Face-specific fields
@@ -101,20 +103,21 @@ class ModelParameters(BaseModel):
 
 class SynthesisRequest(BaseModel):
     """Main request model for synthesis"""
-    use_case: UseCase
+    use_case: UseCase | None = Field(default=UseCase.CUSTOM)  # Optional with default=CUSTOM
     model_id: str
-    num_questions: int = Field(gt=0, le=500)  # Limit number of questions
-    technique: Technique = Technique.SFT  # Default to SFT
+    num_questions: int | None = Field(default=1, gt=0, le=500)  # Optional with default=1
+    technique: Technique | None = Field(default=Technique.SFT)  # Optional with default=SFT
     is_demo:bool = True
     
     # Optional fields that can override defaults
     inference_type :Optional[str] = "aws_bedrock"
     caii_endpoint: Optional[str] = None
-    topics: Optional[List[str]] = None  # If None, will use default topics
+    topics: Optional[List[str]] = None  # If None, 
     doc_paths: Optional[List[str]] = None
-    input_path: Optional[str] = None
-    output_key: Optional[str] = None
-    output_value: Optional[str] = None
+    input_path: Optional[List[str]] = None
+    input_key: Optional[str] = 'Prompt'
+    output_key: Optional[str] = 'Prompt'
+    output_value: Optional[str] = 'Completion'
     examples: Optional[List[Example]] = Field(default=None)  # If None, will use default examples
     schema: Optional[str] = None  # Added schema field
     custom_prompt: Optional[str] = None 
@@ -231,6 +234,8 @@ class EvaluationRequest(BaseModel):
     examples: Optional[List[Example_eval]] = Field(default=None)
     custom_prompt: Optional[str] = None 
     display_name: Optional[str] = None 
+    output_key: Optional[str] = 'Prompt'
+    output_value: Optional[str] = 'Completion'
 
     # Export configuration
     export_type: str = "local"  # "local" or "s3"

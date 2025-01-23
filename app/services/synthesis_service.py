@@ -82,8 +82,7 @@ class SynthesisService:
         topic_errors = []
         questions_remaining = num_questions
         omit_questions = []
-        # output_key = request.output_key or "question"
-        # output_value = request.output_value or "solution"
+         
 
         try:
             for batch_idx in range(0, num_questions, self.QUESTIONS_PER_BATCH):
@@ -190,6 +189,8 @@ class SynthesisService:
     async def generate_examples(self, request: SynthesisRequest , job_name = None, is_demo: bool = True) -> Dict:
         """Generate examples based on request parameters"""
         try:
+            output_key = request.output_key 
+            output_value = request.output_value
             st = time.time()
             self.logger.info(f"Starting example generation - Demo Mode: {is_demo}")
             
@@ -268,7 +269,11 @@ class SynthesisService:
             model_name = get_model_family(request.model_id).split('.')[-1]
             file_path = f"qa_pairs_{model_name}_{time_file}_{mode_suffix}.json"
             
-            
+            final_output = [{
+                                'Seeds': item['Topic'],
+                                output_key: item['question'],
+                                output_value: item['solution'] }
+                             for item in final_output]
             output_path = {}
             try:
                 with open(file_path, "w") as f:
@@ -296,9 +301,10 @@ class SynthesisService:
                 'topics': topics,
                 'examples': examples_str,
                 "total_count":total_count,
-                'schema': schema_str
-                
-            }
+                'schema': schema_str,
+                'output_key':output_key,
+                'output_value':output_value
+                }
             
             
             if is_demo:
@@ -372,9 +378,15 @@ class SynthesisService:
             self.logger.info("Creating model handler")
             model_handler = create_handler(request.model_id, self.bedrock_client, model_params = model_params, inference_type = request.inference_type, caii_endpoint =  request.caii_endpoint, custom_p = True)
 
-            file_path = request.input_path
-            with open(file_path, 'r') as file:
-                inputs = json.load(file)
+            inputs = []
+            file_paths = request.input_path
+            for path in file_paths:
+                try:
+                    with open(path) as f:
+                        data = json.load(f)
+                        inputs.extend(item.get(request.input_key, '') for item in data)
+                except Exception as e:
+                    print(f"Error processing {path}: {str(e)}")
             MAX_WORKERS = 5
             
             
@@ -400,15 +412,21 @@ class SynthesisService:
             mode_suffix = "test" if is_demo else "final"
             model_name = get_model_family(request.model_id).split('.')[-1]
             file_path = f"qa_pairs_{model_name}_{time_file}_{mode_suffix}.json"
-            
-            
+            input_key = request.output_key or request.input_key
+            result = [{
+                                
+                                input_key: item['question'],
+                                request.output_value: item['solution'] }
+                             for item in final_output]
             output_path = {}
             try:
                 with open(file_path, "w") as f:
-                    json.dump(final_output, indent=2, fp=f)
+                    json.dump(result, indent=2, fp=f)
             except Exception as e:
                 self.logger.error(f"Error saving results: {str(e)}", exc_info=True)
                 
+            
+
             
 
             output_path['local']= file_path

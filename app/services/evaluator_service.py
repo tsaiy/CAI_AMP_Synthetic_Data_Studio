@@ -61,8 +61,8 @@ class EvaluatorService:
         try:
             # Default error response
             error_response = {
-                "question": qa_pair.get("question", "Unknown"),
-                "solution": qa_pair.get("solution", "Unknown"),
+                request.output_key: qa_pair.get(request.output_key, "Unknown"),
+                request.output_value: qa_pair.get(request.output_value, "Unknown"),
                 "evaluation": {
                     "score": 0,
                     "justification": "Error during evaluation"
@@ -70,13 +70,13 @@ class EvaluatorService:
             }
 
             try:
-                self.logger.info(f"Evaluating QA pair: {qa_pair.get('question', '')[:50]}...")
+                self.logger.info(f"Evaluating QA pair: {qa_pair.get(request.output_key, '')[:50]}...")
             except Exception as e:
                 self.logger.error(f"Error logging QA pair: {str(e)}")
 
             try:
                 # Validate input qa_pair structure
-                if not all(key in qa_pair for key in ["question", "solution"]):
+                if not all(key in qa_pair for key in [request.output_key, request.output_value]):
                     error_msg = "Missing required keys in qa_pair"
                     self.logger.error(error_msg)
                     error_response["evaluation"]["justification"] = error_msg
@@ -85,8 +85,8 @@ class EvaluatorService:
                 prompt = PromptBuilder.build_eval_prompt(
                     request.model_id,
                     request.use_case,
-                    qa_pair["question"],
-                    qa_pair["solution"],
+                    qa_pair[request.output_key],
+                    qa_pair[request.output_value],
                     request.examples,
                     request.custom_prompt
                 )
@@ -116,8 +116,8 @@ class EvaluatorService:
                 self.logger.info(f"Successfully evaluated QA pair with score: {score}")
                 
                 return {
-                    "question": qa_pair["question"],
-                    "solution": qa_pair["solution"],
+                    "question": qa_pair[request.output_key],
+                    "solution": qa_pair[request.output_value],
                     "evaluation": {
                         "score": score,
                         "justification": justification
@@ -252,7 +252,7 @@ class EvaluatorService:
                             "results": {},
                            }
             for item in data:
-                topic = item.get('Topic')
+                topic = item.get('Seeds')
                 
                 # Create topic list if it doesn't exist
                 if topic not in transformed_data['results']:
@@ -260,8 +260,8 @@ class EvaluatorService:
                     
                 # Create QA pair
                 qa_pair = {
-                "question": item.get('question', ''),  # Use get() with default value
-                "solution": item.get('solution', '')   # Use get() with default value
+                request.output_key: item.get(request.output_key, ''),  # Use get() with default value
+                request.output_value: item.get(request.output_value, '')   # Use get() with default value
             }
                 
                 # Add to appropriate topic list

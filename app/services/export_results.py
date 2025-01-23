@@ -75,15 +75,15 @@ class Export_Service:
         
         return flattened
 
-    def _create_dataset(self, records:List) -> Dataset:
+    def _create_dataset(self, records:List, output_key, output_value) -> Dataset:
         """Convert the JSON data to a HuggingFace Dataset"""
         # Flatten the nested structure
         #records = self._flatten_results(json_data)
         
         # Define features for the dataset
         features = Features({
-            'Topic': Value('string'),
-            'question': Value('string'),
+            output_key: Value('string'),
+            output_value: Value('string'),
             'solution': Value('string')
         })
         
@@ -122,7 +122,7 @@ class Export_Service:
                     HfFolder.save_token(request.hf_config.hf_token)
                     
                     # Convert JSON to dataset
-                    dataset = self._create_dataset(output_data)
+                    dataset = self._create_dataset(output_data, request.output_key, request.output_value)
                     print(dataset)
                     
                     # Push to HuggingFace Hub as a dataset

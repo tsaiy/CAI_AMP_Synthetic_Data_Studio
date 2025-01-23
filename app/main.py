@@ -264,6 +264,23 @@ async def generate_examples(request: SynthesisRequest):
     
   
     is_demo = request.is_demo
+    if request.input_path:
+        inputs = []
+        file_paths = request.input_path
+        for path in file_paths:
+            try:
+                with open(path) as f:
+                    data = json.load(f)
+                    inputs.extend(item.get(request.input_key, '') for item in data)
+            except Exception as e:
+                print(f"Error processing {path}: {str(e)}")
+                return JSONResponse(
+                        status_code=400,
+                        content={"status": "failed", "error": str(e)}
+                        )
+        if len(inputs)>25:
+            is_demo = False
+
     if is_demo== True:
         if request.input_path:
             return await synthesis_service.generate_result(request,is_demo)
@@ -305,8 +322,8 @@ async def generate_examples(request: SynthesisRequest):
             name=job_name,
             script=script_path,
             runtime_identifier=runtime_identifier,
-            cpu=1,
-            memory=2,
+            cpu=2,
+            memory=4,
             environment = {'file_name':file_name}
         )
 
@@ -348,9 +365,10 @@ async def generate_examples(request: SynthesisRequest):
                 'schema': schema_str,
                 'job_name':job_name,
                 'job_id': job_run.job_id,
-                'job_status': 'In Progress'
-                
-            }
+                'job_status': 'In Progress',
+                 'output_key':request.output_key,
+                'output_value':request.output_value
+                }
         
         db_manager.save_generation_metadata(metadata)
 
@@ -431,8 +449,8 @@ async def evaluate_examples(request: EvaluationRequest):
             name=job_name,
             script=script_path,
             runtime_identifier=runtime_identifier,
-            cpu=1,
-            memory=2,
+            cpu=2,
+            memory=4,
             environment = {'file_name':file_name}
         )
 
@@ -506,8 +524,8 @@ async def export_results(request:Export_synth):
                 name=job_name,
                 script=script_path,
                 runtime_identifier=runtime_identifier,
-                cpu=1,
-                memory=2,
+                cpu=2,
+                memory=4,
                 environment = {'file_name':file_name}
             )
 
