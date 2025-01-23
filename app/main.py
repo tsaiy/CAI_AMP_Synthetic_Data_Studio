@@ -30,7 +30,7 @@ UPLOAD_DIR = ROOT_DIR / "document_upload"
 sys.path.append(str(ROOT_DIR))
 
 from app.services.evaluator_service import EvaluatorService
-from app.models.request_models import SynthesisRequest, EvaluationRequest, Export_synth, ModelParameters, CustomPromptRequest
+from app.models.request_models import SynthesisRequest, EvaluationRequest, Export_synth, ModelParameters, CustomPromptRequest, JsonDataSize
 from app.services.synthesis_service import SynthesisService
 from app.services.export_results import Export_Service
 from app.core.prompt_templates import PromptBuilder, PromptHandler
@@ -227,6 +227,53 @@ evaluator_service = EvaluatorService()
 export_service = Export_Service()
 db_manager = DatabaseManager()
 
+@app.post("/json/dataset_size", include_in_schema=True, responses = responses,
+          description = "get total dataset size for jsons")
+async def get_dataset_size(request:JsonDataSize):
+
+    if request.input_path:
+        inputs = []
+        file_paths = request.input_path
+        for path in file_paths:
+            try:
+                with open(path) as f:
+                    data = json.load(f)
+                    if not data:
+                        raise ValueError(f"Empty JSON data in file: {path}")
+                    
+                    # Check if input_key exists in at least one item
+                    key_exists = any(request.input_key in item for item in data)
+                    if not key_exists:
+                        raise KeyError(f"Input key '{request.input_key}' not found in any item in file: {path}")
+                    
+                    # Collect values, raising error if any item is missing the key
+                    for item in data:
+                        if request.input_key not in item:
+                            raise KeyError(f"Input key '{request.input_key}' missing in item: {item}")
+                        inputs.append(item[request.input_key])
+                        
+            except json.JSONDecodeError as e:
+                error_msg = f"Invalid JSON format in file {path}: {str(e)}"
+                print(error_msg)
+                return JSONResponse(
+                    status_code=400,
+                    content={"status": "failed", "error": error_msg}
+                )
+            except (KeyError, ValueError) as e:
+                print(str(e))
+                return JSONResponse(
+                    status_code=400,
+                    content={"status": "failed", "error": str(e)}
+                )
+            except Exception as e:
+                error_msg = f"Error processing {path}: {str(e)}"
+                print(error_msg)
+                return JSONResponse(
+                    status_code=400,
+                    content={"status": "failed", "error": error_msg}
+                )
+            
+    return {"dataset_size": len(inputs)}
 
 
 @app.post("/synthesis/generate", include_in_schema=True,
@@ -264,22 +311,7 @@ async def generate_examples(request: SynthesisRequest):
     
   
     is_demo = request.is_demo
-    if request.input_path:
-        inputs = []
-        file_paths = request.input_path
-        for path in file_paths:
-            try:
-                with open(path) as f:
-                    data = json.load(f)
-                    inputs.extend(item.get(request.input_key, '') for item in data)
-            except Exception as e:
-                print(f"Error processing {path}: {str(e)}")
-                return JSONResponse(
-                        status_code=400,
-                        content={"status": "failed", "error": str(e)}
-                        )
-        if len(inputs)>25:
-            is_demo = False
+    
 
     if is_demo== True:
         if request.input_path:

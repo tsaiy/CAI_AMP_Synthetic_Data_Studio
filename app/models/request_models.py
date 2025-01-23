@@ -101,6 +101,11 @@ class ModelParameters(BaseModel):
     top_k: int = Field(default=250, ge=0, description="Top K sampling parameter")
     max_tokens: int = Field(default=4096, ge=1, description="Maximum tokens to generate")
 
+class JsonDataSize(BaseModel):
+    input_path: List[str]
+    input_key: Optional[str] = 'Prompt'
+
+
 class SynthesisRequest(BaseModel):
     """Main request model for synthesis"""
     use_case: UseCase | None = Field(default=UseCase.CUSTOM)  # Optional with default=CUSTOM
