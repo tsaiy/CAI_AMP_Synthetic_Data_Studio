@@ -1,5 +1,6 @@
 import os
 import boto3
+from datetime import datetime, timezone
 from botocore.config import Config
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse
@@ -52,7 +53,9 @@ template_job = client_cml.get_job(
 )
 runtime_identifier = template_job.runtime_identifier
 
-
+def get_job_status(job_id):
+    response = client_cml.list_job_runs(project_id, job_id, sort="-created_at", page_size=1)
+    return response.job_runs[0].status
 
 #*************Comment this when running locally********************************************
 
@@ -225,6 +228,7 @@ export_service = Export_Service()
 db_manager = DatabaseManager()
 
 
+
 @app.post("/synthesis/generate", include_in_schema=True,
     responses=responses,
     description="Generate question-answer pairs")
@@ -303,7 +307,7 @@ async def generate_examples(request: SynthesisRequest):
             runtime_identifier=runtime_identifier,
             cpu=1,
             memory=2,
-            arguments= file_name
+            environment = {'file_name':file_name}
         )
 
         created_job = client_cml.create_job(project_id=project_id,
@@ -429,7 +433,7 @@ async def evaluate_examples(request: EvaluationRequest):
             runtime_identifier=runtime_identifier,
             cpu=1,
             memory=2,
-            arguments=file_name
+            environment = {'file_name':file_name}
         )
 
         created_job = client_cml.create_job(project_id=project_id,
@@ -463,6 +467,7 @@ async def evaluate_examples(request: EvaluationRequest):
         }
 
         db_manager.save_evaluation_metadata(metadata)
+        
 
         return {"job_name": job_name, "job_id": job_run.job_id}
 
@@ -471,16 +476,8 @@ async def evaluate_examples(request: EvaluationRequest):
 @app.post("/export_results", include_in_schema=True)
 async def export_results(request:Export_synth):
     try: 
-
-        # if not (os.environ.get('hf_token') and os.environ.get('hf_username')):
-        #         return JSONResponse(
-        #             status_code=400,
-        #             content={"status": "failed", "error": "Huggingface token or namespace is missing from env variables"}
-        #         )
-
-        
         params = request.model_dump()   
-        #params['hf_config']['hf_repo_name'] = os.environ['hf_username']  + '/' + request.hf_config.hf_repo_name
+       
     
         if os.getenv("IS_COMPOSABLE"):
             script_path = "synthetic-data-studio/app/run_export_job.py"
@@ -492,7 +489,7 @@ async def export_results(request:Export_synth):
 
 
         
-        job_name = f"hf_export_job_{random_id}"
+        job_name = f"hf_{request.hf_config.hf_repo_name}_{random_id}"
         # Create unique filename with UUID
         file_name = f"hf_export_args_{random_id}.json"
         
@@ -511,7 +508,7 @@ async def export_results(request:Export_synth):
                 runtime_identifier=runtime_identifier,
                 cpu=1,
                 memory=2,
-                arguments=file_name
+                environment = {'file_name':file_name}
             )
 
         created_job = client_cml.create_job(project_id=project_id,
@@ -520,6 +517,19 @@ async def export_results(request:Export_synth):
         job_run = client_cml.create_job_run(cmlapi.CreateJobRunRequest(), project_id=project_id, job_id=created_job.id)
         repo_id = f"{request.hf_config.hf_username}/{request.hf_config.hf_repo_name}"
         export_path = f"https://huggingface.co/datasets/{repo_id}"
+
+        job_status = get_job_status(job_run.job_id)
+
+        metadata = {"timestamp": datetime.now(timezone.utc).isoformat(),
+                    "display_export_name": request.hf_config.hf_repo_name, 
+                    "display_name": request.display_name,
+                    "local_export_path":request.file_path,
+                    "hf_export_path": export_path,
+                    "job_id":job_run.job_id,
+                    "job_name": job_name,
+                    "job_status": job_status}
+        
+        db_manager.save_export_metadata(metadata)
 
         return  {"job_name": job_name, "job_id": job_run.job_id, "hf_link":export_path }   
     
@@ -657,6 +667,22 @@ async def get_generation_by_filename(file_name: str):
         )
     
     return result
+
+@app.get("/exports/history", include_in_schema =True)
+def get_exports_history():
+    pending_job_ids = db_manager.get_pending_export_job_ids()
+
+    if not pending_job_ids:
+        return db_manager.get_all_export_metadata()
+
+    job_status_map = {
+            job_id: get_job_status(job_id) 
+            for job_id in pending_job_ids
+        }
+    db_manager.update_job_statuses_export(job_status_map)
+    
+    return db_manager.get_all_export_metadata()
+    
 
 @app.get("/evaluations/history", include_in_schema=True)
 async def get_evaluation_history():
@@ -813,7 +839,6 @@ async def get_example_payloads(use_case:UseCase):
                     "model_params": {
                         "temperature": 0.0,  # More precise responses
                         "top_p": 1.0,
-                        "min_p": 0.01,
                         "top_k": 250,
                         "max_tokens": 4096  # Updated for Claude-3
                     }
@@ -841,7 +866,6 @@ async def get_example_payloads(use_case:UseCase):
                     "model_params": {
                         "temperature": 0.0,  # More precise responses
                         "top_p": 1.0,
-                        "min_p": 0.01,
                         "top_k": 250,
                         "max_tokens": 4096  # Updated for Claude-3
                     }
@@ -870,7 +894,6 @@ async def get_example_payloads(use_case:UseCase):
             "model_params": {
                 "temperature": 0.0,  
                 "top_p": 1.0,
-                "min_p": 0.01,
                 "top_k": 250,
                 "max_tokens": 4096  
             }

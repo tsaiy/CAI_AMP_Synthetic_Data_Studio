@@ -2,6 +2,7 @@ __pycache__
 .history
 metadata.db
 document_upload
+test.json
 cml_test.ipynb
 /app/khauneesh_test.ipynb
 .env
