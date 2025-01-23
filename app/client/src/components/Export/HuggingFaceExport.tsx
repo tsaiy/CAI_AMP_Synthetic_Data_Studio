@@ -1,5 +1,5 @@
 import { Form, Input } from "antd";
-import { HuggingFaceConfiguration } from "../../../api/Datasets/request";
+import { HuggingFaceConfiguration } from "../../api/Datasets/request";
 import { useCallback, useEffect } from "react";
 
 const HF_TOKEN = import.meta.env.VITE_HF_TOKEN;

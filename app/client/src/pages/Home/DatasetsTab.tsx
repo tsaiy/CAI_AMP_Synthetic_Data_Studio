@@ -11,7 +11,7 @@ import DateTime from '../../components/DateTime/DateTime';
 import DatasetActions from './DatasetActions';
 import { sortItemsByKey } from '../../utils/sortutils';
 import { SyntheticEvent, useEffect } from 'react';
-import DatasetExportModal, { ExportResult } from '../../components/Datasets/DatasetExport/ExportModal';
+import DatasetExportModal, { ExportResult } from '../../components/Export/ExportModal';
 import React from 'react';
 
 const { Search } = Input;
