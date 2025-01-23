@@ -1,33 +1,47 @@
-import { Button, Table, TableProps } from 'antd';
+import { Table, TableProps } from 'antd';
 import React from 'react';
 import DateTime from '../../components/DateTime/DateTime';
 import { useGetExportJobs } from '../../api/Export/export';
+import { Job, JobStatus } from '../../api/Export/response';
+import { CheckCircleTwoTone, ExclamationCircleTwoTone, LoadingOutlined } from '@ant-design/icons';
 
-const columns: TableProps<string>['columns'] = [
+
+const columns: TableProps<Job>['columns'] = [
     {
         key: 'display_name',
         title: 'Source Dataset',
         dataIndex: 'display_name',
     }, {
-        key: 'model_id',
+        key: 'display_export_name',
         title: 'Export Name',
-        dataIndex: 'model_id',
+        dataIndex: 'display_export_name',
     }, {
-        key: 'export_location',
+        key: 'hf_export_path',
         title: 'Export Location',
-        dataIndex: 'average_score',
+        dataIndex: 'hf_export_path',
     }, {
         key: 'timestamp',
         title: 'Create Time',
         dataIndex: 'timestamp',
         render: (timestamp) => <DateTime dateTime={timestamp}></DateTime>
 
-    }, {
-        key: 'action',
-        title: 'Actions',
-        render: () =>
-            <Button> Export menu item</Button>
-
+    },
+    {
+        key: 'job_status',
+        title: 'Status',
+        dataIndex: 'timestamp',
+        render: (status: JobStatus) => {
+            switch (status) {
+                case "success":
+                    return <CheckCircleTwoTone twoToneColor="#52c41a"/>;
+                case 'failure':
+                    return <ExclamationCircleTwoTone twoToneColor="#eb2f96"/>;
+                case 'in progress':
+                    return <LoadingOutlined spin/>;
+                default:
+                    return <LoadingOutlined spin/>;
+            }
+        }
     },
 ];
 
@@ -36,13 +50,10 @@ const ExportsTab: React.FC = () => {
 
     return (
         <>
-            <Table<string>
+            <Table<Job>
+                rowKey={row => row.id}
                 columns={columns}
                 loading={isLoading}
-                expandable={{
-                    expandedRowRender: (exportedDataset) => <p style={{ margin: 0 }}>{exportedDataset.exportType}</p>,
-                    rowExpandable: () => false,
-                }}
                 dataSource={data?.jobs || []}
             />
         </>

@@ -1,5 +1,5 @@
 import { useQuery } from "react-query";
-import ExportResponse from "./response";
+import { ExportResponse } from "./response";
 
 const BASE_API_URL = import.meta.env.VITE_AMP_URL;
 const REFETCHINTERVAL_IN_MS = 10000;
