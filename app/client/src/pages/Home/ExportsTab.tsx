@@ -1,9 +1,12 @@
-import { Flex, Table, TableProps } from 'antd';
+import { Flex, Table, TableProps, Typography } from 'antd';
 import React from 'react';
 import DateTime from '../../components/DateTime/DateTime';
 import { useGetExportJobs } from '../../api/Export/export';
 import { ExportResponse, JobStatus } from '../../api/Export/response';
 import { CheckCircleTwoTone, ExclamationCircleTwoTone, LoadingOutlined } from '@ant-design/icons';
+
+const { Link } = Typography;
+
 
 const jobStatus = (status: JobStatus) => {
     switch (status) {
@@ -11,11 +14,11 @@ const jobStatus = (status: JobStatus) => {
             return <CheckCircleTwoTone twoToneColor="#52c41a" />;
         case 'ENGINE_FAILED':
         case 'failure':
-            return <ExclamationCircleTwoTone twoToneColor="#eb2f96" />;
+            return <ExclamationCircleTwoTone twoToneColor="danger" />;
         case 'in progress':
             return <LoadingOutlined spin color='primary' />;
         default:
-            return <ExclamationCircleTwoTone spin />;
+            return <ExclamationCircleTwoTone twoToneColor="danger"/>;
     }
 };
 
@@ -32,12 +35,18 @@ const columns: TableProps<ExportResponse>['columns'] = [
         key: 'hf_export_path',
         title: 'Export Location',
         dataIndex: 'hf_export_path',
+        render: (path) => <Link href={path} target="_blank">{path}</Link>
     }, {
         key: 'timestamp',
         title: 'Create Time',
         dataIndex: 'timestamp',
         render: (timestamp) => <DateTime dateTime={timestamp}></DateTime>
-
+    },
+    {
+        key: 'job_id',
+        title: 'Job ID',
+        dataIndex: 'job_id',
+        render: (jobId) => <Link href={jobId} target="_blank">{jobId}</Link>
     },
     {
         key: 'job_status',
@@ -48,6 +57,8 @@ const columns: TableProps<ExportResponse>['columns'] = [
         </Flex>
     },
 ];
+
+// https://ai-workbench.eng-ml-l.vnu8-sqze.cloudera.site/kisslac/export-list-test-01/jobs/465
 
 const ExportsTab: React.FC = () => {
     const { isLoading, isError, data, error } = useGetExportJobs();
