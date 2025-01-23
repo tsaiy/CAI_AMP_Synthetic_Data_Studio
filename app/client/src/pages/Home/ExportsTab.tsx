@@ -1,10 +1,23 @@
-import { Table, TableProps } from 'antd';
+import { Flex, Table, TableProps } from 'antd';
 import React from 'react';
 import DateTime from '../../components/DateTime/DateTime';
 import { useGetExportJobs } from '../../api/Export/export';
 import { ExportResponse, JobStatus } from '../../api/Export/response';
 import { CheckCircleTwoTone, ExclamationCircleTwoTone, LoadingOutlined } from '@ant-design/icons';
 
+const jobStatus = (status: JobStatus) => {
+    switch (status) {
+        case "success":
+            return <CheckCircleTwoTone twoToneColor="#52c41a" />;
+        case 'ENGINE_FAILED':
+        case 'failure':
+            return <ExclamationCircleTwoTone twoToneColor="#eb2f96" />;
+        case 'in progress':
+            return <LoadingOutlined spin color='primary' />;
+        default:
+            return <ExclamationCircleTwoTone spin />;
+    }
+};
 
 const columns: TableProps<ExportResponse>['columns'] = [
     {
@@ -30,18 +43,9 @@ const columns: TableProps<ExportResponse>['columns'] = [
         key: 'job_status',
         title: 'Status',
         dataIndex: 'timestamp',
-        render: (status: JobStatus) => {
-            switch (status) {
-                case "success":
-                    return <CheckCircleTwoTone twoToneColor="#52c41a"/>;
-                case 'failure':
-                    return <ExclamationCircleTwoTone twoToneColor="#eb2f96"/>;
-                case 'in progress':
-                    return <LoadingOutlined spin/>;
-                default:
-                    return <LoadingOutlined spin/>;
-            }
-        }
+        render: (status: JobStatus) => <Flex justify='center' align='center'>
+            {jobStatus(status)}
+        </Flex>
     },
 ];
 

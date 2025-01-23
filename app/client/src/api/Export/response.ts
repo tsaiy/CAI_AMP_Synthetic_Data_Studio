@@ -11,4 +11,4 @@ export interface ExportResponse {
     timestamp: string;
 }
 
-export type JobStatus = "success" | "failure" | "in progress";
+export type JobStatus = "success" | "failure" | "in progress" | "ENGINE_FAILED";
