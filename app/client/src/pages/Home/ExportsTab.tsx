@@ -1,12 +1,12 @@
-import { Flex, Table, TableProps, Typography } from 'antd';
+import { Flex, Table, TableProps, Tooltip, Typography } from 'antd';
 import React from 'react';
 import DateTime from '../../components/DateTime/DateTime';
 import { useGetExportJobs } from '../../api/Export/export';
 import { ExportResponse, JobStatus } from '../../api/Export/response';
 import { CheckCircleTwoTone, ExclamationCircleTwoTone, LoadingOutlined } from '@ant-design/icons';
+import { CDSW_PROJECT_URL } from '../../constants';
 
 const { Link } = Typography;
-
 
 const jobStatus = (status: JobStatus) => {
     switch (status) {
@@ -14,11 +14,11 @@ const jobStatus = (status: JobStatus) => {
             return <CheckCircleTwoTone twoToneColor="#52c41a" />;
         case 'ENGINE_FAILED':
         case 'failure':
-            return <ExclamationCircleTwoTone twoToneColor="danger" />;
+            return <Tooltip title={`Error during job execution`}><ExclamationCircleTwoTone twoToneColor="red" /></Tooltip>;
         case 'in progress':
-            return <LoadingOutlined spin color='primary' />;
+            return <LoadingOutlined spin />;
         default:
-            return <ExclamationCircleTwoTone twoToneColor="danger"/>;
+            return <Tooltip title={`Error during job execution`}><ExclamationCircleTwoTone twoToneColor="red" /></Tooltip>;
     }
 };
 
@@ -46,7 +46,7 @@ const columns: TableProps<ExportResponse>['columns'] = [
         key: 'job_id',
         title: 'Job ID',
         dataIndex: 'job_id',
-        render: (jobId) => <Link href={jobId} target="_blank">{jobId}</Link>
+        render: (jobId) => <Link href={`${CDSW_PROJECT_URL}/jobs/${jobId}`} target="_blank">{jobId}</Link>
     },
     {
         key: 'job_status',

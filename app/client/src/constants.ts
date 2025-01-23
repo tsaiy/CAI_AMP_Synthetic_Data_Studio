@@ -17,3 +17,4 @@ export const TRANSLATIONS: Record<string, string> = {
     "text2sql": "Text to SQL"
   };
 
+export const CDSW_PROJECT_URL = import.meta.env.VITE_CDSW_PROJECT_URL;
