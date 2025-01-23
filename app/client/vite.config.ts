@@ -8,7 +8,9 @@ const prodEnvVar = {
   'import.meta.env.VITE_WORKBENCH_URL': JSON.stringify(`https://${process.env.CDSW_DOMAIN}`),
   'import.meta.env.VITE_HF_TOKEN': JSON.stringify(process.env.hf_token),
   'import.meta.env.VITE_HF_USERNAME': JSON.stringify(process.env.hf_username),
-  'import.meta.env.VITE_AMP_URL': JSON.stringify('')
+  'import.meta.env.VITE_AMP_URL': JSON.stringify(''),
+  'import.meta.env.VITE_CDSW_API_URL': JSON.stringify(process.env.cdsw_api_url),
+  'import.meta.env.VITE_CDSW_APIV2_KEY': JSON.stringify(process.env.cdsw_apiv2_key),
 }
 
 export default defineConfig(({ mode }) => {
@@ -17,4 +19,3 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
   };
 });
-
