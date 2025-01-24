@@ -30,7 +30,7 @@ UPLOAD_DIR = ROOT_DIR / "document_upload"
 sys.path.append(str(ROOT_DIR))
 
 from app.services.evaluator_service import EvaluatorService
-from app.models.request_models import SynthesisRequest, EvaluationRequest, Export_synth, ModelParameters, CustomPromptRequest
+from app.models.request_models import SynthesisRequest, EvaluationRequest, Export_synth, ModelParameters, CustomPromptRequest, JsonDataSize, RelativePath
 from app.services.synthesis_service import SynthesisService
 from app.services.export_results import Export_Service
 from app.core.prompt_templates import PromptBuilder, PromptHandler
@@ -229,6 +229,68 @@ db_manager = DatabaseManager()
 
 
 
+@app.post("/get_project_files", include_in_schema=True, responses = responses, 
+           description = "get project file details")
+async def get_project_files(request:RelativePath):
+    if os.getenv("IS_COMPOSABLE"):
+        root_path = "synthetic-data-studio"
+    else:
+        root_path = ""
+    final_path = os.path.join(root_path, request.path)
+
+    return client_cml.list_project_files(project_id, final_path)
+    
+    
+
+@app.post("/json/dataset_size", include_in_schema=True, responses = responses,
+          description = "get total dataset size for jsons")
+async def get_dataset_size(request:JsonDataSize):
+
+    if request.input_path:
+        inputs = []
+        file_paths = request.input_path
+        for path in file_paths:
+            try:
+                with open(path) as f:
+                    data = json.load(f)
+                    if not data:
+                        raise ValueError(f"Empty JSON data in file: {path}")
+                    
+                    # Check if input_key exists in at least one item
+                    key_exists = any(request.input_key in item for item in data)
+                    if not key_exists:
+                        raise KeyError(f"Input key '{request.input_key}' not found in any item in file: {path}")
+                    
+                    # Collect values, raising error if any item is missing the key
+                    for item in data:
+                        if request.input_key not in item:
+                            raise KeyError(f"Input key '{request.input_key}' missing in item: {item}")
+                        inputs.append(item[request.input_key])
+                        
+            except json.JSONDecodeError as e:
+                error_msg = f"Invalid JSON format in file {path}: {str(e)}"
+                print(error_msg)
+                return JSONResponse(
+                    status_code=400,
+                    content={"status": "failed", "error": error_msg}
+                )
+            except (KeyError, ValueError) as e:
+                print(str(e))
+                return JSONResponse(
+                    status_code=400,
+                    content={"status": "failed", "error": str(e)}
+                )
+            except Exception as e:
+                error_msg = f"Error processing {path}: {str(e)}"
+                print(error_msg)
+                return JSONResponse(
+                    status_code=400,
+                    content={"status": "failed", "error": error_msg}
+                )
+            
+    return {"dataset_size": len(inputs)}
+
+
 @app.post("/synthesis/generate", include_in_schema=True,
     responses=responses,
     description="Generate question-answer pairs")
@@ -264,6 +326,8 @@ async def generate_examples(request: SynthesisRequest):
     
   
     is_demo = request.is_demo
+    
+
     if is_demo== True:
         if request.input_path:
             return await synthesis_service.generate_result(request,is_demo)
@@ -305,8 +369,8 @@ async def generate_examples(request: SynthesisRequest):
             name=job_name,
             script=script_path,
             runtime_identifier=runtime_identifier,
-            cpu=1,
-            memory=2,
+            cpu=2,
+            memory=4,
             environment = {'file_name':file_name}
         )
 
@@ -348,9 +412,10 @@ async def generate_examples(request: SynthesisRequest):
                 'schema': schema_str,
                 'job_name':job_name,
                 'job_id': job_run.job_id,
-                'job_status': 'In Progress'
-                
-            }
+                'job_status': 'In Progress',
+                 'output_key':request.output_key,
+                'output_value':request.output_value
+                }
         
         db_manager.save_generation_metadata(metadata)
 
@@ -431,8 +496,8 @@ async def evaluate_examples(request: EvaluationRequest):
             name=job_name,
             script=script_path,
             runtime_identifier=runtime_identifier,
-            cpu=1,
-            memory=2,
+            cpu=2,
+            memory=4,
             environment = {'file_name':file_name}
         )
 
@@ -506,8 +571,8 @@ async def export_results(request:Export_synth):
                 name=job_name,
                 script=script_path,
                 runtime_identifier=runtime_identifier,
-                cpu=1,
-                memory=2,
+                cpu=2,
+                memory=4,
                 environment = {'file_name':file_name}
             )
 

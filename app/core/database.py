@@ -51,6 +51,8 @@ class DatabaseManager:
                         use_case TEXT,
                         custom_prompt TEXT,
                         model_parameters TEXT,
+                        output_key TEXT,
+                        output_value TEXT,
                         generate_file_name TEXT UNIQUE,
                         display_name TEXT,
                         local_export_path TEXT,
@@ -152,11 +154,11 @@ class DatabaseManager:
                 query = """
                     INSERT INTO generation_metadata (
                         timestamp, model_id, inference_type, use_case,
-                        custom_prompt, model_parameters, generate_file_name,
+                        custom_prompt, model_parameters,output_key,output_value, generate_file_name,
                         display_name, local_export_path, hf_export_path,
                         num_questions, total_count, topics, examples,
                         schema, job_id, job_name, job_status
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)
                 """
                 
                 values = (
@@ -166,6 +168,8 @@ class DatabaseManager:
                     metadata.get('use_case', None),
                     metadata.get('final_prompt', None),
                     model_params_json,
+                    metadata.get('output_key', None),
+                    metadata.get('output_value', None),
                     metadata.get('generate_file_name', None),
                     display_name,
                     output_paths.get('local', None),
