@@ -34,7 +34,7 @@ export const EXPORT_TYPE_LABELS: Record<ExportType, string> = {
 }
 
 // Coming from EngineStatusType in CML
-export type JobStatus = 'scheduling' | 'starting' | 'running' | 'stopping' | 'stopped' | 'succeeded' | 'failed' | 'timedout';
+export type JobStatus = 'ENGINE_STOPPED' | 'ENGINE_SUCCEEDED' | 'ENGINE_TIMEDOUT' | 'ENGINE_SCHEDULING' | 'ENGINE_RUNNING';
 
 
 export const HuggingFaceIconUrl = "https://huggingface.co/front/assets/huggingface_logo-noborder.svg";

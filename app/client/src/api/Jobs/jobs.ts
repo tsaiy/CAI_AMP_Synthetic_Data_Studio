@@ -1,7 +1,7 @@
 import { useQuery } from "react-query";
 import { JobResponse } from "./response";
 
-const CML_API_URL = import.meta.env.VITE_CDSW_API_URL;
+const CML_API_URL = import.meta.env.VITE_CDSW_API_URL.replace("v1","v2");
 const PROJECT_NAME = import.meta.env.VITE_CDSW_PROJECT;
 const PROJECT_OWNER = import.meta.env.VITE_PROJECT_OWNER;
 const API_V2_KEY = import.meta.env.VITE_CDSW_APIV2_KEY;

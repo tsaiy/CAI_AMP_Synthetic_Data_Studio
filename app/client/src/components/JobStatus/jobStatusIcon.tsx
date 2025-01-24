@@ -9,14 +9,13 @@ export type JobStatusProps = {
 export default function JobStatusIcon({ status }: JobStatusProps) {
     function jobStatus() {
         switch (status) {
-            case "succeeded":
+            case "ENGINE_SUCCEEDED":
                 return <CheckCircleTwoTone twoToneColor="#52c41a" />;
-            case 'stopped':
-            case 'failed':
-            case 'timedout':
+            case 'ENGINE_STOPPED':
+            case 'ENGINE_TIMEDOUT':
                 return <Tooltip title={`Error during job execution`}><ExclamationCircleTwoTone twoToneColor="red" /></Tooltip>;
-            case 'starting':
-            case 'running':
+            case 'ENGINE_SCHEDULING':
+            case 'ENGINE_RUNNING':
                 return <LoadingOutlined spin />;
             default:
                 return <Tooltip title={`Error during job execution`}><ExclamationCircleTwoTone twoToneColor="red" /></Tooltip>;
