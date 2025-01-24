@@ -1,5 +1,6 @@
 import { useQuery } from "react-query";
 import { ExportResponse } from "./response";
+import { ExportListTestData } from "../../testing/exportsTab/testData";
 
 const BASE_API_URL = import.meta.env.VITE_AMP_URL;
 const REFETCHINTERVAL_IN_MS = 10000;
@@ -11,17 +12,17 @@ export const API_ENDPOINTS = {
 async function getExportJobs(): Promise<ExportResponse[]> {
     let response;
 
-    try {
-        response = await fetch(API_ENDPOINTS.getExports);
+    // try {
+    //     response = await fetch(API_ENDPOINTS.getExports);
 
-        if (!response.ok) {
-            return Promise.reject(response.statusText);
-        }
-    } catch (error) {
-        return Promise.reject(error);
-    }
+    //     if (!response.ok) {
+    //         return Promise.reject(response.statusText);
+    //     }
+    // } catch (error) {
+    //     return Promise.reject(error);
+    // }
 
-    const exportResponse: ExportResponse[] = await response.json();
+    const exportResponse: ExportResponse[] = await ExportListTestData;
     return exportResponse;
 };
 

@@ -16,7 +16,7 @@ const Container = styled.div`
   padding: 1rem;
 `;
 
-const StyledTable = styled(Table)`
+const StyledTable = styled(Table<ExportResponse>)`
   font-family: Roboto, -apple-system, 'Segoe UI', sans-serif;
   color:  #5a656d;
   .ant-table-thead > tr > th {
@@ -52,7 +52,7 @@ const columns: TableProps<ExportResponse>['columns'] = [
     {
         key: 'job_status',
         title: 'Status',
-        dataIndex: 'timestamp',
+        dataIndex: 'job_status',
         sorter: sortItemsByKey('job_status'),
         render: (status: JobStatus) => <Flex justify='center' align='center'>
             <JobStatusIcon status={status}></JobStatusIcon>
@@ -120,7 +120,7 @@ const ExportsTab: React.FC = () => {
                 </Col>
             </Row>
             <StyledTable
-                rowKey={row => row.id}
+                rowKey={(row) => row.id}
                 columns={columns}
                 tableLayout="fixed"
                 pagination={{
