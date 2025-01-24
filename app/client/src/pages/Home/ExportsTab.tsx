@@ -1,4 +1,4 @@
-import { Button, Col, Flex, Input, Row, Table, TableProps, Tooltip, Typography } from 'antd';
+import { Col, Flex, Input, Row, Table, TableProps, Tooltip, Typography } from 'antd';
 import React from 'react';
 import DateTime from '../../components/DateTime/DateTime';
 import { useGetExportJobs } from '../../api/Export/export';
@@ -7,18 +7,13 @@ import { sortItemsByKey } from '../../utils/sortutils';
 import styled from 'styled-components';
 import { JobStatus } from '../../types';
 import JobStatusIcon from '../../components/JobStatus/jobStatusIcon';
-import { useGetJobs } from '../../api/Jobs/jobs';
 
 const { Search } = Input;
-const { Text, Link } = Typography;
+const { Text, Link, Paragraph } = Typography;
 
 const Container = styled.div`
   background-color: #ffffff;
   padding: 1rem;
-`;
-const StyledButton = styled(Button)`
-    height: 35px;
-    width: fit-content;
 `;
 
 const StyledTable = styled(Table)`
@@ -46,6 +41,13 @@ const StyledTable = styled(Table)`
   }
 `;
 
+
+const StyledParagraph = styled(Paragraph)`
+    font-size: 13px;
+    font-family: Roboto, -apple-system, 'Segoe UI', sans-serif;
+    color:  #5a656d;
+`;
+
 const columns: TableProps<ExportResponse>['columns'] = [
     {
         key: 'job_status',
@@ -60,12 +62,15 @@ const columns: TableProps<ExportResponse>['columns'] = [
         key: 'display_name',
         title: 'Source Dataset',
         dataIndex: 'display_name',
-        sorter: sortItemsByKey('display_name')
+        sorter: sortItemsByKey('display_name'),
+        render: (displayName) => <Tooltip title={displayName}><StyledParagraph style={{ width: 200, marginBottom: 0 }} ellipsis={{ rows: 1 }}>{displayName}</StyledParagraph></Tooltip>
+
     }, {
         key: 'display_export_name',
         title: 'Export Name',
         dataIndex: 'display_export_name',
         sorter: sortItemsByKey('display_export_name'),
+        render: (displayExportName) => <Tooltip title={displayExportName}><StyledParagraph style={{ width: 200, marginBottom: 0 }} ellipsis={{ rows: 1 }}>{displayExportName}</StyledParagraph></Tooltip>
     }, {
         key: 'hf_export_path',
         title: 'Export Location',
@@ -96,9 +101,12 @@ const ExportsTab: React.FC = () => {
 
     const filteredData = React.useMemo(() => {
         if (!data) return [];
-        return data.filter((job: ExportResponse) =>
-            job.display_name?.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+        return searchTerm
+            ? data.filter((job: ExportResponse) =>
+                job.display_name?.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+            :
+            data;
     }, [data, searchTerm]);
 
     return (
