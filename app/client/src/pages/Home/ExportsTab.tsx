@@ -7,6 +7,7 @@ import { sortItemsByKey } from '../../utils/sortutils';
 import styled from 'styled-components';
 import { JobStatus } from '../../types';
 import JobStatusIcon from '../../components/JobStatus/jobStatusIcon';
+import { useGetJobs } from '../../api/Jobs/jobs';
 
 const { Search } = Input;
 const { Text, Link, Paragraph } = Typography;
@@ -96,7 +97,7 @@ const columns: TableProps<ExportResponse>['columns'] = [
 
 const ExportsTab: React.FC = () => {
     const { isLoading, isError, data, error } = useGetExportJobs();
-    // const { isLoading: isJobsLoading, isError: isJobsError, data: jobsData, error: jobsError } = useGetJobs();
+    const { isLoading: isJobsLoading, isError: isJobsError, data: jobsData, error: jobsError } = useGetJobs();
     const [searchTerm, setSearchTerm] = React.useState<string>('');
 
     const filteredData = React.useMemo(() => {
