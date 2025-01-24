@@ -47,6 +47,9 @@ export default function DatasetExportModal({ isModalActive, datasetDetails, setI
         const data: DatasetExportRequest = {
             export_type: [selectedExportType],
             file_path: datasetDetails.local_export_path,
+            display_name: datasetDetails.display_name,
+            output_key: datasetDetails.output_key,
+            output_value: datasetDetails.output_value,
             ...exportConfigurationBody
         };
 

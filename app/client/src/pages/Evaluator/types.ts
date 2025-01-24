@@ -28,6 +28,8 @@ export interface Dataset {
   job_status: string;
   inference_type: string;
   local_export_path: string;
+  output_key: string;
+  output_value: string;
 }
 
 export interface TopicEvaluationResult {

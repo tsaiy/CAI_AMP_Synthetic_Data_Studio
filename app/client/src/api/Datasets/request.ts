@@ -4,6 +4,9 @@ export interface DatasetExportRequest {
     export_type: ExportType[];
     file_path: string;
     hf_config?: HuggingFaceConfiguration;
+    display_name: string;
+    output_key: string;
+    output_value: string;
 }
 
 export interface HuggingFaceConfiguration {
