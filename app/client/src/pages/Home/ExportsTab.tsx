@@ -17,7 +17,7 @@ const StyledButton = styled(Button)`
     width: fit-content;
 `;
 
-const CDSW_DOMAIN = import.meta.env.WITE_CDSW_DOMAIN;
+const CDSW_DOMAIN = import.meta.env.VITE_CDSW_DOMAIN;
 const PROJECT_OWNER = import.meta.env.VITE_PROJECT_OWNER;
 const PROJECT_NAME = import.meta.env.VITE_CDSW_PROJECT;
 const JOBS_URL = `https://${CDSW_DOMAIN}/${PROJECT_OWNER}/${PROJECT_NAME}/jobs`;

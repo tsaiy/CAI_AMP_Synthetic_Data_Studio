@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 
 // In prod env, these values are expected from AMP runtime
 const prodEnvVar = {
+  'import.meta.env.VITE_AMP_URL': JSON.stringify(''),
   'import.meta.env.VITE_CDSW_PROJECT': JSON.stringify(process.env.CDSW_PROJECT),
   'import.meta.env.VITE_CDSW_PROJECT_URL': JSON.stringify(process.env.CDSW_PROJECT_URL),
   'import.meta.env.VITE_PROJECT_OWNER': JSON.stringify(process.env.PROJECT_OWNER),
