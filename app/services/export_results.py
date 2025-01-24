@@ -82,9 +82,9 @@ class Export_Service:
         
         # Define features for the dataset
         features = Features({
+            'Seeds': Value('string'),
             output_key: Value('string'),
-            output_value: Value('string'),
-            'solution': Value('string')
+            output_value: Value('string')
         })
         
         # Create the dataset

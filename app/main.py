@@ -30,7 +30,7 @@ UPLOAD_DIR = ROOT_DIR / "document_upload"
 sys.path.append(str(ROOT_DIR))
 
 from app.services.evaluator_service import EvaluatorService
-from app.models.request_models import SynthesisRequest, EvaluationRequest, Export_synth, ModelParameters, CustomPromptRequest, JsonDataSize
+from app.models.request_models import SynthesisRequest, EvaluationRequest, Export_synth, ModelParameters, CustomPromptRequest, JsonDataSize, RelativePath
 from app.services.synthesis_service import SynthesisService
 from app.services.export_results import Export_Service
 from app.core.prompt_templates import PromptBuilder, PromptHandler
@@ -226,6 +226,21 @@ synthesis_service = SynthesisService()
 evaluator_service = EvaluatorService()
 export_service = Export_Service()
 db_manager = DatabaseManager()
+
+
+
+@app.post("/get_project_files", include_in_schema=True, responses = responses, 
+           description = "get project file details")
+async def get_project_files(request:RelativePath):
+    if os.getenv("IS_COMPOSABLE"):
+        root_path = "synthetic-data-studio"
+    else:
+        root_path = ""
+    final_path = os.path.join(root_path, request.path)
+
+    return client_cml.list_project_files(project_id, final_path)
+    
+    
 
 @app.post("/json/dataset_size", include_in_schema=True, responses = responses,
           description = "get total dataset size for jsons")

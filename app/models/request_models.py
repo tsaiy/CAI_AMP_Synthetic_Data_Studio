@@ -105,6 +105,9 @@ class JsonDataSize(BaseModel):
     input_path: List[str]
     input_key: Optional[str] = 'Prompt'
 
+class RelativePath(BaseModel):
+    path: Optional[str] = ""
+    
 
 class SynthesisRequest(BaseModel):
     """Main request model for synthesis"""
