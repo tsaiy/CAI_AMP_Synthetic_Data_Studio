@@ -21,6 +21,31 @@ const StyledButton = styled(Button)`
     width: fit-content;
 `;
 
+const StyledTable = styled(Table)`
+  font-family: Roboto, -apple-system, 'Segoe UI', sans-serif;
+  color:  #5a656d;
+  .ant-table-thead > tr > th {
+    color: #5a656d;
+    border-bottom: 1px solid #eaebec;
+    font-weight: 500;
+    text-align: left;
+    // background: #ffffff;
+    border-bottom: 1px solid #eaebec;
+    transition: background 0.3s ease; 
+  }
+  .ant-table-row > td.ant-table-cell {
+    padding: 8px;
+    padding-left: 16px;
+    font-size: 13px;
+    font-family: Roboto, -apple-system, 'Segoe UI', sans-serif;
+    color:  #5a656d;
+    .ant-typography {
+      font-size: 13px;
+      font-family: Roboto, -apple-system, 'Segoe UI', sans-serif;
+    }
+  }
+`;
+
 const columns: TableProps<ExportResponse>['columns'] = [
     {
         key: 'job_status',
@@ -66,7 +91,7 @@ const columns: TableProps<ExportResponse>['columns'] = [
 
 const ExportsTab: React.FC = () => {
     const { isLoading, isError, data, error } = useGetExportJobs();
-    const { isLoading: isJobsLoading, isError: isJobsError, data: jobsData, error: jobsError } = useGetJobs();
+    // const { isLoading: isJobsLoading, isError: isJobsError, data: jobsData, error: jobsError } = useGetJobs();
     const [searchTerm, setSearchTerm] = React.useState<string>('');
 
     const filteredData = React.useMemo(() => {
@@ -86,9 +111,14 @@ const ExportsTab: React.FC = () => {
                         style={{ width: 350 }} />
                 </Col>
             </Row>
-            <Table<ExportResponse>
+            <StyledTable
                 rowKey={row => row.id}
                 columns={columns}
+                tableLayout="fixed"
+                pagination={{
+                    showSizeChanger: true,
+                    showQuickJumper: true
+                }}
                 loading={isLoading}
                 dataSource={filteredData}
             />
