@@ -1,3 +1,4 @@
+import { JobStatus } from "../../types";
 
 export interface ExportResponse {
     display_export_name: string;
@@ -10,5 +11,3 @@ export interface ExportResponse {
     local_export_path: string;
     timestamp: string;
 }
-
-export type JobStatus = "success" | "failure" | "in progress" | "ENGINE_FAILED";

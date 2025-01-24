@@ -1,13 +1,17 @@
-import { Button, Col, Flex, Row, Table, TableProps, Tooltip, Typography } from 'antd';
+import { Button, Col, Flex, Input, Row, Table, TableProps, Tooltip, Typography } from 'antd';
 import React from 'react';
 import DateTime from '../../components/DateTime/DateTime';
 import { useGetExportJobs } from '../../api/Export/export';
-import { ExportResponse, JobStatus } from '../../api/Export/response';
-import { CheckCircleTwoTone, CodeOutlined, ExclamationCircleTwoTone, LoadingOutlined } from '@ant-design/icons';
+import { ExportResponse } from '../../api/Export/response';
 import { sortItemsByKey } from '../../utils/sortutils';
 import styled from 'styled-components';
+import { JobStatus } from '../../types';
+import JobStatusIcon from '../../components/JobStatus/jobStatusIcon';
+import { useGetJobs } from '../../api/Jobs/jobs';
 
+const { Search } = Input;
 const { Text, Link } = Typography;
+
 const Container = styled.div`
   background-color: #ffffff;
   padding: 1rem;
@@ -17,25 +21,16 @@ const StyledButton = styled(Button)`
     width: fit-content;
 `;
 
-const CDSW_DOMAIN = import.meta.env.VITE_CDSW_DOMAIN;
-const PROJECT_OWNER = import.meta.env.VITE_PROJECT_OWNER;
-const PROJECT_NAME = import.meta.env.VITE_CDSW_PROJECT;
-const JOBS_URL = `https://${CDSW_DOMAIN}/${PROJECT_OWNER}/${PROJECT_NAME}/jobs`;
-
-const jobStatus = (status: JobStatus) => {
-    switch (status) {
-        case "success":
-            return <CheckCircleTwoTone twoToneColor="#52c41a" />;
-        case 'ENGINE_FAILED':
-        case 'failure':
-            return <Tooltip title={`Error during job execution`}><ExclamationCircleTwoTone twoToneColor="red" /></Tooltip>;
-        case 'in progress':
-            return <LoadingOutlined spin />;
-        default:
-            return <Tooltip title={`Error during job execution`}><ExclamationCircleTwoTone twoToneColor="red" /></Tooltip>;
-    }
-};
 const columns: TableProps<ExportResponse>['columns'] = [
+    {
+        key: 'job_status',
+        title: 'Status',
+        dataIndex: 'timestamp',
+        sorter: sortItemsByKey('job_status'),
+        render: (status: JobStatus) => <Flex justify='center' align='center'>
+            <JobStatusIcon status={status}></JobStatusIcon>
+        </Flex>
+    },
     {
         key: 'display_name',
         title: 'Source Dataset',
@@ -52,12 +47,6 @@ const columns: TableProps<ExportResponse>['columns'] = [
         dataIndex: 'hf_export_path',
         sorter: sortItemsByKey('hf_export_path'),
         render: (exportPath) => <Link href={exportPath} target="_blank">{exportPath}</Link>
-    }, {
-        key: 'timestamp',
-        title: 'Create Time',
-        dataIndex: 'timestamp',
-        sorter: sortItemsByKey('timestamp'),
-        render: (timestamp) => <DateTime dateTime={timestamp}></DateTime>
     },
     {
         key: 'job_name',
@@ -67,31 +56,41 @@ const columns: TableProps<ExportResponse>['columns'] = [
         render: (jobName) => <Text>{jobName}</Text>
     },
     {
-        key: 'job_status',
-        title: 'Status',
+        key: 'timestamp',
+        title: 'Create Time',
         dataIndex: 'timestamp',
-        sorter: sortItemsByKey('job_status'),
-        render: (status: JobStatus) => <Flex justify='center' align='center'>
-            {jobStatus(status)}
-        </Flex>
-    },
+        sorter: sortItemsByKey('timestamp'),
+        render: (timestamp) => <DateTime dateTime={timestamp}></DateTime>
+    }
 ];
 
 const ExportsTab: React.FC = () => {
     const { isLoading, isError, data, error } = useGetExportJobs();
+    const { isLoading: isJobsLoading, isError: isJobsError, data: jobsData, error: jobsError } = useGetJobs();
+    const [searchTerm, setSearchTerm] = React.useState<string>('');
+
+    const filteredData = React.useMemo(() => {
+        if (!data) return [];
+        return data.filter((job: ExportResponse) =>
+            job.display_name?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [data, searchTerm]);
 
     return (
         <Container>
             <Row style={{ marginBottom: 16 }}>
                 <Col span={24}>
-                    <StyledButton icon={<CodeOutlined />} href={JOBS_URL}>Jobs</StyledButton>
+                    <Search
+                        placeholder="Search Exports"
+                        onChange={(event) => setSearchTerm(event.target.value)}
+                        style={{ width: 350 }} />
                 </Col>
             </Row>
             <Table<ExportResponse>
                 rowKey={row => row.id}
                 columns={columns}
                 loading={isLoading}
-                dataSource={data || []}
+                dataSource={filteredData}
             />
         </Container>
     );
