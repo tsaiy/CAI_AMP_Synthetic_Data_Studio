@@ -82,7 +82,7 @@ const columns: TableProps<ExportResponse>['columns'] = [
     {
         key: 'job_name',
         title: 'Job Name',
-        dataIndex: 'job_id',
+        dataIndex: 'job_name',
         sorter: sortItemsByKey('job_name'),
         render: (jobName) => <Text>{jobName}</Text>
     },
