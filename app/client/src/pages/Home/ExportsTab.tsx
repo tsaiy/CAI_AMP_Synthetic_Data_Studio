@@ -53,7 +53,7 @@ const columns: TableProps<ExportResponse>['columns'] = [
         key: 'job_status',
         title: 'Status',
         dataIndex: 'job_status',
-        width: 30,
+        width: 80,
         sorter: sortItemsByKey('job_status'),
         render: (status: JobStatus) => <Flex justify='center' align='center'>
             <JobStatusIcon status={status}></JobStatusIcon>
