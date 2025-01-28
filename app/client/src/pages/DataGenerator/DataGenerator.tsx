@@ -27,7 +27,7 @@ const Wizard = styled(Steps)`
     padding: 15px 0px 25px 0px;
 `;
 const WizardButton = styled(Button)`
-    font-size: 18px;
+    // font-size: 18px;
     font-weight: 300;
     padding: 20px 14px;
 `;

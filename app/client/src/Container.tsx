@@ -85,7 +85,7 @@ const Container = () => {
                   <StyledImg src={clouderaIcon} height={48} />
                   <BrandingTextContainer align='start' justify='center' vertical>
                     <img src={clouderaText} height={12} />
-                    <BrandingTitle>{'Synthetic Data Generator'}</BrandingTitle>
+                    <BrandingTitle>{'Synthetic Data Studio'}</BrandingTitle>
                   </BrandingTextContainer>
                 </BrandingContainer>
                 <Menu

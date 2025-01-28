@@ -1,11 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Flex, Form, Input, Select, Typography } from 'antd';
 import styled from 'styled-components';
-
+import { File, WorkflowType } from './types';
 import { useFetchModels } from '../../api/api';
 import { MODEL_PROVIDER_LABELS } from './constants';
 import { ModelProviders, ModelProvidersDropdownOpts } from './types';
 import { useWizardCtx } from './utils';
+import FileSelectorButton from './FileSelectorButton';
 
 const StepContainer = styled(Flex)`
     background: white;
@@ -20,10 +21,15 @@ export const StyledTextArea = styled(Input.TextArea)`
     min-height: 175px !important;
 `;
 
-const USECASE_OPTIONS = [
+export const USECASE_OPTIONS = [
     { label: 'Code Generation', value: 'code_generation' },
     { label: 'Text to SQL', value: 'text2sql' },
     { label: 'Custom', value: 'custom' }
+];
+
+export const WORKFLOW_OPTIONS = [
+    { label: 'Supervised Fine-Tuning', value: 'supervised-fine-tuning' },
+    { label: 'Custom Data Generation', value: 'custom' }
 ];
 
 export const MODEL_TYPE_OPTIONS: ModelProvidersDropdownOpts = [
@@ -31,12 +37,12 @@ export const MODEL_TYPE_OPTIONS: ModelProvidersDropdownOpts = [
     { label: MODEL_PROVIDER_LABELS[ModelProviders.CAII], value: ModelProviders.CAII },
 ];
 
-// test
 const Configure = () => {
     const form = Form.useFormInstance();
     const formData = Form.useWatch((values) => values, form);
     const { setIsStepValid } = useWizardCtx();
     const { data } = useFetchModels();
+    const [selectedFiles, setSelectedFiles] = useState([]);
 
     const validateForm = () => {
         const values = form.getFieldsValue();
@@ -61,6 +67,30 @@ const Configure = () => {
       span: 16
     }
 
+    const onAddFiles = (files: File[]) => {
+        const paths = files.map((file: File) => (
+            { 
+                value: file?.path,
+                label: file.name
+            }));
+        console.log('paths', paths);
+        setSelectedFiles(paths);
+        form.setFieldValue('doc_paths', paths);
+        console.log('values', form.getFieldsValue());
+    }
+
+    const onFilesChange = (selections: any) => {
+        console.log('onFilesChange', selections);
+        const paths = selections.map((file: File) => (
+            { 
+                value: file.name,
+                label: file.name
+            }));
+        setSelectedFiles(paths);
+        form.setFieldValue('doc_paths', paths);    
+    }
+    
+
     return (
         <StepContainer justify='center'>
             <FormContainer vertical>
@@ -75,31 +105,6 @@ const Configure = () => {
                 >
                     <Input placeholder='Type a display name'/>
                 </Form.Item>
-                <Form.Item
-                    name='use_case'
-                    label='Usecase'
-                    rules={[{ required: true }]}
-                    tooltip='A specialized usecase for your dataset'
-                    labelCol={labelCol}
-                >
-                    <Select placeholder={'Select a use case'}>
-                        {USECASE_OPTIONS.map(option => 
-                            <Select.Option key={option.value} value={option.value}>
-                                {option.label}
-                            </Select.Option>
-                        )}
-                    </Select>
-                </Form.Item>
-                { formData?.use_case === 'custom' && 
-                    <Form.Item
-                    name='custom_prompt_instructions'
-                    label='Custom Prompt Instructions'
-                    labelCol={labelCol}
-                >
-                    <StyledTextArea autoSize placeholder={'Enter instructions for a custom prompt'}/>
-
-                </Form.Item>
-                }
                 <Form.Item
                     name='inference_type'
                     label='Model Provider'
@@ -168,6 +173,83 @@ const Configure = () => {
                     </>
 
                 )}
+                <Form.Item
+                    name='use_case'
+                    label='Use Case'
+                    rules={[{ required: true }]}
+                    tooltip='A specialized usecase for your dataset'
+                    labelCol={labelCol}
+                    shouldUpdate
+                >
+                    <Select placeholder={'Select a use case'}>
+                        {USECASE_OPTIONS.map(option => 
+                            <Select.Option key={option.value} value={option.value}>
+                                {option.label}
+                            </Select.Option>
+                        )}
+                    </Select>
+                </Form.Item>
+                <Form.Item
+                    name='workflow_type'
+                    label='Workflow'
+                    rules={[{ required: true }]}
+                    tooltip='A specialized workflow for your dataset'
+                    labelCol={labelCol}
+                    shouldUpdate
+                >
+                    <Select placeholder={'Select a workflow'}>
+                        {WORKFLOW_OPTIONS.map(option => 
+                            <Select.Option key={option.value} value={option.value}>
+                                {option.label}
+                            </Select.Option>
+                        )}
+                    </Select>
+                </Form.Item>
+
+                {(
+                    formData?.workflow_type === WorkflowType.SUPERVISED_FINE_TUNING || 
+                    formData?.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) && 
+                <Form.Item
+                    name='doc_paths'
+                    label='Files'
+                    labelCol={labelCol}
+                    shouldUpdate
+                >
+                    <Flex>
+                        <Select placeholder={'Select project files'} mode="multiple" value={selectedFiles} onChange={onFilesChange}/>    
+                        <FileSelectorButton onAddFiles={onAddFiles} workflowType={form.getFieldValue('use_case')} />
+                    </Flex>
+                </Form.Item>}
+                {formData?.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION && 
+                <>
+                    <Form.Item
+                        name='input_key'
+                        label='Input Key'
+                        labelCol={labelCol}
+                        rules={[{ required: true }]}
+                        shouldUpdate
+                    >
+                        <Input />
+                    </Form.Item>
+                    <Form.Item
+                        name='output_key'
+                        label='Output Key'
+                        labelCol={labelCol}
+                        rules={[{ required: true }]}
+                        shouldUpdate
+                    >
+                        <Input />
+                    </Form.Item>
+                    <Form.Item
+                        name='output_value'
+                        label='Output Value'
+                        labelCol={labelCol}
+                        rules={[{ required: true }]}
+                        shouldUpdate
+                    >
+                        <Input />
+                    </Form.Item>
+                </>}
             </FormContainer>
         </StepContainer>
     )
