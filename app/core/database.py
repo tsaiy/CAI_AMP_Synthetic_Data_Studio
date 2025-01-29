@@ -101,8 +101,7 @@ class DatabaseManager:
                         hf_export_path TEXT,
                         job_id TEXT,
                         job_name TEXT UNIQUE,
-                        job_status TEXT,
-                        username TEXT
+                        job_status TEXT
                     )
                 """)
                 
@@ -359,8 +358,7 @@ class DatabaseManager:
                         hf_export_path,
                         job_id,
                         job_name,
-                        job_status,
-                        username
+                        job_status
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """
                 
@@ -373,7 +371,6 @@ class DatabaseManager:
                     metadata.get('job_id', None),
                     metadata.get('job_name', None),
                     metadata.get('job_status', None)
-                    metadata.get('username', None)
                 )
                 
                 cursor.execute(query, values)

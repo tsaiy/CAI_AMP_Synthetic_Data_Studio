@@ -592,8 +592,7 @@ async def export_results(request:Export_synth):
                     "hf_export_path": export_path,
                     "job_id":job_run.job_id,
                     "job_name": job_name,
-                    "job_status": job_status,
-                    "username": job_run.creator.username}
+                    "job_status": job_status}
         
         db_manager.save_export_metadata(metadata)
 
