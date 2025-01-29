@@ -1,5 +1,5 @@
 import Layout from 'antd/es/layout';
-import { ConfigProvider, Flex, Menu, notification, Typography } from 'antd';
+import { ConfigProvider, Flex, Menu, Typography } from 'antd';
 import type { MenuProps } from 'antd';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
@@ -53,13 +53,7 @@ const pages: MenuItem[] = [
     label: (
       <Link to={`${Pages.GENERATOR}`}>{LABELS[Pages.GENERATOR]}</Link>
     ),
-  },
-  {
-    key: Pages.HISTORY,
-    label: (
-      <Link to={`${Pages.HISTORY}`}>{LABELS[Pages.HISTORY]}</Link>
-    ),
-  },
+  }
 ]
 
 const NotificationContext = React.createContext({messagePlacement: 'topRight'});

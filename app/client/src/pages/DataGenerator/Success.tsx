@@ -171,9 +171,6 @@ const Success: FC<SuccessProps> = ({ formData, isDemo = true }) => {
             />
 
             <ButtonGroup gap={8}>
-                <StyledButton icon={<FormatListBulletedIcon/>}>
-                    <Link to={Pages.HISTORY}>{'View Dataset List'}</Link>
-                </StyledButton>
                 {isDemo && (
                     <StyledButton icon={<PageviewOutlined/>}>
                         <a href={getFilesURL(formData?.export_path)} target='_blank' rel='noreferrer'>

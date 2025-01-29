@@ -1,5 +1,5 @@
 import { Form, Input } from "antd";
-import { HuggingFaceConfiguration } from "../../../api/Datasets/request";
+import { HuggingFaceConfiguration } from "../../api/Datasets/request";
 import { useCallback, useEffect } from "react";
 
 const HF_TOKEN = import.meta.env.VITE_HF_TOKEN;
@@ -52,13 +52,16 @@ export default function HuggingFaceExport({ setExportConfiguration, isExportConf
                 name="huggingfaceExportConfiguration"
                 labelCol={{ span: 8 }}
                 wrapperCol={{ span: 14 }}
-                initialValues={{...setInitialExportConfiguration(), remember: true}}
+                initialValues={{ ...setInitialExportConfiguration(), remember: true }}
                 autoComplete="on">
                 <Form.Item<HuggingFaceConfiguration>
                     label="Repository Name"
                     name="hf_repo_name"
                     tooltip={{ title: "The name of the repository you would like to create" }}
-                    rules={[{ required: true, message: "Repository Name is required!" }]}>
+                    rules={[
+                        { required: true, message: "Repository Name is required!" },
+                        { pattern: /^[a-zA-Z0-9-_]+$/, message: "Repository Name can only include letters, numbers, hyphens, and underscores!" }
+                    ]}>
                     <Input />
                 </Form.Item>
                 <Form.Item<HuggingFaceConfiguration>
