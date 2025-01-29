@@ -16,12 +16,10 @@ const FileSelectorButton: React.FC<Props> = ({ onAddFiles, workflowType }) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
 
   const onSelectedRows = (selections: File[]) => {
-    console.log('onSelectedRows', selections);
     setSelectedFiles(selections);
   };
 
   const onFinish = () => {
-    console.log('onFinish', selectedFiles);
     setShowModal(false);
     onAddFiles(selectedFiles);
     
