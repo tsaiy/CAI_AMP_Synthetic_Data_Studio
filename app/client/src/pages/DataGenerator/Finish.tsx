@@ -12,8 +12,9 @@ import styled from 'styled-components';
 import PCModalContent from './PCModalContent'
 import { useTriggerDatagen } from './../../api/api'
 import { DEMO_MODE_THRESHOLD } from './constants'
-import { GenDatasetResponse, QuestionSolution } from './types';
+import { GenDatasetResponse, QuestionSolution, WorkflowType } from './types';
 import { Pages } from '../../types';
+import { isEmpty } from 'lodash';
 
 const { Title } = Typography;
 
@@ -111,7 +112,18 @@ const Finish = () => {
     const isDemo = isDemoMode(num_questions, topics)
 
     useEffect(() => { 
-        const formValues = form.getFieldsValue(true)
+        const formValues = form.getFieldsValue(true);
+        const doc_paths = formValues.doc_paths;
+        if (!isEmpty(doc_paths)) {
+            if (formValues.workflow_type === WorkflowType.SUPERVISED_FINE_TUNING) {
+                formValues.doc_paths = doc_paths.map(item => item.value);
+            } else if (formValues.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) {
+                formValues.input_path = doc_paths.map(item => item.value);
+                delete formValues.doc_paths;
+            }
+        } else {
+            delete formValues.doc_paths;
+        }
         const args = {...formValues, is_demo: isDemo }
         triggerPost(args)
     }, []);
