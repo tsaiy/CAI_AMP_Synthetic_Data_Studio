@@ -113,7 +113,7 @@ class SynthesisRequest(BaseModel):
     """Main request model for synthesis"""
     use_case: UseCase | None = Field(default=UseCase.CUSTOM)  # Optional with default=CUSTOM
     model_id: str
-    num_questions: int | None = Field(default=1, gt=0, le=500)  # Optional with default=1
+    num_questions: int | None = Field(default=1, gt=0)  # Optional with default=1
     technique: Technique | None = Field(default=Technique.SFT)  # Optional with default=SFT
     is_demo:bool = True
     
@@ -234,7 +234,7 @@ class EvaluationRequest(BaseModel):
     """Request model for evaluating generated QA pairs"""
     use_case: UseCase
     model_id: str
-    import_path: str
+    import_path: Optional[str] = None
     import_type: str = "local" 
     is_demo:bool = True
     inference_type :Optional[str] = "aws_bedrock"

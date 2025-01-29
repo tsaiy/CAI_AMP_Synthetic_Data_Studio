@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from typing import Dict, List, Optional
+import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
 import time
@@ -37,6 +38,7 @@ from app.core.prompt_templates import PromptBuilder, PromptHandler
 from app.core.config import UseCase, USE_CASE_CONFIGS
 from app.core.database import DatabaseManager
 from app.core.exceptions import APIError, InvalidModelError, ModelHandlerError
+from app.services.model_alignment import ModelAlignment
 from app.core.model_handlers import create_handler
 from app.services.aws_bedrock import get_bedrock_client
 
@@ -536,7 +538,51 @@ async def evaluate_examples(request: EvaluationRequest):
 
         return {"job_name": job_name, "job_id": job_run.job_id}
 
+
+@app.post("/model/alignment",
+          include_in_schema=True,
+          responses=responses,
+          description="Generate model alignment data in DPO and KTO formats")
+async def generate_alignment_data(
+    synthesis_request: SynthesisRequest,
+    evaluation_request: EvaluationRequest,
+    job_name: str = None,
+    is_demo: bool = True
+) -> Dict:
+    """
+    Generate model alignment data using synthesis and evaluation services.
+    
+    Args:
+        synthesis_request: Parameters for synthesis generation
+        evaluation_request: Parameters for evaluation
+        job_name: Optional job identifier for tracking
+        is_demo: Whether this is a demo run
         
+    Returns:
+        Dictionary containing DPO and KTO formatted data
+    """
+    try:
+        alignment_service = ModelAlignment()
+        result = await alignment_service.model_alignment(
+            synthesis_request=synthesis_request,
+            evaluation_request=evaluation_request,
+            job_name=job_name,
+            is_demo=is_demo
+        )
+
+        
+        return {
+            "status": "success",
+            "dpo": result["dpo"],
+            "kto": result["kto"]
+        }
+        
+    except APIError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
 
 @app.post("/export_results", include_in_schema=True)
 async def export_results(request:Export_synth):
