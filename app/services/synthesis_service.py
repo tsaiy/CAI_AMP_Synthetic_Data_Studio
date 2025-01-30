@@ -337,7 +337,7 @@ class SynthesisService:
             model_id=request.model_id,
             use_case=request.use_case,
             input=input,
-            example_custom=request.example_custom or [],
+            examples=request.examples or [],
             schema=request.schema,
             custom_prompt=request.custom_prompt,
         )
@@ -426,7 +426,7 @@ class SynthesisService:
             output_path['local']= file_path
 
             custom_prompt_str = PromptHandler.get_default_custom_prompt(request.use_case, request.custom_prompt)  
-            examples_str = PromptHandler.get_default_single_generate_example(request.use_case,request.examples)
+            examples_str = PromptHandler.get_default_example(request.use_case,request.examples)
             schema_str = PromptHandler.get_default_schema(request.use_case, request.schema)
             
             metadata = {
