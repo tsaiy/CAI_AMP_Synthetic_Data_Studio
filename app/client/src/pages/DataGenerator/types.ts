@@ -106,3 +106,8 @@ export enum WorkflowType {
     SUPERVISED_FINE_TUNING = 'supervised-fine-tuning',
     CUSTOM_DATA_GENERATION = "custom"
 }
+
+export interface CustomResult {
+    question: string;
+    solution: string;
+}

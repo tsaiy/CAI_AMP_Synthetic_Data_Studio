@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react';
 import { WizardCtxObj } from './types';
 import moment from 'moment';
 import toString from 'lodash/toString';
+import { File } from './types';
 
 export const WizardCtx = createContext<WizardCtxObj | null>(null);
 export const useWizardCtx = (): WizardCtxObj => {

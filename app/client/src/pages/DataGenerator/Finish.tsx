@@ -15,6 +15,7 @@ import { DEMO_MODE_THRESHOLD } from './constants'
 import { GenDatasetResponse, QuestionSolution, WorkflowType } from './types';
 import { Pages } from '../../types';
 import { isEmpty } from 'lodash';
+import CustomResultTable from './CustomResultTable';
 
 const { Title } = Typography;
 
@@ -110,6 +111,7 @@ const Finish = () => {
     const { data: genDatasetResp, loading, error: generationError, triggerPost } = useTriggerDatagen<GenDatasetResponse>();
     const { num_questions, topics } = form.getFieldsValue(true)
     const isDemo = isDemoMode(num_questions, topics)
+    console.log('genDatasetResp', genDatasetResp);
 
     useEffect(() => { 
         const formValues = form.getFieldsValue(true);
@@ -120,20 +122,30 @@ const Finish = () => {
             } else if (formValues.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) {
                 formValues.input_path = doc_paths.map(item => item.value);
                 delete formValues.doc_paths;
+                formValues.example_custom = formValues.examples;
+                delete formValues.examples;
+                formValues.use_case = 'custom';
             }
         } else {
             delete formValues.doc_paths;
         }
         const args = {...formValues, is_demo: isDemo }
+        console.log('generate values', args);
         triggerPost(args)
     }, []);
 
-    const topicTabs = genDatasetResp?.results && Object.keys(genDatasetResp.results).map((topic, i) => ({
-        key: `${topic}-${i}`,
-        label: topic,
-        value: topic,
-        children: <TopicsTable formData={genDatasetResp} topic={topic} />
-    }));
+    const formValues = form.getFieldsValue(true);
+    let topicTabs = [];
+    if (formValues.workflow_type !== WorkflowType.CUSTOM_DATA_GENERATION) {
+        topicTabs = genDatasetResp?.results && Object.keys(genDatasetResp.results).map((topic, i) => ({
+            key: `${topic}-${i}`,
+            label: topic,
+            value: topic,
+            children: <TopicsTable formData={genDatasetResp} topic={topic} />
+        }));
+    }
+    console.log('topicTabs', topicTabs);
+    
     const nextStepsListPreview = [
         {
             avatar: '',
@@ -226,11 +238,14 @@ const Finish = () => {
                     </StyledButton>
                 </Flex>
             )}
-            {isDemo && (
+            {isDemo && formValues.workflow_type !== WorkflowType.CUSTOM_DATA_GENERATION && (
                 <TabsContainer title={'Generated Dataset'}>
                     <Tabs tabPosition='left' items={topicTabs}/>
                 </TabsContainer>
             )}
+            {formValues.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION && 
+                <CustomResultTable results={genDatasetResp?.results || []} />
+            }
             <Divider/>
             <Title level={2}>{'Next Steps'}</Title>
             <List

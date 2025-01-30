@@ -47,8 +47,11 @@ const Configure = () => {
     const validateForm = () => {
         const values = form.getFieldsValue();
         delete values.custom_prompt_instructions;
+        delete values.workflow_type;
+        console.log('values', values);
         
         const allFieldsFilled = Object.values(values).every(value => Boolean(value));
+        console.log('allFieldsFilled', allFieldsFilled);
         if (allFieldsFilled) {
             setIsStepValid && setIsStepValid(true)
         } else {
@@ -73,14 +76,12 @@ const Configure = () => {
                 value: file?.path,
                 label: file.name
             }));
-        console.log('paths', paths);
         setSelectedFiles(paths);
         form.setFieldValue('doc_paths', paths);
         console.log('values', form.getFieldsValue());
     }
 
     const onFilesChange = (selections: any) => {
-        console.log('onFilesChange', selections);
         const paths = selections.map((file: File) => (
             { 
                 value: file.name,
@@ -192,7 +193,6 @@ const Configure = () => {
                 <Form.Item
                     name='workflow_type'
                     label='Workflow'
-                    rules={[{ required: true }]}
                     tooltip='A specialized workflow for your dataset'
                     labelCol={labelCol}
                     shouldUpdate
@@ -216,7 +216,7 @@ const Configure = () => {
                     shouldUpdate
                 >
                     <Flex>
-                        <Select placeholder={'Select project files'} mode="multiple" value={selectedFiles} onChange={onFilesChange}/>    
+                        <Select placeholder={'Select project files'} mode="multiple" value={selectedFiles} onChange={onFilesChange} allowClear/>    
                         <FileSelectorButton onAddFiles={onAddFiles} workflowType={form.getFieldValue('use_case')} />
                     </Flex>
                 </Form.Item>}
