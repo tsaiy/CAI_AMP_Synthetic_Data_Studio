@@ -23,6 +23,10 @@ def get_bedrock_client():
         },
     )
     bedrock_client = boto3.client(service_name="bedrock-runtime", region_name=region, config=retry_config)
+
+    # bedrock_client = boto3.Session(profile_name='cu_manowar_dev').client(
+    #         "bedrock-runtime", region_name="us-west-2"
+    #     )
     
     print("boto3 Bedrock client successfully created!")
     print(bedrock_client._endpoint)

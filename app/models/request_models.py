@@ -44,6 +44,7 @@ class Example_eval(BaseModel):
         }
     )
 
+
 class S3Config(BaseModel):
     """S3 export configuration"""
     bucket: str
@@ -127,6 +128,7 @@ class SynthesisRequest(BaseModel):
     output_key: Optional[str] = 'Prompt'
     output_value: Optional[str] = 'Completion'
     examples: Optional[List[Example]] = Field(default=None)  # If None, will use default examples
+    example_custom: Optional[List[str]] = None
     schema: Optional[str] = None  # Added schema field
     custom_prompt: Optional[str] = None 
     display_name: Optional[str] = None 

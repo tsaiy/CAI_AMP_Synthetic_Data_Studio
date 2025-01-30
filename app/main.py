@@ -919,6 +919,57 @@ async def get_eval_examples(use_case: UseCase):
     
     return {"examples": examples}
 
+@app.get("/{use_case}/custom_gen_examples")
+async def get_custom_gen_examples(use_case: UseCase):
+    
+                
+    if use_case == UseCase.CODE_GENERATION:
+        examples = [
+        """#Here's how to create and modify a list in Python:
+        # Create an empty list\n
+        my_list = []
+        #  Add elements using append\n
+        my_list.append(1)\n
+        my_list.append(2)\n\n
+        # # Create a list with initial elements
+        my_list = [1, 2, 3]
+        """,
+
+        """#Here's how to implement a basic stack:class Stack:
+        def __init__(self):
+        self.items = []
+        def push(self, item):
+        self.items.append(item)
+        def pop(self):
+        if not self.is_empty():
+        return self.items.pop()
+        def is_empty(self):
+        return len(self.items) == 0"""
+    ]
+        
+        
+    
+    elif use_case == UseCase.TEXT2SQL:
+
+        examples = [ """
+                    SELECT e.name, d.department_name
+                    FROM employees e
+                    JOIN departments d ON 
+                    e.department_id = d.id;""",
+
+                    """SELECT *
+                        FROM employees
+                        WHERE salary > 50000;"""
+        ]
+        
+        
+    elif use_case == UseCase.CUSTOM:
+        examples = []
+        
+                   
+        
+    return {"examples": examples}
+
 @app.get("/health")
 async def health_check():
     """Get API health status"""

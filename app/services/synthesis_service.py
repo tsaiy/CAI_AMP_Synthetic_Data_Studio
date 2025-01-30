@@ -336,7 +336,7 @@ class SynthesisService:
             model_id=request.model_id,
             use_case=request.use_case,
             input=input,
-            examples=request.examples or [],
+            example_custom=request.example_custom or [],
             schema=request.schema,
             custom_prompt=request.custom_prompt,
         )
@@ -383,7 +383,8 @@ class SynthesisService:
                 # Wait for all futures to complete
                 final_output = await asyncio.gather(*input_futures)
          
-
+            
+            
             timestamp = datetime.now(timezone.utc).isoformat()
             time_file = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%f')[:-3] 
             mode_suffix = "test" if is_demo else "final"

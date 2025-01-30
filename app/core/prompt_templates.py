@@ -422,6 +422,7 @@ class ModelPrompts:
             final_prompt = custom_prompt_str + "\n" + final_instruction 
         return final_prompt
     
+    
     @staticmethod
     def create_custom_prompt(model_id: str,
         custom_prompt:str
@@ -472,13 +473,13 @@ class ModelPrompts:
     def generate_result_prompt(model_id: str,
         use_case: UseCase,
         input: str,
-        examples: List[str],
+        example_custom: List[str],
         schema = Optional[str],
         custom_prompt = Optional[str]
     ) -> str:
         
         
-        examples_str = PromptHandler.get_default_single_generate_example(use_case, examples)
+        examples_str = PromptHandler.get_default_single_generate_example(use_case, example_custom)
         
         #print(examples, '\n', examples_str)
         schema_str = PromptHandler.get_default_schema(use_case, schema)
@@ -574,12 +575,12 @@ class PromptBuilder:
     def build_generate_result_prompt(model_id: str,
         use_case: UseCase,
         input: str,
-        examples: List[Example],
+        example_custom: List[str],
         schema = Optional[str],
         custom_prompt = Optional[str]
     ) -> str:
         
-        return ModelPrompts.generate_result_prompt(model_id, use_case, input, examples, schema, custom_prompt)
+        return ModelPrompts.generate_result_prompt(model_id, use_case, input, example_custom, schema, custom_prompt)
     
     @staticmethod
     def build_custom_prompt(model_id: str,
