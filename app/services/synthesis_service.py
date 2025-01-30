@@ -25,6 +25,7 @@ from app.services.doc_extraction import DocumentProcessor
 import logging
 from logging.handlers import RotatingFileHandler
 import traceback
+import uuid 
 
 
 class SynthesisService:
@@ -347,6 +348,21 @@ class SynthesisService:
     async def generate_result(self, request: SynthesisRequest , job_name = None, is_demo: bool = True) -> Dict:
         try:
             self.logger.info(f"Starting example generation - Demo Mode: {is_demo}")
+            # json_str = request.model_dump_json()  
+            # random_id = uuid.uuid4().hex[:4]  # Generate a random 8-character ID
+        
+
+        
+
+            # params = json.loads(json_str)
+           
+    
+            # # Create unique filename with UUID
+            # file_name = f"job_args_{random_id}.json"
+            
+            # # Write to local file
+            # with open(file_name, 'w') as f:
+            #     json.dump(params, f)
                 
             # Use default parameters if none provided
             model_params = request.model_params or ModelParameters()
@@ -423,7 +439,8 @@ class SynthesisService:
                 'generate_file_name': os.path.basename(output_path['local']),
                 'display_name': request.display_name,
                 'output_path': output_path,
-                
+                'output_key':request.output_key,
+                'output_value':request.output_value,
                 'examples': examples_str,
                 "total_count":len(inputs),
                 'schema': schema_str
