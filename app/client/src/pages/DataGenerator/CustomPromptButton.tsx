@@ -26,7 +26,6 @@ const CustomPromptButton: React.FC<Props> = ({ model_id, inference_type, caii_en
   const mutation = useMutation({
     mutationFn: fetchCustomPrompt
   });
-  console.log('mutation', mutation);
 
   useEffect(() => {
       if (mutation.isError) {

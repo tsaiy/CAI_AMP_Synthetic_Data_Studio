@@ -47,8 +47,11 @@ const Configure = () => {
     const validateForm = () => {
         const values = form.getFieldsValue();
         delete values.custom_prompt_instructions;
+        delete values.workflow_type;
+        console.log('values', values);
         
         const allFieldsFilled = Object.values(values).every(value => Boolean(value));
+        console.log('allFieldsFilled', allFieldsFilled);
         if (allFieldsFilled) {
             setIsStepValid && setIsStepValid(true)
         } else {
@@ -73,14 +76,12 @@ const Configure = () => {
                 value: file?.path,
                 label: file.name
             }));
-        console.log('paths', paths);
         setSelectedFiles(paths);
         form.setFieldValue('doc_paths', paths);
         console.log('values', form.getFieldsValue());
     }
 
     const onFilesChange = (selections: any) => {
-        console.log('onFilesChange', selections);
         const paths = selections.map((file: File) => (
             { 
                 value: file.name,
@@ -173,28 +174,13 @@ const Configure = () => {
                     </>
 
                 )}
-                <Form.Item
-                    name='use_case'
-                    label='Use Case'
-                    rules={[{ required: true }]}
-                    tooltip='A specialized usecase for your dataset'
-                    labelCol={labelCol}
-                    shouldUpdate
-                >
-                    <Select placeholder={'Select a use case'}>
-                        {USECASE_OPTIONS.map(option => 
-                            <Select.Option key={option.value} value={option.value}>
-                                {option.label}
-                            </Select.Option>
-                        )}
-                    </Select>
-                </Form.Item>
+                
                 <Form.Item
                     name='workflow_type'
                     label='Workflow'
-                    rules={[{ required: true }]}
                     tooltip='A specialized workflow for your dataset'
                     labelCol={labelCol}
+                    rules={[{ required: true }]}
                     shouldUpdate
                 >
                     <Select placeholder={'Select a workflow'}>
@@ -205,6 +191,23 @@ const Configure = () => {
                         )}
                     </Select>
                 </Form.Item>
+                {formData?.workflow_type === WorkflowType.SUPERVISED_FINE_TUNING && 
+                <Form.Item
+                    name='use_case'
+                    label='Template'
+                    rules={[{ required: true }]}
+                    tooltip='A specialize template for generating your dataset'
+                    labelCol={labelCol}
+                    shouldUpdate
+                >
+                    <Select placeholder={'Select a template'}>
+                        {USECASE_OPTIONS.map(option => 
+                            <Select.Option key={option.value} value={option.value}>
+                                {option.label}
+                            </Select.Option>
+                        )}
+                    </Select>
+                </Form.Item>}
 
                 {(
                     formData?.workflow_type === WorkflowType.SUPERVISED_FINE_TUNING || 
@@ -216,8 +219,8 @@ const Configure = () => {
                     shouldUpdate
                 >
                     <Flex>
-                        <Select placeholder={'Select project files'} mode="multiple" value={selectedFiles} onChange={onFilesChange}/>    
-                        <FileSelectorButton onAddFiles={onAddFiles} workflowType={form.getFieldValue('use_case')} />
+                        <Select placeholder={'Select project files'} mode="multiple" value={selectedFiles} onChange={onFilesChange} allowClear/>    
+                        <FileSelectorButton onAddFiles={onAddFiles} workflowType={form.getFieldValue('workflow_type')} />
                     </Flex>
                 </Form.Item>}
                 {formData?.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION && 
