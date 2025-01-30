@@ -174,27 +174,13 @@ const Configure = () => {
                     </>
 
                 )}
-                <Form.Item
-                    name='use_case'
-                    label='Use Case'
-                    rules={[{ required: true }]}
-                    tooltip='A specialized usecase for your dataset'
-                    labelCol={labelCol}
-                    shouldUpdate
-                >
-                    <Select placeholder={'Select a use case'}>
-                        {USECASE_OPTIONS.map(option => 
-                            <Select.Option key={option.value} value={option.value}>
-                                {option.label}
-                            </Select.Option>
-                        )}
-                    </Select>
-                </Form.Item>
+                
                 <Form.Item
                     name='workflow_type'
                     label='Workflow'
                     tooltip='A specialized workflow for your dataset'
                     labelCol={labelCol}
+                    rules={[{ required: true }]}
                     shouldUpdate
                 >
                     <Select placeholder={'Select a workflow'}>
@@ -205,6 +191,23 @@ const Configure = () => {
                         )}
                     </Select>
                 </Form.Item>
+                {formData?.workflow_type === WorkflowType.SUPERVISED_FINE_TUNING && 
+                <Form.Item
+                    name='use_case'
+                    label='Template'
+                    rules={[{ required: true }]}
+                    tooltip='A specialize template for generating your dataset'
+                    labelCol={labelCol}
+                    shouldUpdate
+                >
+                    <Select placeholder={'Select a template'}>
+                        {USECASE_OPTIONS.map(option => 
+                            <Select.Option key={option.value} value={option.value}>
+                                {option.label}
+                            </Select.Option>
+                        )}
+                    </Select>
+                </Form.Item>}
 
                 {(
                     formData?.workflow_type === WorkflowType.SUPERVISED_FINE_TUNING || 
@@ -217,7 +220,7 @@ const Configure = () => {
                 >
                     <Flex>
                         <Select placeholder={'Select project files'} mode="multiple" value={selectedFiles} onChange={onFilesChange} allowClear/>    
-                        <FileSelectorButton onAddFiles={onAddFiles} workflowType={form.getFieldValue('use_case')} />
+                        <FileSelectorButton onAddFiles={onAddFiles} workflowType={form.getFieldValue('workflow_type')} />
                     </Flex>
                 </Form.Item>}
                 {formData?.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION && 
@@ -235,7 +238,6 @@ const Configure = () => {
                         name='output_key'
                         label='Output Key'
                         labelCol={labelCol}
-                        rules={[{ required: true }]}
                         shouldUpdate
                     >
                         <Input />
@@ -244,7 +246,6 @@ const Configure = () => {
                         name='output_value'
                         label='Output Value'
                         labelCol={labelCol}
-                        rules={[{ required: true }]}
                         shouldUpdate
                     >
                         <Input />
