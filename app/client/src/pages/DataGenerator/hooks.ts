@@ -127,14 +127,11 @@ export const useGetProjectFiles = (paths: string[]) => {
     });
 
     if (mutation.isError) {
-        console.log('data', mutation.error);
         notification.error({
           message: 'Error',
           description: `An error occurred while fetching the prompt.\n ${mutation.error}`
         });
     }
-    
-    console.log('mutation', mutation);
     return {
       listProjectFiles: mutation.mutate,
       fetching: mutation.isLoading,
@@ -154,7 +151,7 @@ export const useGetProjectFiles = (paths: string[]) => {
         body: JSON.stringify(params),
     });
     const body = await resp.json();
-    return isString(body) ? body : null;
+    return get(body, 'dataset_size');
 }
 
 export const useDatasetSize = (

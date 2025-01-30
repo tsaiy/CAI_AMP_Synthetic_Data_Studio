@@ -88,7 +88,6 @@ const Prompt = () => {
         input_value,
         output_key
     );
-    console.log('dataset_size', dataset_size, datasetSizeLoading)
 
     useEffect(() => {
         if (defaultTopics) {
@@ -130,7 +129,12 @@ const Prompt = () => {
                 form.setFieldValue('schema', defaultSchema)
             }
         }
-    }, [defaultPromptRef, defaultSchema, defaultSchemaRef, defaultTopics, form, setItems]);
+        if (dataset_size) {
+            if (form.getFieldValue('dataset_size') !== dataset_size) {
+                form.setFieldValue('dataset_size', dataset_size)
+            }
+        }
+    }, [defaultPromptRef, defaultSchema, defaultSchemaRef, defaultTopics, dataset_size, form, setItems]);
 
     const { setIsStepValid } = useWizardCtx();
     useEffect(() => {
@@ -233,6 +237,27 @@ const Prompt = () => {
                             />
                         }
                     </div>
+                    {workflow_type === WorkflowType.CUSTOM_DATA_GENERATION && !isEmpty(doc_paths) && 
+                        <StyledFormItem
+                            name={'dataset_size'}
+                            label={
+                                <FormLabel level={4}>
+                                    <Space>
+                                        {'Total Dataset Size'}
+                                        <TooltipIcon message={'The total number of Prompt/Completion pairs that will be generated based on this configuration'}/>
+                                    </Space>
+                                </FormLabel>
+                            }
+                            
+                            labelCol={{ span: 24 }}
+                            wrapperCol={{ span: 24 }}
+                            shouldUpdate
+                           
+                        >
+                        
+                            <InputNumber disabled value={dataset_size} />
+                        </StyledFormItem>    
+                    }
                     {isEmpty(doc_paths) && 
                     <Flex gap={20} vertical>
                         <StyledFormItem

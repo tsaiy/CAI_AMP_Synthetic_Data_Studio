@@ -115,10 +115,9 @@ const FilesTable: React.FC<Props> = ({ onSelectedRows, workflowType }) => {
       disabled: isSelectionDisabled(record)
     }),
     onChange: (_selectedRowKeys: React.Key[], _selectedRows: File[]) => {
-      console.log(`selectedRowKeys: ${_selectedRowKeys}`, 'selectedRows: ', _selectedRows);
       const selectedRowsWithPath = _selectedRows.map((row: File) => ({
         ...row,
-        path: `${Array.isArray(paths) ? paths?.join('/') + '/' : ''}${row.name}`
+        path: `${Array.isArray(paths) && !isEmpty(paths) ? paths?.join('/') + '/' : ''}${row.name}`
       })) 
       // update row key map by path
       let newRowSelectionMap = clone(rowSelectionMap);
@@ -131,7 +130,6 @@ const FilesTable: React.FC<Props> = ({ onSelectedRows, workflowType }) => {
       setSelectedRowKeys(getSelectedRowKeys(newRowSelectionMap));
       setSelectedRows(getSelectedRows(newFileSelectionMap));
       onSelectedRows(getSelectedRows(newFileSelectionMap));
-      console.log('newFileSelectionMap', newFileSelectionMap);
     },
     selectedRowKeys
   };
@@ -177,10 +175,6 @@ const FilesTable: React.FC<Props> = ({ onSelectedRows, workflowType }) => {
     }
   ];
   const hasSelected = selectedRowKeys.length !== 0;
-
-  console.log('---------------------');
-  console.log('-path', path);
-  console.log('-paths', paths);
 
   return (
     <>
