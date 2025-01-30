@@ -368,6 +368,24 @@ const Prompt = () => {
                         </FormLabel>
                         <InputNumber disabled value={selectedTopics?.length * numQuestions} />
                     </Flex>}
+                    {form.getFieldValue('workflow_type') === WorkflowType.SUPERVISED_FINE_TUNING  && (
+                        <StyledFormItem
+                            name={'total_dataset_size'}
+                            label={
+                                <FormLabel level={4}>
+                                    <Space>
+                                        {'Total Dataset Size'}
+                                        <TooltipIcon message={'The total number of Prompt/Completion pairs that will be generated based on this configuration'}/>
+                                    </Space>
+                                </FormLabel>}
+                            labelCol={{ span: 24 }}
+                            wrapperCol={{ span: 24 }}
+                            shouldUpdate
+                        >
+                            <InputNumber value={25} />
+                        </StyledFormItem>
+                    )}
+
                     {form.getFieldValue('use_case') === Usecases.TEXT2SQL  && (
                         <div>
                             <StyledFormItem
