@@ -264,9 +264,6 @@ const Finish = () => {
                 )}
             />
             <ButtonGroup gap={8}>
-                <StyledButton icon={<FormatListBulletedIcon/>}>
-                    <Link to={`/${Pages.HISTORY}`}>{'View Dataset List'}</Link>
-                </StyledButton>
                 {isDemo && (
                     <StyledButton icon={<PageviewOutlined/>}>
                         <a href={getFilesURL(genDatasetResp?.export_path?.local)} target='_blank' rel='noreferrer'>

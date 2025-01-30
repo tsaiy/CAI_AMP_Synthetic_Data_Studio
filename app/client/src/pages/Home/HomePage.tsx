@@ -8,6 +8,7 @@ import DatasetIcon from '../../assets/ic-datasets.svg';
 import ArrowRightIcon from '../../assets/ic-arrow-right.svg';
 import EvaluateIcon from '../../assets/ic-evaluations.svg';
 import EvaluateButton from './EvaluateButton';
+import ExportsTab from './ExportsTab';
 
 
 const { Content } = Layout;
@@ -63,7 +64,8 @@ const HeaderSection = styled.div`
 
 enum ViewType {
     DATASETS = 'datasets',
-    EVALUATIONS = 'evaluations'
+    EVALUATIONS = 'evaluations',
+    EXPORTS = 'exports'
 }
 
 const HomePage: React.FC = () => {
@@ -79,7 +81,12 @@ const HomePage: React.FC = () => {
           key: ViewType.EVALUATIONS,
           label: 'Evaluations',
           children:  <EvaluationsTab />,
-        }
+        },
+        {
+            key: ViewType.EXPORTS,
+            label: 'Exports',
+            children:  <ExportsTab />,
+          }
     ]; 
 
     const onTabChange = (key: string) => 

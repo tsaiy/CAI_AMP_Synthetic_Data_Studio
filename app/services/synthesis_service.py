@@ -25,11 +25,12 @@ from app.services.doc_extraction import DocumentProcessor
 import logging
 from logging.handlers import RotatingFileHandler
 import traceback
+import uuid 
 
 
 class SynthesisService:
     """Service for generating synthetic QA pairs"""
-    QUESTIONS_PER_BATCH = 5  # Maximum questions per batch
+    QUESTIONS_PER_BATCH = 1  # Maximum questions per batch
     MAX_CONCURRENT_TOPICS = 5  # Limit concurrent I/O operations
 
 
@@ -77,110 +78,87 @@ class SynthesisService:
     
 
     def process_single_topic(self, topic: str, model_handler: any, request: SynthesisRequest, num_questions: int) -> Tuple[str, List[Dict], List[str], List[Dict]]:
+        """
+        Process a single topic to generate questions and solutions.
+        Optimized for processing one question at a time, but handles multiple questions.
+        
+        Args:
+            topic: The topic to generate questions for
+            model_handler: Handler for the AI model
+            request: The synthesis request object
+            num_questions: Total number of questions to generate
+        
+        Returns:
+            Tuple containing:
+            - topic (str)
+            - list of validated QA pairs
+            - list of error messages
+            - list of output dictionaries with topic information
+        """
         topic_results = []
         topic_output = []
         topic_errors = []
-        questions_remaining = num_questions
         omit_questions = []
-         
-
-        try:
-            for batch_idx in range(0, num_questions, self.QUESTIONS_PER_BATCH):
-                try:
-                    batch_size = min(self.QUESTIONS_PER_BATCH, questions_remaining)
+    
+        # Process one question at a time for the total number requested
+        for question_idx in range(num_questions):
+            try:
+                self.logger.info(f"Processing topic: {topic}, question: {question_idx + 1}/{num_questions}")
+                
+                # Build prompt for single question
+                prompt = PromptBuilder.build_prompt(
+                    model_id=request.model_id,
+                    use_case=request.use_case,
+                    topic=topic,
+                    num_questions=1,  # Process one question at a time
+                    omit_questions=omit_questions,
+                    examples=request.examples or [],
+                    technique=request.technique,
+                    schema=request.schema,
+                    custom_prompt=request.custom_prompt,
+                )
+                #print(prompt)
+                # Generate response
+                qa_pairs = model_handler.generate_response(prompt)
+                
+                # Process single QA pair
+                if qa_pairs and len(qa_pairs) > 0:
+                    pair = qa_pairs[0]  # Take first (and should be only) pair
                     
-                    self.logger.info(f"Processing topic: {topic}, batch: {batch_idx+1}-{batch_idx+batch_size}")
-                    
-                    try:
-                        prompt = PromptBuilder.build_prompt(
-                            model_id=request.model_id,
-                            use_case=request.use_case,
-                            topic=topic,
-                            num_questions=batch_size,
-                            omit_questions=omit_questions,
-                            examples=request.examples or [],
-                            technique=request.technique,
-                            schema=request.schema,
-                            custom_prompt=request.custom_prompt,
-                        )
-                    except Exception as e:
-                        error_msg = f"Error building prompt for topic {topic}: {str(e)}"
-                        self.logger.error(error_msg)
+                    if self._validate_qa_pair(pair):
+                        validated_pair = {
+                            "question": pair["question"],
+                            "solution": pair["solution"]
+                        }
+                        validated_output = {
+                            "Topic": topic,
+                            "question": pair["question"],
+                            "solution": pair["solution"]
+                        }
+                        
+                        topic_results.append(validated_pair)
+                        topic_output.append(validated_output)
+                        
+                        # Update omit_questions list with the new question
+                        omit_questions.append(pair["question"])
+                        omit_questions = omit_questions[-100:]  # Keep last 100 questions
+                        
+                        self.logger.info(f"Generated valid QA pair {question_idx + 1} for topic {topic}")
+                    else:
+                        error_msg = f"Invalid QA pair structure received for topic {topic}, question {question_idx + 1}"
+                        self.logger.warning(error_msg)
                         topic_errors.append(error_msg)
-                        continue
-
-                    try:
-                        qa_pairs = model_handler.generate_response(prompt)
-                    except Exception as e:
-                        error_msg = f"Error generating response for topic {topic}: {str(e)}"
-                        self.logger.error(error_msg)
-                        topic_errors.append(error_msg)
-                        continue
-
-                    # Validate the pairs we got back (if any)
-                    validated_pairs = []
-                    validated_output = []
-                    
-                    try:
-                        for pair in qa_pairs:
-                            try:
-                                if not self._validate_qa_pair(pair):
-                                    error_msg = f"Invalid QA pair structure received for topic {topic}"
-                                    self.logger.warning(error_msg)
-                                    topic_errors.append(error_msg)
-                                    continue
-                                
-                                validated_pairs.append({
-                                    "question": pair["question"],
-                                    "solution": pair["solution"]
-                                })
-                                validated_output.append({
-                                    "Topic": topic,
-                                    "question": pair["question"],
-                                    "solution": pair["solution"]
-                                })
-                            except KeyError as ke:
-                                error_msg = f"Missing required key in QA pair for topic {topic}: {str(ke)}"
-                                self.logger.warning(error_msg)
-                                topic_errors.append(error_msg)
-                                continue
-                            except Exception as e:
-                                error_msg = f"Error processing QA pair for topic {topic}: {str(e)}"
-                                self.logger.warning(error_msg)
-                                topic_errors.append(error_msg)
-                                continue
-
-                        if validated_pairs:
-                            topic_results.extend(validated_pairs)
-                            topic_output.extend(validated_output)
-                            questions_list = [pair["question"] for pair in validated_pairs]
-                            omit_questions = omit_questions + questions_list
-                            omit_questions = omit_questions[-100:]
-                            self.logger.info(f"Generated {len(validated_pairs)} valid QA pairs for topic {topic}")
-                        else:
-                            error_msg = f"No valid QA pairs generated for topic {topic} batch {batch_idx+1}-{batch_idx+batch_size}"
-                            self.logger.warning(error_msg)
-                            topic_errors.append(error_msg)
-
-                    except Exception as e:
-                        error_msg = f"Error processing batch for topic {topic}: {str(e)}"
-                        self.logger.error(error_msg)
-                        topic_errors.append(error_msg)
-                        continue
-
-                    questions_remaining -= batch_size
-
-                except Exception as e:
-                    error_msg = f"Error processing batch {batch_idx+1}-{batch_idx+batch_size} for topic {topic}: {str(e)}"
-                    self.logger.error(error_msg)
+                else:
+                    error_msg = f"No QA pair generated for topic {topic}, question {question_idx + 1}"
+                    self.logger.warning(error_msg)
                     topic_errors.append(error_msg)
-                    continue
-
-        except Exception as e:
-            error_msg = f"Critical error processing topic {topic}: {str(e)}"
-            self.logger.error(error_msg)
-            topic_errors.append(error_msg)
-
+                    
+            except Exception as e:
+                error_msg = f"Error processing topic {topic}, question {question_idx + 1}: {str(e)}"
+                self.logger.error(error_msg)
+                topic_errors.append(error_msg)
+                continue
+    
         return topic, topic_results, topic_errors, topic_output
         
 
@@ -359,7 +337,7 @@ class SynthesisService:
             model_id=request.model_id,
             use_case=request.use_case,
             input=input,
-            examples=request.examples or [],
+            example_custom=request.example_custom or [],
             schema=request.schema,
             custom_prompt=request.custom_prompt,
         )
@@ -370,6 +348,21 @@ class SynthesisService:
     async def generate_result(self, request: SynthesisRequest , job_name = None, is_demo: bool = True) -> Dict:
         try:
             self.logger.info(f"Starting example generation - Demo Mode: {is_demo}")
+            # json_str = request.model_dump_json()  
+            # random_id = uuid.uuid4().hex[:4]  # Generate a random 8-character ID
+        
+
+        
+
+            # params = json.loads(json_str)
+           
+    
+            # # Create unique filename with UUID
+            # file_name = f"job_args_{random_id}.json"
+            
+            # # Write to local file
+            # with open(file_name, 'w') as f:
+            #     json.dump(params, f)
                 
             # Use default parameters if none provided
             model_params = request.model_params or ModelParameters()
@@ -406,7 +399,8 @@ class SynthesisService:
                 # Wait for all futures to complete
                 final_output = await asyncio.gather(*input_futures)
          
-
+            
+            
             timestamp = datetime.now(timezone.utc).isoformat()
             time_file = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%f')[:-3] 
             mode_suffix = "test" if is_demo else "final"
@@ -445,7 +439,8 @@ class SynthesisService:
                 'generate_file_name': os.path.basename(output_path['local']),
                 'display_name': request.display_name,
                 'output_path': output_path,
-                
+                'output_key':request.output_key,
+                'output_value':request.output_value,
                 'examples': examples_str,
                 "total_count":len(inputs),
                 'schema': schema_str

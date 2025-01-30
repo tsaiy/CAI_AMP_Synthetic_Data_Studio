@@ -102,7 +102,6 @@ class DatabaseManager:
                         job_id TEXT,
                         job_name TEXT UNIQUE,
                         job_status TEXT
-                       
                     )
                 """)
                 

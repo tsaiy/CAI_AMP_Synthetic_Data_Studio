@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from typing import Dict, List, Optional
+import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
 import time
@@ -37,6 +38,7 @@ from app.core.prompt_templates import PromptBuilder, PromptHandler
 from app.core.config import UseCase, USE_CASE_CONFIGS
 from app.core.database import DatabaseManager
 from app.core.exceptions import APIError, InvalidModelError, ModelHandlerError
+from app.services.model_alignment import ModelAlignment
 from app.core.model_handlers import create_handler
 from app.services.aws_bedrock import get_bedrock_client
 
@@ -536,7 +538,51 @@ async def evaluate_examples(request: EvaluationRequest):
 
         return {"job_name": job_name, "job_id": job_run.job_id}
 
+
+@app.post("/model/alignment",
+          include_in_schema=True,
+          responses=responses,
+          description="Generate model alignment data in DPO and KTO formats")
+async def generate_alignment_data(
+    synthesis_request: SynthesisRequest,
+    evaluation_request: EvaluationRequest,
+    job_name: str = None,
+    is_demo: bool = True
+) -> Dict:
+    """
+    Generate model alignment data using synthesis and evaluation services.
+    
+    Args:
+        synthesis_request: Parameters for synthesis generation
+        evaluation_request: Parameters for evaluation
+        job_name: Optional job identifier for tracking
+        is_demo: Whether this is a demo run
         
+    Returns:
+        Dictionary containing DPO and KTO formatted data
+    """
+    try:
+        alignment_service = ModelAlignment()
+        result = await alignment_service.model_alignment(
+            synthesis_request=synthesis_request,
+            evaluation_request=evaluation_request,
+            job_name=job_name,
+            is_demo=is_demo
+        )
+
+        
+        return {
+            "status": "success",
+            "dpo": result["dpo"],
+            "kto": result["kto"]
+        }
+        
+    except APIError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
 
 @app.post("/export_results", include_in_schema=True)
 async def export_results(request:Export_synth):
@@ -871,6 +917,57 @@ async def get_eval_examples(use_case: UseCase):
         examples = []
     
     
+    return {"examples": examples}
+
+@app.get("/{use_case}/custom_gen_examples")
+async def get_custom_gen_examples(use_case: UseCase):
+    
+                
+    if use_case == UseCase.CODE_GENERATION:
+        examples = [
+        """#Here's how to create and modify a list in Python:
+        # Create an empty list\n
+        my_list = []
+        #  Add elements using append\n
+        my_list.append(1)\n
+        my_list.append(2)\n\n
+        # # Create a list with initial elements
+        my_list = [1, 2, 3]
+        """,
+
+        """#Here's how to implement a basic stack:class Stack:
+        def __init__(self):
+        self.items = []
+        def push(self, item):
+        self.items.append(item)
+        def pop(self):
+        if not self.is_empty():
+        return self.items.pop()
+        def is_empty(self):
+        return len(self.items) == 0"""
+    ]
+        
+        
+    
+    elif use_case == UseCase.TEXT2SQL:
+
+        examples = [ """
+                    SELECT e.name, d.department_name
+                    FROM employees e
+                    JOIN departments d ON 
+                    e.department_id = d.id;""",
+
+                    """SELECT *
+                        FROM employees
+                        WHERE salary > 50000;"""
+        ]
+        
+        
+    elif use_case == UseCase.CUSTOM:
+        examples = []
+        
+                   
+        
     return {"examples": examples}
 
 @app.get("/health")

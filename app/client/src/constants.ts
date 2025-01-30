@@ -2,7 +2,7 @@ import { ModelParameters, Pages } from "./types";
 
 export const LABELS = {
     [Pages.HOME]: 'Home',
-    [Pages.GENERATOR]: 'Generator',
+    [Pages.GENERATOR]: 'Generation',
     [Pages.EVALUATOR]: 'Evaluator',
     [Pages.DATASETS]: 'Datasets',
     [Pages.HISTORY]: 'History',
@@ -17,3 +17,4 @@ export const TRANSLATIONS: Record<string, string> = {
     "text2sql": "Text to SQL"
   };
 
+export const CDSW_PROJECT_URL = import.meta.env.VITE_CDSW_PROJECT_URL;

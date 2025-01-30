@@ -14,7 +14,7 @@ import { blue } from '@ant-design/colors';
 import DateTime from "../DateTime/DateTime";
 import { TRANSLATIONS } from "../../constants";
 import DeleteConfirmWarningModal from './DeleteConfirmModal';
-import DatasetExportModal, { ExportResult } from './DatasetExport/ExportModal';
+import DatasetExportModal, { ExportResult } from '../Export/ExportModal';
 
 
 const { Paragraph, Text } = Typography;
