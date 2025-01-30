@@ -87,8 +87,8 @@ Write a programming question-pair for the following topic:
 ```json
 {
    "question": "How do you read a CSV file into a pandas DataFrame?",
-   "solution": "You can use pandas.read_csv(). Here's an example:",
-   "code": """
+   "solution": """You can use pandas.read_csv(). Here's an example
+   
 import pandas as pd
 df = pd.read_csv('data.csv')
 print(df.head())
@@ -97,7 +97,7 @@ print(df.info())
    "explanation": "This code demonstrates:
 - Basic file reading using pandas
 - Data verification steps
-- Basic DataFrame operations"
+- Basic DataFrame operations"""
 }
 ```
 
@@ -119,8 +119,8 @@ print(df.info())
 <examples>
 {
    "question": "How do you implement a graph data structure and perform depth-first search traversal?",
-   "solution": "Here's an implementation of a graph using an adjacency list and depth-first search traversal:",
-   "code": """
+   "solution": """Here's an implementation of a graph using an adjacency list and depth-first search traversal:
+   
 class Graph:
     def __init__(self):
         self.graph = {}
@@ -155,10 +155,7 @@ for v1, v2 in edges:
     graph.add_edge(v1, v2)
 
 graph.dfs(1)
-""",
-   "explanation": "This implementation demonstrates:
-- Graph representation using an adjacency list
-- Depth-First Search traversal with recursion"
+"""
 }
 </examples>
 
