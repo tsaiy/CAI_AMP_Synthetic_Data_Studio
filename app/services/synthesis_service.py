@@ -116,7 +116,7 @@ class SynthesisService:
                     schema=request.schema,
                     custom_prompt=request.custom_prompt,
                 )
-                
+                #print(prompt)
                 # Generate response
                 qa_pairs = model_handler.generate_response(prompt)
                 

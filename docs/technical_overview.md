@@ -72,36 +72,38 @@ prompt_template = """
 <examples>
 {examples}
 </examples>
-Write a programming question-pair for the following topic:
+{custom_prompt}
+<topic>{seed}</topic>"""
+```
+#### Custom Prompt
+```json
+{
+"""Write a programming question-pair for the following topic:
 
-"""Requirements:
+Requirements:
 - Each solution must include working code examples
 - Include explanations with the code
 - Follow the same format as the examples
 - Ensure code is properly formatted with appropriate indentation"""
-<topic>{seed}</topic>"""
+}
 ```
 
-### Example Dataset
+#### Example Dataset
 
 ```json
 {
    "question": "How do you read a CSV file into a pandas DataFrame?",
    "solution": """You can use pandas.read_csv(). Here's an example
    
-import pandas as pd
-df = pd.read_csv('data.csv')
-print(df.head())
-print(df.info())
-""",
-   "explanation": "This code demonstrates:
-- Basic file reading using pandas
-- Data verification steps
-- Basic DataFrame operations"""
+        import pandas as pd
+        df = pd.read_csv('data.csv')
+        print(df.head())
+        print(df.info())
+"""
 }
 ```
 
-### Seed Examples
+#### Seed Examples
 
 ```json
 [
@@ -113,11 +115,11 @@ print(df.info())
 ]
 ```
 
-## Complete Prompt Example
+### Complete Prompt Example
 
 ```python
 <examples>
-{
+[{
    "question": "How do you implement a graph data structure and perform depth-first search traversal?",
    "solution": """Here's an implementation of a graph using an adjacency list and depth-first search traversal:
    
@@ -155,17 +157,20 @@ for v1, v2 in edges:
     graph.add_edge(v1, v2)
 
 graph.dfs(1)
-"""
-}
+"""},
+{'question': 'How do you read a CSV file into a pandas DataFrame?', 
+'solution': """You can use pandas.read_csv(). Here's an example:
+import pandas as pd
+df = pd.read_csv('data.csv')\n
+"""}]
 </examples>
 
 Write a programming question-pair for the following topic:
-
-"""Requirements:
+Requirements:
 - Each solution must include working code examples
 - Include explanations with the code
 - Follow the same format as the examples
-- Ensure code is properly formatted with appropriate indentation"""
+- Ensure code is properly formatted with appropriate indentation
 <topic>Depth-First Search traversal in graphs</topic>
 ```
 
