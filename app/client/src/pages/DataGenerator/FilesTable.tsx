@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { Badge, Breadcrumb, Button, Col, Flex, List, Popover, Row, Table } from 'antd';
 import styled from 'styled-components';
 import { FileOutlined, FolderOutlined } from '@ant-design/icons';
-import { getFileSize } from './utils';
+import { getFileSize, isDirectory } from './utils';
 import { File, WorkflowType } from './types';
 import { useGetProjectFiles } from './hooks';
 import isEmpty from 'lodash/isEmpty';
@@ -101,6 +101,10 @@ const FilesTable: React.FC<Props> = ({ onSelectedRows, workflowType }) => {
   });
 
   const isSelectionDisabled = (record: File) => {
+    if (isDirectory(record)) {
+      return true;
+    }
+
     if (workflowType === WorkflowType.SUPERVISED_FINE_TUNING) {
       return !endsWith(record.name, '.pdf');
     } else if (workflowType === WorkflowType.CUSTOM_DATA_GENERATION) {
