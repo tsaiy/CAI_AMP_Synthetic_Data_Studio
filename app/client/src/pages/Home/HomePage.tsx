@@ -62,7 +62,7 @@ const HeaderSection = styled.div`
     }     
 `;
 
-enum ViewType {
+export enum ViewType {
     DATASETS = 'datasets',
     EVALUATIONS = 'evaluations',
     EXPORTS = 'exports'
@@ -73,25 +73,25 @@ const HomePage: React.FC = () => {
 
     const items: TabsProps['items'] = [
         {
-          key: ViewType.DATASETS,
-          label: 'Datasets',
-          children: <DatasetsTab />,
+            key: ViewType.DATASETS,
+            label: 'Datasets',
+            children: <DatasetsTab />,
         },
         {
-          key: ViewType.EVALUATIONS,
-          label: 'Evaluations',
-          children:  <EvaluationsTab />,
+            key: ViewType.EVALUATIONS,
+            label: 'Evaluations',
+            children: <EvaluationsTab />,
         },
         {
             key: ViewType.EXPORTS,
             label: 'Exports',
-            children:  <ExportsTab />,
-          }
-    ]; 
+            children: <ExportsTab tabType={tabViewType} />,
+        }
+    ];
 
-    const onTabChange = (key: string) => 
+    const onTabChange = (key: string) =>
         setTabViewType(key as ViewType);
-    
+
 
     return (
         <Layout>
@@ -135,9 +135,9 @@ const HomePage: React.FC = () => {
                 </Flex>
                 <Row>
                     <Col span={24}>
-                       <Tabs 
-                            defaultActiveKey={tabViewType} 
-                            items={items} 
+                        <Tabs
+                            defaultActiveKey={tabViewType}
+                            items={items}
                             onChange={onTabChange} />
                     </Col>
                 </Row>
