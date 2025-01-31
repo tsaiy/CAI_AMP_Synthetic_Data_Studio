@@ -1,3 +1,4 @@
+import isEmpty from 'lodash/isEmpty';
 import { useFetch, usePostApi } from './hooks';
 import {
     FetchDefaultParamsResp,
@@ -12,12 +13,12 @@ import {
 const baseUrl = import.meta.env.VITE_AMP_URL;
 
 export const usefetchTopics = (useCase: string): UseFetchApiReturn<FetchTopicsResp> => {
-    const url = `${baseUrl}/use-cases/${useCase}/topics`;
+    const url = `${baseUrl}/use-cases/${isEmpty(useCase) ? 'custom' : useCase}/topics`;
     return useFetch(url);
 }
 
 export const useFetchExamples = (useCase: string): UseFetchApiReturn<FetchExamplesResp> => {
-    const url = `${baseUrl}/${useCase}/gen_examples`;
+    const url = `${baseUrl}/${isEmpty(useCase) ? 'custom' : useCase}/gen_examples`;
     return useFetch(url);
 }
 
@@ -26,8 +27,8 @@ export const useFetchModels = (): UseFetchApiReturn<FetchModelsResp> => {
     return useFetch(url);
 }
 
-export const useFetchDefaultPrompt = (use_case: string): UseFetchApiReturn<FetchDefaultPromptResp> => {
-    const url = `${baseUrl}/${use_case}/gen_prompt`;
+export const useFetchDefaultPrompt = (useCase: string): UseFetchApiReturn<FetchDefaultPromptResp> => {
+    const url = `${baseUrl}/${isEmpty(useCase) ? 'custom' : useCase}/gen_prompt`;
     return useFetch(url);
 }
 

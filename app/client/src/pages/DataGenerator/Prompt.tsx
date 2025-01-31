@@ -73,10 +73,9 @@ const Prompt = () => {
     const input_key = form.getFieldValue('input_key');
     const input_value = form.getFieldValue('input_value');
     const output_key = form.getFieldValue('output_key');
-    console.log('workflow_type', workflow_type);
-    console.log('doc_paths', doc_paths);
-    const { data: defaultPrompt, loading: promptsLoading } = useFetchDefaultPrompt(useCase);
     const caii_endpoint = form.getFieldValue('caii_endpoint');
+    const { data: defaultPrompt, loading: promptsLoading } = useFetchDefaultPrompt(useCase);
+    
 
     // Page Bootstrap requests and useEffect
     const { data: defaultTopics, loading: topicsLoading } = usefetchTopics(useCase);
@@ -106,16 +105,6 @@ const Prompt = () => {
         if (defaultPrompt) {
             defaultPromptRef.current = defaultPrompt;
             if (form.getFieldValue('custom_prompt') === undefined) {
-                form.setFieldValue('custom_prompt', defaultPrompt)
-            }
-            if (form.getFieldValue('custom_prompt') !== undefined && 
-                form.getFieldValue('use_case') === 'custom' && 
-                isEmpty(form.getFieldValue('custom_prompt_instructions'))) {
-                form.setFieldValue('custom_prompt', null)
-            }
-            if (form.getFieldValue('custom_prompt') !== undefined && 
-                form.getFieldValue('use_case') === 'custom' && 
-                !isEmpty(form.getFieldValue('custom_prompt_instructions'))) {
                 form.setFieldValue('custom_prompt', defaultPrompt)
             }
             if (form.getFieldValue('custom_prompt') !== defaultPrompt && 
@@ -258,7 +247,8 @@ const Prompt = () => {
                             <InputNumber disabled value={dataset_size} />
                         </StyledFormItem>    
                     }
-                    {isEmpty(doc_paths) && 
+                    {isEmpty(doc_paths) && (workflow_type === WorkflowType.SUPERVISED_FINE_TUNING ||
+                        workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) &&
                     <Flex gap={20} vertical>
                         <StyledFormItem
                             name={'topics'}
@@ -368,7 +358,7 @@ const Prompt = () => {
                         </FormLabel>
                         <InputNumber disabled value={selectedTopics?.length * numQuestions} />
                     </Flex>}
-                    {form.getFieldValue('workflow_type') === WorkflowType.SUPERVISED_FINE_TUNING  && (
+                    {/* {!isEmpty(doc_paths) && form.getFieldValue('workflow_type') === WorkflowType.CUSTOM_DATA_GENERATION  && (
                         <StyledFormItem
                             name={'total_dataset_size'}
                             label={
@@ -384,7 +374,7 @@ const Prompt = () => {
                         >
                             <InputNumber value={25} />
                         </StyledFormItem>
-                    )}
+                    )} */}
 
                     {form.getFieldValue('use_case') === Usecases.TEXT2SQL  && (
                         <div>
