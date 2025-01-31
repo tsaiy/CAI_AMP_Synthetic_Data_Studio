@@ -1,5 +1,5 @@
 import { Col, Flex, Input, Row, Table, TableProps, Tooltip, Typography } from 'antd';
-import React from 'react';
+import React, { useEffect } from 'react';
 import DateTime from '../../components/DateTime/DateTime';
 import { useGetExportJobs } from '../../api/Export/export';
 import { ExportResponse } from '../../api/Export/response';
@@ -7,6 +7,7 @@ import { sortItemsByKey } from '../../utils/sortutils';
 import styled from 'styled-components';
 import { JobStatus } from '../../types';
 import JobStatusIcon from '../../components/JobStatus/jobStatusIcon';
+import { ViewType } from './HomePage';
 
 const { Search } = Input;
 const { Text, Link, Paragraph } = Typography;
@@ -47,6 +48,10 @@ const StyledParagraph = styled(Paragraph)`
     font-family: Roboto, -apple-system, 'Segoe UI', sans-serif;
     color:  #5a656d;
 `;
+
+export type ExportsTabProps = {
+    tabType: ViewType;
+};
 
 const columns: TableProps<ExportResponse>['columns'] = [
     {
@@ -95,8 +100,8 @@ const columns: TableProps<ExportResponse>['columns'] = [
     }
 ];
 
-const ExportsTab: React.FC = () => {
-    const { isLoading, data } = useGetExportJobs();
+const ExportsTab: React.FC<ExportsTabProps> = ({ tabType }) => {
+    const { isLoading, data, refetch } = useGetExportJobs();
     const [searchTerm, setSearchTerm] = React.useState<string>('');
 
     const filteredData = React.useMemo(() => {
@@ -108,6 +113,12 @@ const ExportsTab: React.FC = () => {
             :
             data;
     }, [data, searchTerm]);
+
+    useEffect(() => {
+        if(tabType === ViewType.EXPORTS) {
+            refetch();
+        }
+    }, [tabType, refetch]);
 
     return (
         <Container>
