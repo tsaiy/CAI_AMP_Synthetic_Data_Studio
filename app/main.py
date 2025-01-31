@@ -203,11 +203,11 @@ def get_timeout_for_request(request: Request) -> float:
     
     # Longer timeouts for job creation endpoints
     if path.endswith("/generate"):
-        return 120.0  # 2 minutes for generation
+        return 200.0  # 2 minutes for generation
     elif path.endswith("/evaluate"):
-        return 120.0  # 2 minutes for evaluation
+        return 200.0  # 2 minutes for evaluation
     elif path.endswith("/export_results"):
-        return 120.0  # 2 minutes for export
+        return 200.0  # 2 minutes for export
     elif "health" in path:
         return 5.0    # Quick timeout for health checks
     else:
@@ -400,6 +400,8 @@ async def generate_examples(request: SynthesisRequest):
         schema_str = PromptHandler.get_default_schema(request.use_case, request.schema)
         
         model_params = request.model_params or ModelParameters()
+        print(job_run.job_id, job_name)
+        
         metadata = {
                 'model_id': request.model_id,
                 'inference_type': request.inference_type,
@@ -414,9 +416,10 @@ async def generate_examples(request: SynthesisRequest):
                 'schema': schema_str,
                 'job_name':job_name,
                 'job_id': job_run.job_id,
-                'job_status': 'In Progress',
+                'job_status': get_job_status(job_run.job_id),
                  'output_key':request.output_key,
-                'output_value':request.output_value
+                'output_value':request.output_value,
+               'job_creator_name' : client_cml.list_job_runs(project_id, job_run.job_id,sort="-created_at", page_size=1).job_runs[0].creator.name
                 }
         
         db_manager.save_generation_metadata(metadata)
@@ -529,7 +532,8 @@ async def evaluate_examples(request: EvaluationRequest):
             'examples': examples_str,
             'job_name':job_name,
             'job_id': job_run.job_id,
-            'job_status': 'In Progress'
+            'job_status': get_job_status(job_run.job_id),
+             'job_creator_name' : client_cml.list_job_runs(project_id, job_run.job_id,sort="-created_at", page_size=1).job_runs[0].creator.name
             
         }
 
@@ -638,11 +642,13 @@ async def export_results(request:Export_synth):
                     "hf_export_path": export_path,
                     "job_id":job_run.job_id,
                     "job_name": job_name,
-                    "job_status": job_status}
+                    "job_status": job_status,
+                     "job_creator_name" : client_cml.list_job_runs(project_id, job_run.job_id,sort="-created_at", page_size=1).job_runs[0].creator.name
+                   }
         
         db_manager.save_export_metadata(metadata)
 
-        return  {"job_name": job_name, "job_id": job_run.job_id, "hf_link":export_path }   
+        return  {"job_name": job_name, "job_id": job_run.job_id, "hf_link":export_path}   
     
     except Exception as e:
 
@@ -764,6 +770,17 @@ async def customise_prompt():
 @app.get("/generations/history", include_in_schema=True)
 async def get_generation_history():
     """Get history of all generations"""
+    pending_job_ids = db_manager.get_pending_generate_job_ids()
+
+    if not pending_job_ids:
+        return db_manager.get_all_generate_metadata()
+
+    job_status_map = {
+            job_id: get_job_status(job_id) 
+            for job_id in pending_job_ids
+        }
+    db_manager.update_job_statuses_generate(job_status_map)
+    
     return db_manager.get_all_generate_metadata()
 
 @app.get("/generations/{file_name}", include_in_schema=True)
@@ -798,7 +815,18 @@ def get_exports_history():
 @app.get("/evaluations/history", include_in_schema=True)
 async def get_evaluation_history():
     """Get history of all generations"""
-    print("Hi")
+    pending_job_ids = db_manager.get_pending_evaluate_job_ids()
+
+    if not pending_job_ids:
+        return db_manager.get_all_evaluate_metadata()
+
+    job_status_map = {
+            job_id: get_job_status(job_id) 
+            for job_id in pending_job_ids
+        }
+    db_manager.update_job_statuses_evaluate(job_status_map)
+    
+    
     return db_manager.get_all_evaluate_metadata()
 
 
