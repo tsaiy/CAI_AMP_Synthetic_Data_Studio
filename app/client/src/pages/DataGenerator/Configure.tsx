@@ -1,3 +1,4 @@
+import isEmpty from 'lodash/isEmpty';
 import { useEffect, useState } from 'react';
 import { Flex, Form, Input, Select, Typography } from 'antd';
 import styled from 'styled-components';
@@ -42,12 +43,16 @@ const Configure = () => {
     const formData = Form.useWatch((values) => values, form);
     const { setIsStepValid } = useWizardCtx();
     const { data } = useFetchModels();
-    const [selectedFiles, setSelectedFiles] = useState([]);
+    const [selectedFiles, setSelectedFiles] = useState(
+        !isEmpty(form.getFieldValue('doc_paths')) ? form.getFieldValue('doc_paths') : []);
 
     const validateForm = () => {
         const values = form.getFieldsValue();
         delete values.custom_prompt_instructions;
         delete values.workflow_type;
+        delete values.doc_paths;
+        delete values.output_key;
+        delete values.output_value;
         console.log('values', values);
         
         const allFieldsFilled = Object.values(values).every(value => Boolean(value));
@@ -89,6 +94,10 @@ const Configure = () => {
             }));
         setSelectedFiles(paths);
         form.setFieldValue('doc_paths', paths);    
+    }
+
+    const onWorkflowTypeChange = (value: string) => {
+        console.log('onWorkflowTypeChange', value);
     }
     
 
@@ -183,7 +192,7 @@ const Configure = () => {
                     rules={[{ required: true }]}
                     shouldUpdate
                 >
-                    <Select placeholder={'Select a workflow'}>
+                    <Select placeholder={'Select a workflow'} onChange={onWorkflowTypeChange}>
                         {WORKFLOW_OPTIONS.map(option => 
                             <Select.Option key={option.value} value={option.value}>
                                 {option.label}
