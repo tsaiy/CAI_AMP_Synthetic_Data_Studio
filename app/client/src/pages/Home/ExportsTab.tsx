@@ -96,7 +96,7 @@ const columns: TableProps<ExportResponse>['columns'] = [
 ];
 
 const ExportsTab: React.FC = () => {
-    const { isLoading, isError, data, error } = useGetExportJobs();
+    const { isLoading, data } = useGetExportJobs();
     const [searchTerm, setSearchTerm] = React.useState<string>('');
 
     const filteredData = React.useMemo(() => {

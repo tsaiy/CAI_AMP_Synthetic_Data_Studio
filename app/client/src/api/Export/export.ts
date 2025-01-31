@@ -27,7 +27,7 @@ async function getExportJobs(): Promise<ExportResponse[]> {
 
 
 const useGetExportJobs = () => {
-    return useQuery({ queryKey: [`${API_ENDPOINTS.getExports}`], refetchIntervalInBackground: true, refetchInterval: REFETCHINTERVAL_IN_MS, queryFn: getExportJobs })
+    return useQuery({ queryKey: [`${API_ENDPOINTS.getExports}`], refetchOnMount: true, refetchIntervalInBackground: true, refetchInterval: REFETCHINTERVAL_IN_MS, queryFn: getExportJobs })
 };
 
 export { useGetExportJobs };
