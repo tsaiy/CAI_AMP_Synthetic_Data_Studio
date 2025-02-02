@@ -42,6 +42,7 @@ export const MODEL_TYPE_OPTIONS: ModelProvidersDropdownOpts = [
 const Configure = () => {
     const form = Form.useFormInstance();
     const formData = Form.useWatch((values) => values, form);
+    console.log('formData', formData);
     const { setIsStepValid } = useWizardCtx();
     const { data } = useFetchModels();
     const [selectedFiles, setSelectedFiles] = useState(
