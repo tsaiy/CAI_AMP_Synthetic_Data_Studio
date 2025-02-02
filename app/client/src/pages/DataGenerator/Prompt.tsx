@@ -75,7 +75,6 @@ const Prompt = () => {
     const output_key = form.getFieldValue('output_key');
     const caii_endpoint = form.getFieldValue('caii_endpoint');
     const { data: defaultPrompt, loading: promptsLoading } = useFetchDefaultPrompt(useCase);
-    
 
     // Page Bootstrap requests and useEffect
     const { data: defaultTopics, loading: topicsLoading } = usefetchTopics(useCase);
@@ -358,23 +357,6 @@ const Prompt = () => {
                         </FormLabel>
                         <InputNumber disabled value={selectedTopics?.length * numQuestions} />
                     </Flex>}
-                    {/* {!isEmpty(doc_paths) && form.getFieldValue('workflow_type') === WorkflowType.CUSTOM_DATA_GENERATION  && (
-                        <StyledFormItem
-                            name={'total_dataset_size'}
-                            label={
-                                <FormLabel level={4}>
-                                    <Space>
-                                        {'Total Dataset Size'}
-                                        <TooltipIcon message={'The total number of Prompt/Completion pairs that will be generated based on this configuration'}/>
-                                    </Space>
-                                </FormLabel>}
-                            labelCol={{ span: 24 }}
-                            wrapperCol={{ span: 24 }}
-                            shouldUpdate
-                        >
-                            <InputNumber value={25} />
-                        </StyledFormItem>
-                    )} */}
 
                     {form.getFieldValue('use_case') === Usecases.TEXT2SQL  && (
                         <div>

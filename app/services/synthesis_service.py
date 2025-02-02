@@ -297,7 +297,7 @@ class SynthesisService:
             else:
                 # extract_timestamp = lambda filename: '_'.join(filename.split('_')[-3:-1])
                 # time_stamp = extract_timestamp(metadata.get('generate_file_name'))
-                job_status = "success"
+                job_status = "ENGINE_SUCCEEDED"
                 generate_file_name = os.path.basename(output_path['local'])
                 
                 self.db.update_job_generate(job_name,generate_file_name, output_path['local'], timestamp, job_status)
@@ -313,7 +313,7 @@ class SynthesisService:
                 raise APIError(str(e))  # Let middleware decide status code
             else:
                 time_stamp = datetime.now(timezone.utc).isoformat()
-                job_status = "failure"
+                job_status = "ENGINE_FAILED"
                 file_name = ''
                 output_path = ''
                 self.db.update_job_generate(job_name, file_name, output_path, time_stamp, job_status)

@@ -487,7 +487,7 @@ class ModelPrompts:
         schema_str = PromptHandler.get_default_schema(use_case, schema)
         custom_prompt_str = PromptHandler.get_default_custom_prompt(use_case, custom_prompt)
 
-        base_prompt = f"""You are a very helpful assistant.Observe in the below examples how a soution is provided for a given qustion.
+        base_prompt = f"""You are a very helpful assistant.Observe in the given examples how a soution is provided for a given question.
 
         <examples>
                 {examples_str}
