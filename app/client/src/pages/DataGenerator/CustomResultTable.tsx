@@ -30,9 +30,13 @@ const CustomResultTable: React.FC<Props> = ({ results }) => {
         <Table
             columns={columns}
             dataSource={results}
-            pagination={false}
             rowClassName={() => 'hover-pointer'}
             rowKey={(_record, index) => `examples-table-${index}`}
+            pagination={{
+                showSizeChanger: true,
+                showQuickJumper: false,
+                hideOnSinglePage: true
+            }}
         />    
     )
 }

@@ -15,7 +15,7 @@ import { useTriggerDatagen } from './../../api/api'
 import { DEMO_MODE_THRESHOLD } from './constants'
 import { GenDatasetResponse, QuestionSolution, WorkflowType } from './types';
 import { Pages } from '../../types';
-import { isEmpty } from 'lodash';
+import { isEmpty, isObject } from 'lodash';
 import CustomResultTable from './CustomResultTable';
 
 const { Title } = Typography;
@@ -64,7 +64,11 @@ const TopicsTable: FC<TopicsTableProps> = ({ formData, topic }) => {
         <StyledTable
             columns={cols}
             dataSource={dataSource}
-            pagination={false}
+            pagination={{
+                showSizeChanger: true,
+                showQuickJumper: false,
+                hideOnSinglePage: true
+            }}
             onRow={(record) => ({
                 onClick: () => Modal.info({
                     title: 'View Details',
@@ -107,7 +111,7 @@ const isDemoMode = (numQuestions: number, topics: [], form: FormInstance) => {
         if (isNumber(total_dataset_size)) {
             return total_dataset_size <= DEMO_MODE_THRESHOLD;
         }
-        return 20;
+        return true;
     }
 
     if (numQuestions * topics?.length <= DEMO_MODE_THRESHOLD) {
@@ -129,9 +133,10 @@ const Finish = () => {
             if (formValues.workflow_type === WorkflowType.SUPERVISED_FINE_TUNING) {
                 formValues.doc_paths = doc_paths.map(item => item.value);
             } else if (formValues.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) {
+
                 formValues.input_path = doc_paths.map(item => item.value);
                 delete formValues.doc_paths;
-                formValues.example_custom = formValues.examples;
+                formValues.example_custom = Array.isArray(formValues.examples) ? formValues.examples.map(example => example.solution) : [];
                 delete formValues.examples;
                 formValues.use_case = 'custom';
             }
@@ -142,10 +147,14 @@ const Finish = () => {
         console.log('generate values', args);
         triggerPost(args)
     }, []);
+    
+    const hasTopics = (genDatasetResp) => {
+        return !Array.isArray(genDatasetResp?.results)
+    }
 
     const formValues = form.getFieldsValue(true);
     let topicTabs = [];
-    if (formValues.workflow_type !== WorkflowType.CUSTOM_DATA_GENERATION) {
+    if (formValues.workflow_type !== WorkflowType.CUSTOM_DATA_GENERATION && hasTopics(genDatasetResp)) {
         topicTabs = genDatasetResp?.results && Object.keys(genDatasetResp.results).map((topic, i) => ({
             key: `${topic}-${i}`,
             label: topic,
@@ -247,7 +256,7 @@ const Finish = () => {
                     </StyledButton>
                 </Flex>
             )}
-            {isDemo && formValues.workflow_type !== WorkflowType.CUSTOM_DATA_GENERATION && (
+            {isDemo && formValues.workflow_type !== WorkflowType.CUSTOM_DATA_GENERATION && hasTopics(genDatasetResp) && (
                 <TabsContainer title={'Generated Dataset'}>
                     <Tabs tabPosition='left' items={topicTabs}/>
                 </TabsContainer>
