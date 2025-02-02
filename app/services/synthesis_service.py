@@ -280,11 +280,13 @@ class SynthesisService:
                 'examples': examples_str,
                 "total_count":total_count,
                 'schema': schema_str,
+                'doc_paths': request.doc_paths,
+                
                 'output_key':output_key,
                 'output_value':output_value
                 }
             
-            
+            print("metadata: ",metadata)
             if is_demo:
                 
                 self.db.save_generation_metadata(metadata)
@@ -442,6 +444,7 @@ class SynthesisService:
                 'output_key':request.output_key,
                 'output_value':request.output_value,
                 'examples': examples_str,
+                'input_path': request.input_path,
                 "total_count":len(inputs),
                 'schema': schema_str
                 

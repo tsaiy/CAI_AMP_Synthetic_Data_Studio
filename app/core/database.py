@@ -62,6 +62,8 @@ class DatabaseManager:
                         topics TEXT,
                         examples TEXT,
                         schema TEXT,
+                        doc_paths TEXT,
+                        input_path, TEXT,
                         job_id TEXT,
                         job_name TEXT UNIQUE,
                         job_status TEXT,
@@ -139,7 +141,10 @@ class DatabaseManager:
             model_params_json = json.dumps(metadata.get('model_parameters', {}))
             topics_json = json.dumps(metadata.get('topics', []))
             examples_json = json.dumps(metadata.get('examples', []))
-            
+            doc_paths_json = json.dumps(metadata.get('doc_paths', []))
+            input_path_json = json.dumps(metadata.get('input_path', []))
+            print("docs_paths: ", doc_paths_json)
+            print("input_path: ", input_path_json)
             display_name = (
                 metadata.get('display_name') or 
                 metadata.get('generate_file_name') or 
@@ -158,9 +163,9 @@ class DatabaseManager:
                         timestamp, model_id, inference_type, use_case,
                         custom_prompt, model_parameters,output_key,output_value, generate_file_name,
                         display_name, local_export_path, hf_export_path,
-                        num_questions, total_count, topics, examples,
-                        schema, job_id, job_name, job_status, job_creator_name
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?, ?)
+                        num_questions, total_count, topics, examples, 
+                        schema, doc_paths, input_path,job_id, job_name, job_status, job_creator_name
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?, ?,?,?)
                 """
                 
                 values = (
@@ -181,7 +186,8 @@ class DatabaseManager:
                     topics_json,
                     examples_json,
                     metadata.get('schema', None),
-                   
+                   doc_paths_json,
+                   input_path_json,
                     metadata.get('job_id', None),
                     metadata.get('job_name', None),
                     metadata.get('job_status', None),
