@@ -74,13 +74,7 @@ const Prompt = () => {
     const input_value = form.getFieldValue('input_value');
     const output_key = form.getFieldValue('output_key');
     const caii_endpoint = form.getFieldValue('caii_endpoint');
-    console.log('workflow_type', workflow_type);
-    console.log('doc_paths', doc_paths);
-    console.log('useCase', useCase);
     const { data: defaultPrompt, loading: promptsLoading } = useFetchDefaultPrompt(useCase);
-    console.log('useCase', useCase);
-    console.log('defaultPrompt', defaultPrompt);
-    
 
     // Page Bootstrap requests and useEffect
     const { data: defaultTopics, loading: topicsLoading } = usefetchTopics(useCase);
@@ -110,16 +104,6 @@ const Prompt = () => {
         if (defaultPrompt) {
             defaultPromptRef.current = defaultPrompt;
             if (form.getFieldValue('custom_prompt') === undefined) {
-                form.setFieldValue('custom_prompt', defaultPrompt)
-            }
-            if (form.getFieldValue('custom_prompt') !== undefined && 
-                form.getFieldValue('use_case') === 'custom' && 
-                isEmpty(form.getFieldValue('custom_prompt_instructions'))) {
-                form.setFieldValue('custom_prompt', null)
-            }
-            if (form.getFieldValue('custom_prompt') !== undefined && 
-                form.getFieldValue('use_case') === 'custom' && 
-                !isEmpty(form.getFieldValue('custom_prompt_instructions'))) {
                 form.setFieldValue('custom_prompt', defaultPrompt)
             }
             if (form.getFieldValue('custom_prompt') !== defaultPrompt && 
@@ -373,23 +357,6 @@ const Prompt = () => {
                         </FormLabel>
                         <InputNumber disabled value={selectedTopics?.length * numQuestions} />
                     </Flex>}
-                    {!isEmpty(doc_paths) && form.getFieldValue('workflow_type') === WorkflowType.CUSTOM_DATA_GENERATION  && (
-                        <StyledFormItem
-                            name={'total_dataset_size'}
-                            label={
-                                <FormLabel level={4}>
-                                    <Space>
-                                        {'Total Dataset Size'}
-                                        <TooltipIcon message={'The total number of Prompt/Completion pairs that will be generated based on this configuration'}/>
-                                    </Space>
-                                </FormLabel>}
-                            labelCol={{ span: 24 }}
-                            wrapperCol={{ span: 24 }}
-                            shouldUpdate
-                        >
-                            <InputNumber value={25} />
-                        </StyledFormItem>
-                    )}
 
                     {form.getFieldValue('use_case') === Usecases.TEXT2SQL  && (
                         <div>

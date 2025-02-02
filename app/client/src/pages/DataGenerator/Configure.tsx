@@ -1,3 +1,4 @@
+import endsWith from 'lodash/endsWith';
 import isEmpty from 'lodash/isEmpty';
 import { useEffect, useState } from 'react';
 import { Flex, Form, Input, Select, Typography } from 'antd';
@@ -46,17 +47,15 @@ const Configure = () => {
     const [selectedFiles, setSelectedFiles] = useState(
         !isEmpty(form.getFieldValue('doc_paths')) ? form.getFieldValue('doc_paths') : []);
 
-    const validateForm = () => {
+    const validateForm = async () => {
         const values = form.getFieldsValue();
         delete values.custom_prompt_instructions;
         delete values.workflow_type;
         delete values.doc_paths;
         delete values.output_key;
         delete values.output_value;
-        console.log('values', values);
         
         const allFieldsFilled = Object.values(values).every(value => Boolean(value));
-        console.log('allFieldsFilled', allFieldsFilled);
         if (allFieldsFilled) {
             setIsStepValid && setIsStepValid(true)
         } else {
@@ -83,7 +82,6 @@ const Configure = () => {
             }));
         setSelectedFiles(paths);
         form.setFieldValue('doc_paths', paths);
-        console.log('values', form.getFieldsValue());
     }
 
     const onFilesChange = (selections: any) => {
@@ -97,7 +95,11 @@ const Configure = () => {
     }
 
     const onWorkflowTypeChange = (value: string) => {
-        console.log('onWorkflowTypeChange', value);
+        const _workflow_type = form.getFieldValue('workflow_type');
+        if (_workflow_type !== value) {
+            form.setFieldValue('doc_paths', []);
+            setSelectedFiles([]);    
+        }
     }
     
 
@@ -189,10 +191,12 @@ const Configure = () => {
                     label='Workflow'
                     tooltip='A specialized workflow for your dataset'
                     labelCol={labelCol}
-                    rules={[{ required: true }]}
                     shouldUpdate
-                >
-                    <Select placeholder={'Select a workflow'} onChange={onWorkflowTypeChange}>
+                    rules={[
+                            { required: true }
+                        ]}
+                      >
+                        <Select placeholder={'Select a workflow'} onChange={onWorkflowTypeChange}>
                         {WORKFLOW_OPTIONS.map(option => 
                             <Select.Option key={option.value} value={option.value}>
                                 {option.label}
@@ -204,7 +208,9 @@ const Configure = () => {
                 <Form.Item
                     name='use_case'
                     label='Template'
-                    rules={[{ required: true }]}
+                    rules={[
+                        { required: true }
+                    ]}
                     tooltip='A specialize template for generating your dataset'
                     labelCol={labelCol}
                     shouldUpdate
@@ -225,7 +231,39 @@ const Configure = () => {
                     name='doc_paths'
                     label='Files'
                     labelCol={labelCol}
+                    dependencies={['workflow_type']}
+                    validateTrigger={['workflow_type', 'doc_paths', 'onChange']}
                     shouldUpdate
+                    rules={[
+                        () => ({
+                            validator(_, value) {
+                              const _workflow_type = form.getFieldValue('workflow_type');
+                              const values = form.getFieldValue('doc_paths');
+                              if (Array.isArray(values) && !isEmpty(values)) {
+                                try {
+                                    if (_workflow_type === WorkflowType.CUSTOM_DATA_GENERATION && 
+                                        !isEmpty(value)) {
+                                            const isInValid = values.some(item => !endsWith(item.value, '.json'));
+                                            if(isInValid) {
+                                                throw new Error('Invalid file extension, for custom data generation workflow only JSON files are supported.')
+                                            }
+
+                                    } else if (_workflow_type === WorkflowType.SUPERVISED_FINE_TUNING &&
+                                        !isEmpty(value)) {
+                                            const isInValid = values.some(item => !endsWith(item.value, '.pdf'));
+                                            if(isInValid) {
+                                                throw new Error('Invalid file extension, for supervised fine tuning workflow only PDF files are supported.')
+                                            }
+                                    }
+
+                                } catch(e) {
+                                    return Promise.reject(e);
+                                }
+                            }
+                            return Promise.resolve();
+                            }
+                        })
+                    ]}
                 >
                     <Flex>
                         <Select placeholder={'Select project files'} mode="multiple" value={selectedFiles} onChange={onFilesChange} allowClear/>    
@@ -238,8 +276,23 @@ const Configure = () => {
                         name='input_key'
                         label='Input Key'
                         labelCol={labelCol}
-                        rules={[{ required: true }]}
+                        validateTrigger={['workflow_type', 'onChange']}
                         shouldUpdate
+                        rules={[
+                            () => ({
+                                validator(_, value) { 
+                                  const values = form.getFieldValue('doc_paths');  
+                                  if (isEmpty(value) && Array.isArray(values) && !isEmpty(values)) {
+                                    try {
+                                        throw new Error('This field is required.')
+                                    } catch(e) {
+                                        return Promise.reject(e);
+                                    }
+                                }
+                                return Promise.resolve();
+                            }
+                            })
+                        ]}
                     >
                         <Input />
                     </Form.Item>

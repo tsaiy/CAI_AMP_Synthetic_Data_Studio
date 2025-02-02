@@ -1,3 +1,4 @@
+import isNumber from 'lodash/isNumber';
 import { ComponentType, FC, useEffect } from 'react';
 import { HomeOutlined, PageviewOutlined } from '@mui/icons-material';
 import AssessmentIcon from '@mui/icons-material/Assessment';
@@ -5,7 +6,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import GradingIcon from '@mui/icons-material/Grading';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import ModelTrainingIcon from '@mui/icons-material/ModelTraining';
-import { Avatar, Button, Card, Divider, Flex, Form, List, Modal, Result, Spin, Tabs, Table, Typography } from 'antd';
+import { Avatar, Button, Card, Divider, Flex, Form, List, Modal, Result, Spin, Tabs, Table, Typography, FormInstance } from 'antd';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 
@@ -99,7 +100,16 @@ const getJobsURL = () => {
 
 // Determine if server should return dataset for parsing
 // or will create a batch job and return a job id
-const isDemoMode = (numQuestions: number, topics: []) => {
+const isDemoMode = (numQuestions: number, topics: [], form: FormInstance) => {
+    const workflow_type = form.getFieldValue('workflow_type');
+    if (workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) {
+        const total_dataset_size = form.getFieldValue('total_dataset_size');
+        if (isNumber(total_dataset_size)) {
+            return total_dataset_size <= DEMO_MODE_THRESHOLD;
+        }
+        return 20;
+    }
+
     if (numQuestions * topics?.length <= DEMO_MODE_THRESHOLD) {
         return true
     }
@@ -110,13 +120,12 @@ const Finish = () => {
     const form = Form.useFormInstance();
     const { data: genDatasetResp, loading, error: generationError, triggerPost } = useTriggerDatagen<GenDatasetResponse>();
     const { num_questions, topics } = form.getFieldsValue(true)
-    const isDemo = isDemoMode(num_questions, topics)
-    console.log('genDatasetResp', genDatasetResp);
+    const isDemo = isDemoMode(num_questions, topics, form)
 
     useEffect(() => { 
         const formValues = form.getFieldsValue(true);
         const doc_paths = formValues.doc_paths;
-        if (!isEmpty(doc_paths)) {
+        if (Array.isArray(doc_paths) && !isEmpty(doc_paths)) {
             if (formValues.workflow_type === WorkflowType.SUPERVISED_FINE_TUNING) {
                 formValues.doc_paths = doc_paths.map(item => item.value);
             } else if (formValues.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) {
