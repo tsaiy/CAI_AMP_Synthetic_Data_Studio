@@ -43,21 +43,21 @@ from app.core.model_handlers import create_handler
 from app.services.aws_bedrock import get_bedrock_client
 
 #*************Comment this when running locally********************************************
-# import cmlapi
-# client_cml = cmlapi.default_client()
-# project_id = os.getenv("CDSW_PROJECT_ID")
-# base_job_name = 'Synthetic_data_base_job'
-# base_job_id = client_cml.list_jobs(project_id,
-#                                    search_filter='{"name":"%s"}' % base_job_name).jobs[0].id
-# template_job = client_cml.get_job(
-#     project_id=project_id,
-#     job_id=base_job_id
-# )
-# runtime_identifier = template_job.runtime_identifier
+import cmlapi
+client_cml = cmlapi.default_client()
+project_id = os.getenv("CDSW_PROJECT_ID")
+base_job_name = 'Synthetic_data_base_job'
+base_job_id = client_cml.list_jobs(project_id,
+                                   search_filter='{"name":"%s"}' % base_job_name).jobs[0].id
+template_job = client_cml.get_job(
+    project_id=project_id,
+    job_id=base_job_id
+)
+runtime_identifier = template_job.runtime_identifier
 
-# def get_job_status(job_id):
-#     response = client_cml.list_job_runs(project_id, job_id, sort="-created_at", page_size=1)
-#     return response.job_runs[0].status
+def get_job_status(job_id):
+    response = client_cml.list_job_runs(project_id, job_id, sort="-created_at", page_size=1)
+    return response.job_runs[0].status
 
 #*************Comment this when running locally********************************************
 
@@ -1094,19 +1094,19 @@ async def get_example_payloads(use_case:UseCase):
     return payload
 
 #****** comment below for testing just backend**************
-# current_directory = os.path.dirname(os.path.abspath(__file__))
-# client_build_path = os.path.join(current_directory, "client", "dist")
-# app.mount("/static", StaticFiles(directory=client_build_path, html=True), name="webapp")
+current_directory = os.path.dirname(os.path.abspath(__file__))
+client_build_path = os.path.join(current_directory, "client", "dist")
+app.mount("/static", StaticFiles(directory=client_build_path, html=True), name="webapp")
 
-# @app.get("/")
-# async def serve_index():
-#    return FileResponse(os.path.join(client_build_path, "index.html"))
+@app.get("/")
+async def serve_index():
+   return FileResponse(os.path.join(client_build_path, "index.html"))
 
-# @app.get("/{path_name:path}")
-# async def serve_react_app(path_name: str):
-#    file_path = os.path.join(client_build_path, path_name)
+@app.get("/{path_name:path}")
+async def serve_react_app(path_name: str):
+   file_path = os.path.join(client_build_path, path_name)
 
-#    if os.path.exists(file_path) and os.path.isfile(file_path):
-#        return FileResponse(file_path)
+   if os.path.exists(file_path) and os.path.isfile(file_path):
+       return FileResponse(file_path)
 
-#    return FileResponse(os.path.join(client_build_path, "index.html")) 
+   return FileResponse(os.path.join(client_build_path, "index.html")) 
