@@ -197,8 +197,8 @@ class SynthesisService:
                 total_count = request.num_questions
             else:
                 if request.topics:
-                    topics = request.topics[:min(5, len(request.topics))] if is_demo else request.topics
-                    num_questions = min(10, request.num_questions) if is_demo else request.num_questions
+                    topics = request.topics
+                    num_questions = request.num_questions
                     total_count = request.num_questions*len(request.topics)
                 else:
                     self.logger.error("Generation failed: No topics provided")
