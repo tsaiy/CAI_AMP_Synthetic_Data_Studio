@@ -89,6 +89,22 @@ export const fetchCustomPrompt = async (params: any) => {
     }
 }
 
+export const listModels = async (params: any) => {
+    const resp = await fetch(`${BASE_API_URL}/model/model_ID`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params),
+    });
+    if (resp.status !== 200) {
+        const error = await resp.json();
+        throw new Error(error.message || error.detail);
+    }
+    const body = await resp.json();
+    return body;
+}
+
 export const listFilesByPath = async (params: any) => {
     const resp = await fetch(`${BASE_API_URL}/get_project_files`, {
         method: 'POST',
