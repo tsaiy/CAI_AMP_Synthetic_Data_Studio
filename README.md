@@ -83,73 +83,7 @@ Built using:
    python start_application.py
    ```
 
-## API Endpoints(backend)
 
-### Data Generation
-- `/synthesis/generate`: Generate synthetic Q&A pairs
-- `/synthesis/evaluate`: Evaluate generated examples
-
-### Configuration
-- `/model/model_ID`: Get available model configurations
-- `/use-cases`: List available use cases
-- `/model/parameters`: Get model parameter ranges
-- `/{use_case}/gen_prompt`: Get generation prompts
-- `/{use_case}/eval_prompt`: Get evaluation prompts
-
-### Management
-- `/generations/history`: View generation history
-- `/evaluations/history`: View evaluation history
-- `/generations/display-name`: Update generation metadata
-- `/evaluations/display-name`: Update evaluation metadata
-
-## Usage Examples
-
-### Code Generation Request
-```json
-{
-    "use_case": "code_generation",
-    "model_id": "anthropic.claude-3-5-sonnet-20240620-v1:0",
-    "num_questions": 3,
-    "technique": "sft",
-    "topics": ["python_basics", "data_structures"],
-    "examples": [
-        {
-            "question": "How do you create a list in Python and add elements to it?",
-            "solution": "# Example solution code..."
-        }
-    ],
-   
-    "model_params": {
-        "temperature": 0.0,
-        "top_p": 1.0,
-        "max_tokens": 4096
-    }
-}
-```
-
-### Text-to-SQL Request
-```json
-{
-    "use_case": "text2sql",
-    "model_id": "anthropic.claude-3-5-sonnet-20240620-v1:0",
-    "num_questions": 3,
-    "technique": "sft",
-    "topics": ["basic_queries", "joins"],
-    "schema": "CREATE TABLE users (...)",
-    "examples": [
-        {
-            "question": "How do you select all employees from the employees table?",
-            "solution": "SELECT * FROM employees;"
-        }
-    ],
-   
-    "model_params": {
-        "temperature": 0.0,
-        "top_p": 1.0,
-        "max_tokens": 4096
-    }
-}
-```
 
 ## Legal Notice
 
