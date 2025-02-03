@@ -61,7 +61,7 @@ Built using:
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/cloudera/CAI_AMP_Synthetic_Data_Studio.git
    ```
 
 2. Configure environment variables:
@@ -75,12 +75,12 @@ Built using:
 
 3. Build the application:
    ```bash
-   python build_client.py
+   python build/build_client.py
    ```
 
 4. Start the application:
    ```bash
-   python start_application.py
+   python build/start_application.py
    ```
 
 
