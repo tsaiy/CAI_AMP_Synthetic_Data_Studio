@@ -7,7 +7,6 @@ import { sortItemsByKey } from '../../utils/sortutils';
 import styled from 'styled-components';
 import { JobStatus } from '../../types';
 import JobStatusIcon from '../../components/JobStatus/jobStatusIcon';
-import { ViewType } from './HomePage';
 
 const { Search } = Input;
 const { Text, Link, Paragraph } = Typography;
@@ -50,7 +49,7 @@ const StyledParagraph = styled(Paragraph)`
 `;
 
 export type ExportsTabProps = {
-    tabType: ViewType;
+    refetchOnRender: boolean;
 };
 
 const columns: TableProps<ExportResponse>['columns'] = [
@@ -77,7 +76,15 @@ const columns: TableProps<ExportResponse>['columns'] = [
         dataIndex: 'display_export_name',
         sorter: sortItemsByKey('display_export_name'),
         render: (displayExportName) => <Tooltip title={displayExportName}><StyledParagraph style={{ width: 200, marginBottom: 0 }} ellipsis={{ rows: 1 }}>{displayExportName}</StyledParagraph></Tooltip>
-    }, {
+    }, 
+    {
+        key: 'creator',
+        title: 'Creator',
+        dataIndex: 'creator',
+        sorter: sortItemsByKey('creator'),
+        render: (creator) => <Text>{creator}</Text>
+    },
+    {
         key: 'hf_export_path',
         title: 'Export Location',
         dataIndex: 'hf_export_path',
@@ -100,7 +107,7 @@ const columns: TableProps<ExportResponse>['columns'] = [
     }
 ];
 
-const ExportsTab: React.FC<ExportsTabProps> = ({ tabType }) => {
+const ExportsTab: React.FC<ExportsTabProps> = ({ refetchOnRender }) => {
     const { isLoading, data, refetch } = useGetExportJobs();
     const [searchTerm, setSearchTerm] = React.useState<string>('');
 
@@ -115,10 +122,10 @@ const ExportsTab: React.FC<ExportsTabProps> = ({ tabType }) => {
     }, [data, searchTerm]);
 
     useEffect(() => {
-        if(tabType === ViewType.EXPORTS) {
+        if(refetchOnRender) {
             refetch();
         }
-    }, [tabType, refetch]);
+    }, [refetchOnRender, refetch]);
 
     return (
         <Container>

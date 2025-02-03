@@ -85,7 +85,7 @@ const HomePage: React.FC = () => {
         {
             key: ViewType.EXPORTS,
             label: 'Exports',
-            children: <ExportsTab tabType={tabViewType} />,
+            children: <ExportsTab refetchOnRender={tabViewType === ViewType.EXPORTS} />,
         }
     ];
 
