@@ -35,17 +35,16 @@ const MAX_EXAMPLES = 5;
 
 const Examples = () => {
     const form = Form.useFormInstance();
-    const { setIsStepValid } = useWizardCtx();
-    const _values = Form.useWatch('examples', form);
-
-    useEffect (() => {
-        const values = form.getFieldsValue();
-        if (isEmpty(values.examples)) {
-            setIsStepValid(false);
-        } else if (!isEmpty(values?.examples)) {
-            setIsStepValid(true);
-        }
-    }, [_values]); 
+    // const { setIsStepValid } = useWizardCtx();
+    // const _values = Form.useWatch('examples', form);
+    // useEffect (() => {
+    //     const values = form.getFieldsValue();
+    //     if (isEmpty(values.examples)) {
+    //         setIsStepValid(false);
+    //     } else if (!isEmpty(values?.examples)) {
+    //         setIsStepValid(true);
+    //     }
+    // }, [_values]); 
 
     const columns = [
         {

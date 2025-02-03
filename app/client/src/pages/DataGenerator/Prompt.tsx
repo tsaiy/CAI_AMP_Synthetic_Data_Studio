@@ -215,7 +215,8 @@ const Prompt = () => {
                         >
                             {'Restore'}
                         </RestoreDefaultBtn>
-                        {form.getFieldValue('use_case') === Usecases.CUSTOM.toLowerCase()  &&  
+                        {(form.getFieldValue('use_case') === Usecases.CUSTOM.toLowerCase() ||
+                            workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) &&  
                             <CustomPromptButton 
                                 model_id={model_id}
                                 inference_type={inference_type}
@@ -225,7 +226,8 @@ const Prompt = () => {
                             />
                         }
                     </div>
-                    {workflow_type === WorkflowType.CUSTOM_DATA_GENERATION && !isEmpty(doc_paths) && 
+                    {((workflow_type === WorkflowType.CUSTOM_DATA_GENERATION && !isEmpty(doc_paths)) ||
+                    (workflow_type === WorkflowType.SUPERVISED_FINE_TUNING && !isEmpty(doc_paths))) && 
                         <StyledFormItem
                             name={'dataset_size'}
                             label={

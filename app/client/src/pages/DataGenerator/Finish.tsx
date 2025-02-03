@@ -146,7 +146,7 @@ const Finish = () => {
         } else {
             delete formValues.doc_paths;
         }
-        const args = {...formValues, is_demo: isDemo }
+        const args = {...formValues, is_demo: isDemo, model_params: formValues.model_parameters }
         console.log('generate values', args);
         triggerPost(args)
     }, []);
