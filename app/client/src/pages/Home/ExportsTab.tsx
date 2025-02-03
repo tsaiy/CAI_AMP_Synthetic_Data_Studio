@@ -78,11 +78,11 @@ const columns: TableProps<ExportResponse>['columns'] = [
         render: (displayExportName) => <Tooltip title={displayExportName}><StyledParagraph style={{ width: 200, marginBottom: 0 }} ellipsis={{ rows: 1 }}>{displayExportName}</StyledParagraph></Tooltip>
     }, 
     {
-        key: 'creator',
+        key: 'job_creator_name',
         title: 'Creator',
-        dataIndex: 'creator',
-        sorter: sortItemsByKey('creator'),
-        render: (creator) => <Text>{creator}</Text>
+        dataIndex: 'job_creator_name',
+        sorter: sortItemsByKey('job_creator_name'),
+        render: (creatorName) => <Text>{creatorName}</Text>
     },
     {
         key: 'hf_export_path',
