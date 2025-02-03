@@ -10,7 +10,8 @@ export enum DataGenWizardSteps {
 
 export enum Usecases {
     CODE_GENERATION = 'code_generation',
-    TEXT2SQL = 'text2sql'
+    TEXT2SQL = 'text2sql',
+    CUSTOM = 'CUSTOM'
 }
 
 export enum ModelProviders {
@@ -90,4 +91,23 @@ export interface WizardStepConfig {
 
 export interface WizardCtxObj {
     setIsStepValid: Dispatch<SetStateAction<boolean>>
+}
+
+export interface File {
+    name: string;
+    size: number;
+    mime: string;
+    mtime: string;
+    url: string;
+    path: string;
+}
+
+export enum WorkflowType {
+    SUPERVISED_FINE_TUNING = 'supervised-fine-tuning',
+    CUSTOM_DATA_GENERATION = "custom"
+}
+
+export interface CustomResult {
+    question: string;
+    solution: string;
 }

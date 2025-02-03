@@ -7,12 +7,13 @@ import styled from 'styled-components';
 
 import Parameters from './Parameters';
 import TooltipIcon from '../../components/TooltipIcon';
-import { usefetchTopics, useFetchDefaultSchema } from '../../api/api';
+import { usefetchTopics, useFetchDefaultSchema, useFetchDefaultPrompt } from '../../api/api';
 import { MAX_NUM_QUESTION, MIN_SEED_INSTRUCTIONS,  MAX_SEED_INSTRUCTIONS } from './constants'
-import { Usecases } from './types';
+import { Usecases, WorkflowType } from './types';
 import { useWizardCtx } from './utils';
-import { useGetPromptByUseCase } from './hooks';
+import { useDatasetSize, useGetPromptByUseCase } from './hooks';
 import Loading from '../Evaluator/Loading';
+import CustomPromptButton from './CustomPromptButton';
 
 const { Title } = Typography;
 
@@ -67,27 +68,24 @@ const Prompt = () => {
     const useCase = form.getFieldValue('use_case');
     const model_id = form.getFieldValue('model_id');
     const inference_type = form.getFieldValue('inference_type');
-    const custom_prompt_instructions = form.getFieldValue('custom_prompt_instructions');
+    const doc_paths = form.getFieldValue('doc_paths');
+    const workflow_type = form.getFieldValue('workflow_type');
+    const input_key = form.getFieldValue('input_key');
+    const input_value = form.getFieldValue('input_value');
+    const output_key = form.getFieldValue('output_key');
     const caii_endpoint = form.getFieldValue('caii_endpoint');
+    const { data: defaultPrompt, loading: promptsLoading } = useFetchDefaultPrompt(useCase);
 
     // Page Bootstrap requests and useEffect
     const { data: defaultTopics, loading: topicsLoading } = usefetchTopics(useCase);
-    const {data: defaultPrompt, isLoading: promptLoading, isError: isPromptError, error: promptError } = useGetPromptByUseCase(useCase, {
-        model_id,
-        inference_type,
-        custom_prompt: custom_prompt_instructions,
-        caii_endpoint
-    });
     const { data: defaultSchema, loading: schemaLoading } = useFetchDefaultSchema();
-
-    useEffect(() => {
-        if (isPromptError) {
-            notification.error({
-                message: 'Error',
-                description: `An error occurred while fetching the prompt.\n ${promptError}`
-            });
-        }
-    }, [promptError]);
+    const { data: dataset_size, isLoading: datasetSizeLoading } = useDatasetSize(
+        workflow_type,
+        doc_paths,
+        input_key,
+        input_value,
+        output_key
+    );
 
     useEffect(() => {
         if (defaultTopics) {
@@ -108,16 +106,6 @@ const Prompt = () => {
             if (form.getFieldValue('custom_prompt') === undefined) {
                 form.setFieldValue('custom_prompt', defaultPrompt)
             }
-            if (form.getFieldValue('custom_prompt') !== undefined && 
-                form.getFieldValue('use_case') === 'custom' && 
-                isEmpty(form.getFieldValue('custom_prompt_instructions'))) {
-                form.setFieldValue('custom_prompt', null)
-            }
-            if (form.getFieldValue('custom_prompt') !== undefined && 
-                form.getFieldValue('use_case') === 'custom' && 
-                !isEmpty(form.getFieldValue('custom_prompt_instructions'))) {
-                form.setFieldValue('custom_prompt', defaultPrompt)
-            }
             if (form.getFieldValue('custom_prompt') !== defaultPrompt && 
                 form.getFieldValue('use_case') !== 'custom') {
                 form.setFieldValue('custom_prompt', defaultPrompt)
@@ -129,20 +117,34 @@ const Prompt = () => {
                 form.setFieldValue('schema', defaultSchema)
             }
         }
-    }, [defaultPrompt, defaultPromptRef, defaultSchema, defaultSchemaRef, defaultTopics, form, setItems]);
+        if (dataset_size) {
+            if (form.getFieldValue('dataset_size') !== dataset_size) {
+                form.setFieldValue('dataset_size', dataset_size)
+            }
+        }
+    }, [defaultPromptRef, defaultSchema, defaultSchemaRef, defaultTopics, dataset_size, form, setItems]);
 
     const { setIsStepValid } = useWizardCtx();
     useEffect(() => {
         let isStepValid = false;
-        if (selectedTopics?.length > 0 && numQuestions > 0) {
-            isStepValid = true;
+        if(isEmpty(doc_paths)) {
+            if (selectedTopics?.length > 0 && numQuestions > 0) {
+                isStepValid = true;
+            }
+            setIsStepValid(isStepValid)
+        } else {
+            setIsStepValid(true);
         }
-        setIsStepValid(isStepValid)
+        
     }, [selectedTopics, numQuestions]);
 
     const onTopicTextChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setCustomTopic(event.target.value);
     };
+
+    const setPrompt = (_prompt: string) => {
+        form.setFieldValue('custom_prompt', _prompt);
+    }
 
     const addItem = (e: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => {
         e.preventDefault();
@@ -170,7 +172,6 @@ const Prompt = () => {
         <Row gutter={[50,0]}>
             <LeftCol span={17}>
                 <Flex vertical gap={14}>
-                    {promptLoading && <Loading />}
                     <div>
                         <StyledFormItem
                             name='custom_prompt'
@@ -214,7 +215,41 @@ const Prompt = () => {
                         >
                             {'Restore'}
                         </RestoreDefaultBtn>
+                        {(form.getFieldValue('use_case') === Usecases.CUSTOM.toLowerCase() ||
+                            workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) &&  
+                            <CustomPromptButton 
+                                model_id={model_id}
+                                inference_type={inference_type}
+                                caii_endpoint={caii_endpoint}
+                                use_case={useCase}
+                                setPrompt={setPrompt}
+                            />
+                        }
                     </div>
+                    {((workflow_type === WorkflowType.CUSTOM_DATA_GENERATION && !isEmpty(doc_paths)) ||
+                    (workflow_type === WorkflowType.SUPERVISED_FINE_TUNING && !isEmpty(doc_paths))) && 
+                        <StyledFormItem
+                            name={'dataset_size'}
+                            label={
+                                <FormLabel level={4}>
+                                    <Space>
+                                        {'Total Dataset Size'}
+                                        <TooltipIcon message={'The total number of Prompt/Completion pairs that will be generated based on this configuration'}/>
+                                    </Space>
+                                </FormLabel>
+                            }
+                            
+                            labelCol={{ span: 24 }}
+                            wrapperCol={{ span: 24 }}
+                            shouldUpdate
+                           
+                        >
+                        
+                            <InputNumber disabled value={dataset_size} />
+                        </StyledFormItem>    
+                    }
+                    {isEmpty(doc_paths) && (workflow_type === WorkflowType.SUPERVISED_FINE_TUNING ||
+                        workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) &&
                     <Flex gap={20} vertical>
                         <StyledFormItem
                             name={'topics'}
@@ -315,6 +350,7 @@ const Prompt = () => {
                                 step={1}
                             />
                         </StyledFormItem>
+                        
                         <FormLabel level={4}>
                             <Space>
                                 {'Total Dataset Size'}
@@ -322,7 +358,8 @@ const Prompt = () => {
                             </Space>
                         </FormLabel>
                         <InputNumber disabled value={selectedTopics?.length * numQuestions} />
-                    </Flex>
+                    </Flex>}
+
                     {form.getFieldValue('use_case') === Usecases.TEXT2SQL  && (
                         <div>
                             <StyledFormItem

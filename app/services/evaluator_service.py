@@ -342,7 +342,7 @@ class EvaluatorService:
             else:
 
                 
-                job_status = "success"
+                job_status = "ENGINE_SUCCEEDED"
                 evaluate_file_name = os.path.basename(output_path)
                 self.db.update_job_evaluate(job_name, evaluate_file_name, output_path, timestamp, overall_average, job_status)
                 self.db.backup_and_restore_db()
@@ -358,7 +358,7 @@ class EvaluatorService:
                 raise APIError(str(e))
             else:
                 time_stamp = datetime.now(timezone.utc).isoformat()
-                job_status = "failure"
+                job_status = "ENGINE_FAILED"
                 file_name = ''
                 output_path = ''
                 overall_average = ''

@@ -46,6 +46,7 @@ class DatabaseManager:
                     CREATE TABLE IF NOT EXISTS generation_metadata (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         timestamp TEXT,
+                        technique TEXT,
                         model_id TEXT,
                         inference_type TEXT,
                         use_case TEXT,
@@ -62,9 +63,12 @@ class DatabaseManager:
                         topics TEXT,
                         examples TEXT,
                         schema TEXT,
+                        doc_paths TEXT,
+                        input_path, TEXT,
                         job_id TEXT,
                         job_name TEXT UNIQUE,
-                        job_status TEXT
+                        job_status TEXT,
+                        job_creator_name TEXT
                        
                     )
                 """)
@@ -86,7 +90,8 @@ class DatabaseManager:
                         average_score FLOAT,
                         job_id TEXT,
                         job_name TEXT UNIQUE,
-                        job_status TEXT
+                        job_status TEXT,
+                        job_creator_name TEXT
                        
                     )
                 """)
@@ -101,7 +106,8 @@ class DatabaseManager:
                         hf_export_path TEXT,
                         job_id TEXT,
                         job_name TEXT UNIQUE,
-                        job_status TEXT
+                        job_status TEXT,
+                        job_creator_name TEXT
                     )
                 """)
                 
@@ -136,7 +142,10 @@ class DatabaseManager:
             model_params_json = json.dumps(metadata.get('model_parameters', {}))
             topics_json = json.dumps(metadata.get('topics', []))
             examples_json = json.dumps(metadata.get('examples', []))
-            
+            doc_paths_json = json.dumps(metadata.get('doc_paths', []))
+            input_path_json = json.dumps(metadata.get('input_path', []))
+            print("docs_paths: ", doc_paths_json)
+            print("input_path: ", input_path_json)
             display_name = (
                 metadata.get('display_name') or 
                 metadata.get('generate_file_name') or 
@@ -152,16 +161,17 @@ class DatabaseManager:
                 
                 query = """
                     INSERT INTO generation_metadata (
-                        timestamp, model_id, inference_type, use_case,
+                        timestamp, technique, model_id, inference_type, use_case,
                         custom_prompt, model_parameters,output_key,output_value, generate_file_name,
                         display_name, local_export_path, hf_export_path,
-                        num_questions, total_count, topics, examples,
-                        schema, job_id, job_name, job_status
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)
+                        num_questions, total_count, topics, examples, 
+                        schema, doc_paths, input_path,job_id, job_name, job_status, job_creator_name
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?, ?,?,?,?)
                 """
                 
                 values = (
                     metadata.get('timestamp', None),
+                    metadata.get('technique', None),
                     metadata.get('model_id', None),
                     metadata.get('inference_type', None),
                     metadata.get('use_case', None),
@@ -178,10 +188,12 @@ class DatabaseManager:
                     topics_json,
                     examples_json,
                     metadata.get('schema', None),
-                   
+                   doc_paths_json,
+                   input_path_json,
                     metadata.get('job_id', None),
                     metadata.get('job_name', None),
-                    metadata.get('job_status', None)
+                    metadata.get('job_status', None),
+                    metadata.get('job_creator_name', None)
                 )
                 
                 cursor.execute(query, values)
@@ -301,8 +313,8 @@ class DatabaseManager:
                         timestamp, model_id, inference_type, use_case,
                         custom_prompt, model_parameters, generate_file_name,
                         evaluate_file_name, display_name, local_export_path,
-                        examples, average_score, job_id, job_name, job_status
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        examples, average_score, job_id, job_name, job_status, job_creator_name
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
                 
                 values = (
@@ -321,7 +333,8 @@ class DatabaseManager:
                    
                     metadata.get('job_id', None),
                  metadata.get('job_name', None),
-                    metadata.get('job_status', None)
+                    metadata.get('job_status', None),
+                    metadata.get('job_creator_name', None)
                 )
                 
                 cursor.execute(query, values)
@@ -358,8 +371,9 @@ class DatabaseManager:
                         hf_export_path,
                         job_id,
                         job_name,
-                        job_status
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        job_status,
+                        job_creator_name
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
                 
                 values = (
@@ -370,7 +384,8 @@ class DatabaseManager:
                     metadata.get('hf_export_path', None),
                     metadata.get('job_id', None),
                     metadata.get('job_name', None),
-                    metadata.get('job_status', None)
+                    metadata.get('job_status', None),
+                    metadata.get('job_creator_name', None)
                 )
                 
                 cursor.execute(query, values)
@@ -510,6 +525,201 @@ class DatabaseManager:
             print(f"Error updating job statuses: {str(e)}")
             raise
 
+
+
+    def get_pending_generate_job_ids(self) -> List[str]:
+        """
+        Retrieve all job IDs from export_metadata where job_status is not 'ENGINE_SUCCEEDED'
+        
+        Returns:
+            List[str]: List of job IDs with pending or failed status
+        """
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                query = """
+                    SELECT job_id 
+                    FROM generation_metadata 
+                    WHERE job_status != 'ENGINE_SUCCEEDED'
+                    AND job_id IS NOT NULL
+                """
+                
+                cursor.execute(query)
+                results = cursor.fetchall()
+                
+                # Extract job_ids from results tuples
+                job_ids = [row[0] for row in results]
+                
+                return job_ids
+                
+        except sqlite3.OperationalError as e:
+            print(f"Database operation error in get_pending_job_ids: {e}")
+            raise
+            
+        except Exception as e:
+            print(f"Error retrieving pending job IDs: {str(e)}")
+            raise
+
+    def update_job_statuses_generate(self, job_status_updates: Dict[str, str]) -> Dict[str, int]:
+        """
+        Update all job statuses in a single database transaction using provided status updates.
+        
+        Args:
+            job_status_updates: Dictionary mapping job_ids to their new statuses {job_id: status}
+        
+        Returns:
+            Dict[str, int]: Summary of updates {status: count}
+        """
+        try:
+            if not job_status_updates:
+                return {"no_updates": 0}
+                
+            with self.get_connection() as conn:
+                conn.execute("BEGIN IMMEDIATE")
+                cursor = conn.cursor()
+                
+                # Build the CASE statement for the update query
+                case_statements = [
+                    f"WHEN job_id = ? THEN ?" 
+                    for _ in job_status_updates
+                ]
+                
+                # Flatten the job_id/status pairs for the query parameters
+                params = []
+                for job_id, status in job_status_updates.items():
+                    params.extend([job_id, status])
+                    
+                # Construct the full update query
+                update_query = f"""
+                    UPDATE generation_metadata 
+                    SET job_status = CASE 
+                        {' '.join(case_statements)}
+                        ELSE job_status 
+                    END
+                    WHERE job_id IN ({','.join(['?'] * len(job_status_updates))})
+                """
+                
+                # Add the job_ids for the IN clause to params
+                params.extend(job_status_updates.keys())
+                
+                # Execute the bulk update
+                cursor.execute(update_query, params)
+                updated_count = cursor.rowcount
+                
+                conn.commit()
+                
+                return True
+                
+        except sqlite3.OperationalError as e:
+            if 'conn' in locals():
+                conn.rollback()
+            print(f"Database operation error in update_job_statuses_bulk: {e}")
+            raise
+            
+        except Exception as e:
+            if 'conn' in locals():
+                conn.rollback()
+            print(f"Error updating job statuses: {str(e)}")
+            raise
+
+    def get_pending_evaluate_job_ids(self) -> List[str]:
+        """
+        Retrieve all job IDs from export_metadata where job_status is not 'ENGINE_SUCCEEDED'
+        
+        Returns:
+            List[str]: List of job IDs with pending or failed status
+        """
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                query = """
+                    SELECT job_id 
+                    FROM evaluation_metadata 
+                    WHERE job_status != 'ENGINE_SUCCEEDED'
+                    AND job_id IS NOT NULL
+                """
+                
+                cursor.execute(query)
+                results = cursor.fetchall()
+                
+                # Extract job_ids from results tuples
+                job_ids = [row[0] for row in results]
+                
+                return job_ids
+                
+        except sqlite3.OperationalError as e:
+            print(f"Database operation error in get_pending_job_ids: {e}")
+            raise
+            
+        except Exception as e:
+            print(f"Error retrieving pending job IDs: {str(e)}")
+            raise
+
+    def update_job_statuses_evaluate(self, job_status_updates: Dict[str, str]) -> Dict[str, int]:
+        """
+        Update all job statuses in a single database transaction using provided status updates.
+        
+        Args:
+            job_status_updates: Dictionary mapping job_ids to their new statuses {job_id: status}
+        
+        Returns:
+            Dict[str, int]: Summary of updates {status: count}
+        """
+        try:
+            if not job_status_updates:
+                return {"no_updates": 0}
+                
+            with self.get_connection() as conn:
+                conn.execute("BEGIN IMMEDIATE")
+                cursor = conn.cursor()
+                
+                # Build the CASE statement for the update query
+                case_statements = [
+                    f"WHEN job_id = ? THEN ?" 
+                    for _ in job_status_updates
+                ]
+                
+                # Flatten the job_id/status pairs for the query parameters
+                params = []
+                for job_id, status in job_status_updates.items():
+                    params.extend([job_id, status])
+                    
+                # Construct the full update query
+                update_query = f"""
+                    UPDATE evaluation_metadata 
+                    SET job_status = CASE 
+                        {' '.join(case_statements)}
+                        ELSE job_status 
+                    END
+                    WHERE job_id IN ({','.join(['?'] * len(job_status_updates))})
+                """
+                
+                # Add the job_ids for the IN clause to params
+                params.extend(job_status_updates.keys())
+                
+                # Execute the bulk update
+                cursor.execute(update_query, params)
+                updated_count = cursor.rowcount
+                
+                conn.commit()
+                
+                return True
+                
+        except sqlite3.OperationalError as e:
+            if 'conn' in locals():
+                conn.rollback()
+            print(f"Database operation error in update_job_statuses_bulk: {e}")
+            raise
+            
+        except Exception as e:
+            if 'conn' in locals():
+                conn.rollback()
+            print(f"Error updating job statuses: {str(e)}")
+            raise
+
+    
     def update_job_evaluate(self, job_name: str, evaluate_file_name: str, local_export_path: str, timestamp: str, average_score: float, job_status:str):
         """Update job evaluation with retry mechanism"""
         max_retries = 3

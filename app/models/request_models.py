@@ -11,10 +11,9 @@ class UseCase(str, Enum):
 
 class Technique(str, Enum):
     SFT = "sft"
-    DPO = "dpo"
-    ORPO = "orpo"
-    SPIN = "spin"
-    KTO = "kto"
+    Custom_Workflow = "custom_workflow"
+    Model_Alignment = "model_alignment"
+    
 
 class Example(BaseModel):
     """Structure for QA examples"""
@@ -43,6 +42,7 @@ class Example_eval(BaseModel):
                         }
         }
     )
+
 
 class S3Config(BaseModel):
     """S3 export configuration"""
@@ -113,7 +113,7 @@ class SynthesisRequest(BaseModel):
     """Main request model for synthesis"""
     use_case: UseCase | None = Field(default=UseCase.CUSTOM)  # Optional with default=CUSTOM
     model_id: str
-    num_questions: int | None = Field(default=1, gt=0, le=500)  # Optional with default=1
+    num_questions: int | None = Field(default=1, gt=0)  # Optional with default=1
     technique: Technique | None = Field(default=Technique.SFT)  # Optional with default=SFT
     is_demo:bool = True
     
@@ -127,6 +127,7 @@ class SynthesisRequest(BaseModel):
     output_key: Optional[str] = 'Prompt'
     output_value: Optional[str] = 'Completion'
     examples: Optional[List[Example]] = Field(default=None)  # If None, will use default examples
+    example_custom: Optional[List[str]] = None
     schema: Optional[str] = None  # Added schema field
     custom_prompt: Optional[str] = None 
     display_name: Optional[str] = None 
@@ -234,7 +235,7 @@ class EvaluationRequest(BaseModel):
     """Request model for evaluating generated QA pairs"""
     use_case: UseCase
     model_id: str
-    import_path: str
+    import_path: Optional[str] = None
     import_type: str = "local" 
     is_demo:bool = True
     inference_type :Optional[str] = "aws_bedrock"

@@ -17,10 +17,18 @@ import { DataGenWizardSteps, WizardStepConfig } from './types';
 import { WizardCtx } from './utils';
 
 const { Content } = Layout;
-const { Title } = Typography;
+// const { Title } = Typography;
 
-const StyledTitle = styled(Title)`
+const StyledTitle = styled.div`
     margin-top: 10px;
+    font-family: Roboto, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    font-stretch: normal;
+    font-style: normal;
+    line-height: 1.4;
+    letter-spacing: normal;
+    text-align: left;
 `
 const Wizard = styled(Steps)`
     margin-bottom: 5px;
@@ -29,7 +37,7 @@ const Wizard = styled(Steps)`
 const WizardButton = styled(Button)`
     font-size: 18px;
     font-weight: 300;
-    padding: 20px 14px;
+    padding: 24px 12px;
 `;
 const WizardContent = styled(Content)`
     background: #FFFFFF;
@@ -108,7 +116,7 @@ const DataGenerator = () => {
     return (
         <WizardCtx.Provider value={{ setIsStepValid }}>
             <Layout style={{ paddingBottom: 45 }}>
-                <StyledTitle level={2}>{'Synthetic Dataset Generator'}</StyledTitle>
+                <StyledTitle>{'Synthetic Dataset Studio'}</StyledTitle>
                 <Wizard
                     current={current}
                     onChange={onStepChange}

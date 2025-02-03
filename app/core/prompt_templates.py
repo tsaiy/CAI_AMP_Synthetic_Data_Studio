@@ -422,6 +422,7 @@ class ModelPrompts:
             final_prompt = custom_prompt_str + "\n" + final_instruction 
         return final_prompt
     
+    
     @staticmethod
     def create_custom_prompt(model_id: str,
         custom_prompt:str
@@ -472,23 +473,27 @@ class ModelPrompts:
     def generate_result_prompt(model_id: str,
         use_case: UseCase,
         input: str,
-        examples: List[str],
+        examples: List[Example],
         schema = Optional[str],
         custom_prompt = Optional[str]
     ) -> str:
         
+                   
         
-        examples_str = PromptHandler.get_default_single_generate_example(use_case, examples)
+        examples_str = PromptHandler.get_default_example(use_case, examples)
+        #examples_str = PromptHandler.get_default_single_generate_example(use_case, examples)
         
         #print(examples, '\n', examples_str)
         schema_str = PromptHandler.get_default_schema(use_case, schema)
         custom_prompt_str = PromptHandler.get_default_custom_prompt(use_case, custom_prompt)
 
-        base_prompt = f"""<examples>
+        base_prompt = f"""You are a very helpful assistant.Observe in the given examples how a soution is provided for a given question.
+
+        <examples>
                 {examples_str}
                 </examples>
                 """
-        base_prompt += '\n' + "You are a very helpful assistant who follows instructions very carefully and generates response based on that."
+        base_prompt += '\n' + " Now that you have looked at examples you have to follow instructions very carefully and generates response based on those instructions."
 
         
         base_prompt += custom_prompt_str

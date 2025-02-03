@@ -4,7 +4,7 @@ import styled from 'styled-components';
 
 const StyledFlex = styled(Flex)`
   position: fixed;
-  left: 40%;
+  left: 46%;
   top: 0;
   width: 100%;
   height: 100%;

@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from typing import Dict, List, Optional
+import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
 import time
@@ -37,6 +38,7 @@ from app.core.prompt_templates import PromptBuilder, PromptHandler
 from app.core.config import UseCase, USE_CASE_CONFIGS
 from app.core.database import DatabaseManager
 from app.core.exceptions import APIError, InvalidModelError, ModelHandlerError
+from app.services.model_alignment import ModelAlignment
 from app.core.model_handlers import create_handler
 from app.services.aws_bedrock import get_bedrock_client
 
@@ -201,11 +203,11 @@ def get_timeout_for_request(request: Request) -> float:
     
     # Longer timeouts for job creation endpoints
     if path.endswith("/generate"):
-        return 120.0  # 2 minutes for generation
+        return 200.0  # 2 minutes for generation
     elif path.endswith("/evaluate"):
-        return 120.0  # 2 minutes for evaluation
+        return 200.0  # 2 minutes for evaluation
     elif path.endswith("/export_results"):
-        return 120.0  # 2 minutes for export
+        return 200.0  # 2 minutes for export
     elif "health" in path:
         return 5.0    # Quick timeout for health checks
     else:
@@ -384,21 +386,24 @@ async def generate_examples(request: SynthesisRequest):
             with open(file_path, 'r') as file:
                     inputs = json.load(file)
             total_count = len(inputs)
-            examples_str = PromptHandler.get_default_single_generate_example(request.use_case,request.examples)
+            
             topics = []
             num_questions = None
         else:
             total_count = request.num_questions*len(request.topics)
-            examples_str = PromptHandler.get_default_example(request.use_case,request.examples)
+            
             topics = request.topics
             num_questions = request.num_questions
-
+        examples_str = PromptHandler.get_default_example(request.use_case,request.examples)
         custom_prompt_str = PromptHandler.get_default_custom_prompt(request.use_case, request.custom_prompt)  
        
         schema_str = PromptHandler.get_default_schema(request.use_case, request.schema)
         
         model_params = request.model_params or ModelParameters()
+        print(job_run.job_id, job_name)
+        
         metadata = {
+                'technique': request.technique,
                 'model_id': request.model_id,
                 'inference_type': request.inference_type,
                 'use_case': request.use_case,
@@ -410,11 +415,14 @@ async def generate_examples(request: SynthesisRequest):
                 'examples': examples_str,
                 "total_count":total_count,
                 'schema': schema_str,
+                'doc_paths': request.doc_paths,
+                'input_path': request.input_path,
                 'job_name':job_name,
                 'job_id': job_run.job_id,
-                'job_status': 'In Progress',
+                'job_status': get_job_status(job_run.job_id),
                  'output_key':request.output_key,
-                'output_value':request.output_value
+                'output_value':request.output_value,
+               'job_creator_name' : client_cml.list_job_runs(project_id, job_run.job_id,sort="-created_at", page_size=1).job_runs[0].creator.name
                 }
         
         db_manager.save_generation_metadata(metadata)
@@ -527,7 +535,8 @@ async def evaluate_examples(request: EvaluationRequest):
             'examples': examples_str,
             'job_name':job_name,
             'job_id': job_run.job_id,
-            'job_status': 'In Progress'
+            'job_status': get_job_status(job_run.job_id),
+             'job_creator_name' : client_cml.list_job_runs(project_id, job_run.job_id,sort="-created_at", page_size=1).job_runs[0].creator.name
             
         }
 
@@ -536,7 +545,51 @@ async def evaluate_examples(request: EvaluationRequest):
 
         return {"job_name": job_name, "job_id": job_run.job_id}
 
+
+@app.post("/model/alignment",
+          include_in_schema=True,
+          responses=responses,
+          description="Generate model alignment data in DPO and KTO formats")
+async def generate_alignment_data(
+    synthesis_request: SynthesisRequest,
+    evaluation_request: EvaluationRequest,
+    job_name: str = None,
+    is_demo: bool = True
+) -> Dict:
+    """
+    Generate model alignment data using synthesis and evaluation services.
+    
+    Args:
+        synthesis_request: Parameters for synthesis generation
+        evaluation_request: Parameters for evaluation
+        job_name: Optional job identifier for tracking
+        is_demo: Whether this is a demo run
         
+    Returns:
+        Dictionary containing DPO and KTO formatted data
+    """
+    try:
+        alignment_service = ModelAlignment()
+        result = await alignment_service.model_alignment(
+            synthesis_request=synthesis_request,
+            evaluation_request=evaluation_request,
+            job_name=job_name,
+            is_demo=is_demo
+        )
+
+        
+        return {
+            "status": "success",
+            "dpo": result["dpo"],
+            "kto": result["kto"]
+        }
+        
+    except APIError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
 
 @app.post("/export_results", include_in_schema=True)
 async def export_results(request:Export_synth):
@@ -592,11 +645,13 @@ async def export_results(request:Export_synth):
                     "hf_export_path": export_path,
                     "job_id":job_run.job_id,
                     "job_name": job_name,
-                    "job_status": job_status}
+                    "job_status": job_status,
+                     "job_creator_name" : client_cml.list_job_runs(project_id, job_run.job_id,sort="-created_at", page_size=1).job_runs[0].creator.name
+                   }
         
         db_manager.save_export_metadata(metadata)
 
-        return  {"job_name": job_name, "job_id": job_run.job_id, "hf_link":export_path }   
+        return  {"job_name": job_name, "job_id": job_run.job_id, "hf_link":export_path}   
     
     except Exception as e:
 
@@ -718,6 +773,17 @@ async def customise_prompt():
 @app.get("/generations/history", include_in_schema=True)
 async def get_generation_history():
     """Get history of all generations"""
+    pending_job_ids = db_manager.get_pending_generate_job_ids()
+
+    if not pending_job_ids:
+        return db_manager.get_all_generate_metadata()
+
+    job_status_map = {
+            job_id: get_job_status(job_id) 
+            for job_id in pending_job_ids
+        }
+    db_manager.update_job_statuses_generate(job_status_map)
+    
     return db_manager.get_all_generate_metadata()
 
 @app.get("/generations/{file_name}", include_in_schema=True)
@@ -752,7 +818,18 @@ def get_exports_history():
 @app.get("/evaluations/history", include_in_schema=True)
 async def get_evaluation_history():
     """Get history of all generations"""
-    print("Hi")
+    pending_job_ids = db_manager.get_pending_evaluate_job_ids()
+
+    if not pending_job_ids:
+        return db_manager.get_all_evaluate_metadata()
+
+    job_status_map = {
+            job_id: get_job_status(job_id) 
+            for job_id in pending_job_ids
+        }
+    db_manager.update_job_statuses_evaluate(job_status_map)
+    
+    
     return db_manager.get_all_evaluate_metadata()
 
 
@@ -871,6 +948,57 @@ async def get_eval_examples(use_case: UseCase):
         examples = []
     
     
+    return {"examples": examples}
+
+@app.get("/{use_case}/custom_gen_examples")
+async def get_custom_gen_examples(use_case: UseCase):
+    
+                
+    if use_case == UseCase.CODE_GENERATION:
+        examples = [
+        """#Here's how to create and modify a list in Python:
+        # Create an empty list\n
+        my_list = []
+        #  Add elements using append\n
+        my_list.append(1)\n
+        my_list.append(2)\n\n
+        # # Create a list with initial elements
+        my_list = [1, 2, 3]
+        """,
+
+        """#Here's how to implement a basic stack:class Stack:
+        def __init__(self):
+        self.items = []
+        def push(self, item):
+        self.items.append(item)
+        def pop(self):
+        if not self.is_empty():
+        return self.items.pop()
+        def is_empty(self):
+        return len(self.items) == 0"""
+    ]
+        
+        
+    
+    elif use_case == UseCase.TEXT2SQL:
+
+        examples = [ """
+                    SELECT e.name, d.department_name
+                    FROM employees e
+                    JOIN departments d ON 
+                    e.department_id = d.id;""",
+
+                    """SELECT *
+                        FROM employees
+                        WHERE salary > 50000;"""
+        ]
+        
+        
+    elif use_case == UseCase.CUSTOM:
+        examples = []
+        
+                   
+        
     return {"examples": examples}
 
 @app.get("/health")
