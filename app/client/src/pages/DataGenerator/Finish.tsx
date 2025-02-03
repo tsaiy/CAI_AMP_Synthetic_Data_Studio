@@ -17,6 +17,7 @@ import { GenDatasetResponse, QuestionSolution, WorkflowType } from './types';
 import { Pages } from '../../types';
 import { isEmpty, isObject } from 'lodash';
 import CustomResultTable from './CustomResultTable';
+import SeedResultTable from './SeedResultTable';
 
 const { Title } = Typography;
 
@@ -44,6 +45,7 @@ interface TopicsTableProps {
     topic: string;
 }
 const TopicsTable: FC<TopicsTableProps> = ({ formData, topic }) => {
+    console.log('-TopicsTable', topic);
     const cols = [
         {
             title: 'Prompts',
@@ -59,6 +61,7 @@ const TopicsTable: FC<TopicsTableProps> = ({ formData, topic }) => {
         },
     ]
     const dataSource = formData.results[topic];
+    console.log('dataSource', dataSource);
 
     return (
         <StyledTable
@@ -152,12 +155,22 @@ const Finish = () => {
         return !Array.isArray(genDatasetResp?.results)
     }
 
+    
+
     const formValues = form.getFieldsValue(true);
+    let hasDocSeeds = false;
+    if (isEmpty(formValues.topics) &&
+        formValues.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION && 
+        !isEmpty(formValues.doc_paths)) {
+            hasDocSeeds = true;
+    }
+
     let topicTabs = [];
-    if (formValues.workflow_type !== WorkflowType.CUSTOM_DATA_GENERATION && hasTopics(genDatasetResp)) {
+    if (!hasDocSeeds && formValues.workflow_type !== WorkflowType.CUSTOM_DATA_GENERATION && 
+        hasTopics(genDatasetResp)) {
         topicTabs = genDatasetResp?.results && Object.keys(genDatasetResp.results).map((topic, i) => ({
             key: `${topic}-${i}`,
-            label: topic,
+            label: <Typography.Text style={{ maxWidth: '300px' }} ellipsis={true}>{topic}</Typography.Text>,
             value: topic,
             children: <TopicsTable formData={genDatasetResp} topic={topic} />
         }));
@@ -256,7 +269,7 @@ const Finish = () => {
                     </StyledButton>
                 </Flex>
             )}
-            {isDemo && formValues.workflow_type !== WorkflowType.CUSTOM_DATA_GENERATION && hasTopics(genDatasetResp) && (
+            {isDemo && formValues.workflow_type !== WorkflowType.CUSTOM_DATA_GENERATION && hasTopics(genDatasetResp && !hasDocSeeds) && (
                 <TabsContainer title={'Generated Dataset'}>
                     <Tabs tabPosition='left' items={topicTabs}/>
                 </TabsContainer>
@@ -264,6 +277,7 @@ const Finish = () => {
             {formValues.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION && 
                 <CustomResultTable results={genDatasetResp?.results || []} />
             }
+            {hasDocSeeds && <SeedResultTable results={genDatasetResp?.results || {}} />}
             <Divider/>
             <Title level={2}>{'Next Steps'}</Title>
             <List
