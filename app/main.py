@@ -403,6 +403,7 @@ async def generate_examples(request: SynthesisRequest):
         print(job_run.job_id, job_name)
         
         metadata = {
+                'technique': request.technique,
                 'model_id': request.model_id,
                 'inference_type': request.inference_type,
                 'use_case': request.use_case,

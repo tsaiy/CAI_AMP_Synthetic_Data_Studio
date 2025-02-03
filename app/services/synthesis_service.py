@@ -267,6 +267,7 @@ class SynthesisService:
             
             metadata = {
                 'timestamp': timestamp,
+                'technique': request.technique,
                 'model_id': request.model_id,
                 'inference_type': request.inference_type,
                 'use_case': request.use_case,
@@ -433,6 +434,7 @@ class SynthesisService:
             
             metadata = {
                 'timestamp': timestamp,
+                'technique': request.technique,
                 'model_id': request.model_id,
                 'inference_type': request.inference_type,
                 'use_case': request.use_case,

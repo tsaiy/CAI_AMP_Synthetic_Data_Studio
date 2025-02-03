@@ -46,6 +46,7 @@ class DatabaseManager:
                     CREATE TABLE IF NOT EXISTS generation_metadata (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         timestamp TEXT,
+                        technique TEXT,
                         model_id TEXT,
                         inference_type TEXT,
                         use_case TEXT,
@@ -160,16 +161,17 @@ class DatabaseManager:
                 
                 query = """
                     INSERT INTO generation_metadata (
-                        timestamp, model_id, inference_type, use_case,
+                        timestamp, technique, model_id, inference_type, use_case,
                         custom_prompt, model_parameters,output_key,output_value, generate_file_name,
                         display_name, local_export_path, hf_export_path,
                         num_questions, total_count, topics, examples, 
                         schema, doc_paths, input_path,job_id, job_name, job_status, job_creator_name
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?, ?,?,?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?, ?,?,?,?)
                 """
                 
                 values = (
                     metadata.get('timestamp', None),
+                    metadata.get('technique', None),
                     metadata.get('model_id', None),
                     metadata.get('inference_type', None),
                     metadata.get('use_case', None),

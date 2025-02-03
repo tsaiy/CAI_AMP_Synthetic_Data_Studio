@@ -11,10 +11,9 @@ class UseCase(str, Enum):
 
 class Technique(str, Enum):
     SFT = "sft"
-    DPO = "dpo"
-    ORPO = "orpo"
-    SPIN = "spin"
-    KTO = "kto"
+    Custom_Workflow = "custom_workflow"
+    Model_Alignment = "model_alignment"
+    
 
 class Example(BaseModel):
     """Structure for QA examples"""
