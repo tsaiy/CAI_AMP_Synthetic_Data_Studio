@@ -98,6 +98,9 @@ class EvaluatorService:
 
             try:
                 response = model_handler.generate_response(prompt)
+            except ModelHandlerError as e:
+                self.logger.error(f"ModelHandlerError in generate_response: {str(e)}")
+                raise  
             except Exception as e:
                 error_msg = f"Error generating model response: {str(e)}"
                 self.logger.error(error_msg)
@@ -128,7 +131,9 @@ class EvaluatorService:
                 self.logger.error(error_msg)
                 error_response["evaluation"]["justification"] = error_msg
                 return error_response
-
+            
+        except ModelHandlerError:
+            raise 
         except Exception as e:
             self.logger.error(f"Critical error in evaluate_single_pair: {str(e)}")
             return error_response
@@ -158,6 +163,8 @@ class EvaluatorService:
                             try:
                                 result = future.result()
                                 evaluated_pairs.append(result)
+                            except ModelHandlerError:
+                                raise  
                             except Exception as e:
                                 error_msg = f"Error processing future result: {str(e)}"
                                 self.logger.error(error_msg)
@@ -170,7 +177,9 @@ class EvaluatorService:
                         error_msg = f"Error in parallel execution: {str(e)}"
                         self.logger.error(error_msg)
                         raise
-
+                    
+            except ModelHandlerError:
+                raise              
             except Exception as e:
                 error_msg = f"Error in ThreadPoolExecutor setup: {str(e)}"
                 self.logger.error(error_msg)
@@ -212,7 +221,8 @@ class EvaluatorService:
                     "failed_pairs": failed_pairs,
                     "error": error_msg
                 }
-
+        except ModelHandlerError:
+            raise  
         except Exception as e:
             error_msg = f"Critical error in evaluate_topic: {str(e)}"
             self.logger.error(error_msg)
@@ -281,13 +291,18 @@ class EvaluatorService:
                 }
                 
                 for future in as_completed(future_to_topic):
-                    topic = future_to_topic[future]
-                    topic_stats = future.result()
-                    evaluated_results[topic] = topic_stats
-                    all_scores.extend([
-                        pair["evaluation"]["score"] 
-                        for pair in topic_stats["evaluated_pairs"]
-                    ])
+                    try:
+                        topic = future_to_topic[future]
+                        topic_stats = future.result()
+                        evaluated_results[topic] = topic_stats
+                        all_scores.extend([
+                            pair["evaluation"]["score"] 
+                            for pair in topic_stats["evaluated_pairs"]
+                        ])
+                    except ModelHandlerError as e:
+                        self.logger.error(f"ModelHandlerError in future processing: {str(e)}")
+                        raise APIError(f"Model evaluation failed: {str(e)}")
+
             
             overall_average = sum(all_scores) / len(all_scores) if all_scores else 0
             overall_average = round(overall_average, 2)
@@ -350,7 +365,8 @@ class EvaluatorService:
                     "status": "completed",
                     "output_path": output_path
                 }
-            
+        except APIError:
+            raise      
         except Exception as e:
             error_msg = f"Error in evaluation process: {str(e)}"
             self.logger.error(error_msg, exc_info=True)

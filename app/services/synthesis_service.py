@@ -119,7 +119,11 @@ class SynthesisService:
                 )
                 #print(prompt)
                 # Generate response
-                qa_pairs = model_handler.generate_response(prompt)
+                try:
+                    qa_pairs = model_handler.generate_response(prompt)
+                except ModelHandlerError as e:
+                    self.logger.error(f"ModelHandlerError in generate_response: {str(e)}")
+                    raise  # Re-raise ModelHandlerError exceptions
                 
                 # Process single QA pair
                 if qa_pairs and len(qa_pairs) > 0:
@@ -152,6 +156,9 @@ class SynthesisService:
                     error_msg = f"No QA pair generated for topic {topic}, question {question_idx + 1}"
                     self.logger.warning(error_msg)
                     topic_errors.append(error_msg)
+
+            except ModelHandlerError:
+                    raise 
                     
             except Exception as e:
                 error_msg = f"Error processing topic {topic}, question {question_idx + 1}: {str(e)}"
@@ -226,7 +233,11 @@ class SynthesisService:
                 ]
                 
                 # Wait for all futures to complete
-                completed_topics = await asyncio.gather(*topic_futures)
+                try:
+                    completed_topics = await asyncio.gather(*topic_futures)
+                except ModelHandlerError as e:
+                    self.logger.error(f"Model generation failed: {str(e)}")
+                    raise APIError(f"Failed to generate content: {str(e)}")
                 
             # Process results
             
@@ -309,6 +320,8 @@ class SynthesisService:
                     "status": "completed" if final_output else "failed",
                     "export_path": output_path
                 }
+        except APIError:
+            raise
             
         except Exception as e:
             self.logger.error(f"Generation failed: {str(e)}", exc_info=True)
@@ -336,36 +349,33 @@ class SynthesisService:
         )
     
     async def process_single_input(self, input, model_handler, request):
-        prompt = PromptBuilder.build_generate_result_prompt(
-            model_id=request.model_id,
-            use_case=request.use_case,
-            input=input,
-            examples=request.examples or [],
-            schema=request.schema,
-            custom_prompt=request.custom_prompt,
-        )
+        try:
+            prompt = PromptBuilder.build_generate_result_prompt(
+                model_id=request.model_id,
+                use_case=request.use_case,
+                input=input,
+                examples=request.examples or [],
+                schema=request.schema,
+                custom_prompt=request.custom_prompt,
+            )
+            try:
+                result = model_handler.generate_response(prompt)
+            except ModelHandlerError as e:
+                self.logger.error(f"ModelHandlerError in generate_response: {str(e)}")
+                raise
+                    
+            return {"question": input, "solution": result}
         
-        result = model_handler.generate_response(prompt)
-        return {"question": input, "solution": result}
+        except ModelHandlerError:
+            raise
+        except Exception as e:
+            self.logger.error(f"Error processing input: {str(e)}")
+            raise APIError(f"Failed to process input: {str(e)}")
 
     async def generate_result(self, request: SynthesisRequest , job_name = None, is_demo: bool = True) -> Dict:
         try:
             self.logger.info(f"Starting example generation - Demo Mode: {is_demo}")
-            # json_str = request.model_dump_json()  
-            # random_id = uuid.uuid4().hex[:4]  # Generate a random 8-character ID
-        
-
-        
-
-            # params = json.loads(json_str)
-           
-    
-            # # Create unique filename with UUID
-            # file_name = f"job_args_{random_id}.json"
             
-            # # Write to local file
-            # with open(file_name, 'w') as f:
-            #     json.dump(params, f)
                 
             # Use default parameters if none provided
             model_params = request.model_params or ModelParameters()
@@ -400,7 +410,12 @@ class SynthesisService:
                 ]
                 
                 # Wait for all futures to complete
-                final_output = await asyncio.gather(*input_futures)
+                try:
+                    final_output = await asyncio.gather(*input_futures)
+                except ModelHandlerError as e:
+                    self.logger.error(f"Model generation failed: {str(e)}")
+                    raise APIError(f"Failed to generate content: {str(e)}")
+                
          
             
             
@@ -474,6 +489,8 @@ class SynthesisService:
                     "export_path": output_path
                 }
 
+        except APIError:
+            raise 
         except Exception as e:
             self.logger.error(f"Generation failed: {str(e)}", exc_info=True)
             if is_demo:
