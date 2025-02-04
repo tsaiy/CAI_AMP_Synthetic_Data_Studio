@@ -788,13 +788,19 @@ class DatabaseManager:
                 # Changed from file_name to generate_file_name to match your table schema
                 query = "SELECT * FROM generation_metadata WHERE generate_file_name = ?"
                 cursor.execute(query, (file_name,))
+
+                json_fields = ['model_parameters', 'topics', 'examples', 'doc_paths', 'input_path', 'schema']
                 
                 row = cursor.fetchone()
                 if row:
                     result = dict(row)
-                    result['model_parameters'] = json.loads(result['model_parameters'])
-                    result['topics'] = json.loads(result['topics'])
-                    result['examples'] = json.loads(result['examples'])
+                    for field in json_fields:
+                        if field in result and result[field] is not None:
+                            try:
+                                result[field] = json.loads(result[field])
+                            except json.JSONDecodeError:
+                                print(f"Error decoding JSON for field {field}")
+                                result[field] = None
                     conn.rollback()
                     return result
                 return None
@@ -878,13 +884,17 @@ class DatabaseManager:
                 # Changed from file_name to generate_file_name to match your table schema
                 query = "SELECT * FROM evaluation_metadata WHERE evaluate_file_name = ?"
                 cursor.execute(query, (file_name,))
-                
+                json_fields = ['model_parameters', 'examples']
                 row = cursor.fetchone()
                 if row:
                     result = dict(row)
-                    result['model_parameters'] = json.loads(result['model_parameters'])
-                    
-                    result['examples'] = json.loads(result['examples'])
+                    for field in json_fields:
+                       if field in result and result[field] is not None:
+                           try:
+                               result[field] = json.loads(result[field])
+                           except json.JSONDecodeError:
+                               print(f"Error decoding JSON for field {field}")
+                               result[field] = None
                     conn.rollback()
                     return result
                 return None
