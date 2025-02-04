@@ -34,7 +34,10 @@ export const EXPORT_TYPE_LABELS: Record<ExportType, string> = {
 }
 
 // Coming from EngineStatusType in CML
-export type JobStatus = 'ENGINE_STOPPED' | 'ENGINE_SUCCEEDED' | 'ENGINE_TIMEDOUT' | 'ENGINE_SCHEDULING' | 'ENGINE_RUNNING';
+// null and default are not part of the enum in CML. 
+// null when backend return null
+// default when backend returns something that is not defined here but we have to show something
+export type JobStatus = 'ENGINE_STOPPED' | 'ENGINE_SUCCEEDED' | 'ENGINE_TIMEDOUT' | 'ENGINE_SCHEDULING' | 'ENGINE_RUNNING' | 'null' | 'default';
 
 
 export const HuggingFaceIconUrl = "https://huggingface.co/front/assets/huggingface_logo-noborder.svg";
