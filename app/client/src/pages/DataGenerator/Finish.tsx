@@ -1,4 +1,5 @@
 import isNumber from 'lodash/isNumber';
+import isString from 'lodash/isString';
 import { ComponentType, FC, useEffect } from 'react';
 import { HomeOutlined, PageviewOutlined } from '@mui/icons-material';
 import AssessmentIcon from '@mui/icons-material/Assessment';
@@ -148,6 +149,9 @@ const Finish = () => {
             }
         } else {
             delete formValues.doc_paths;
+        }
+        if (isString(formValues?.input_path)) {
+            formValues.input_path = [];
         }
         if (formValues.workflow_type === WorkflowType.SUPERVISED_FINE_TUNING) {
             formValues.technique = 'sft';
