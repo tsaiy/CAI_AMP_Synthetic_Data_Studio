@@ -172,7 +172,7 @@ const Finish = () => {
     const formValues = form.getFieldsValue(true);
     let hasDocSeeds = false;
     if (isEmpty(formValues.topics) &&
-        formValues.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION && 
+        (formValues.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION || formValues.workflow_type === WorkflowType.SUPERVISED_FINE_TUNING) && 
         !isEmpty(formValues.doc_paths)) {
             hasDocSeeds = true;
     }
