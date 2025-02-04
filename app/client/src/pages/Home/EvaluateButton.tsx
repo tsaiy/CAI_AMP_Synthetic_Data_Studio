@@ -48,7 +48,7 @@ const EvaluateButton: React.FC = () => {
 
     return (
         <>
-            <Button onClick={() => setShowModal(true)} className="evaluate-button">
+            <Button onClick={() => setShowModal(true)} className="evaluate-button" disabled={isEmpty(datasets)}>
                 Get Started
                 <img src={ArrowRightIcon} alt="Get Started" />
             </Button>
