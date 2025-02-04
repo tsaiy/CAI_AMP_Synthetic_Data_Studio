@@ -8,11 +8,11 @@ export type JobStatusProps = {
 }
 
 const defaultTooltipTitles: Record<JobStatus, string> = {
-    'ENGINE_SUCCEEDED': 'Successful export!',
-    'ENGINE_STOPPED': 'Error during job execution!',
+    'ENGINE_SUCCEEDED': 'Success!',
+    'ENGINE_STOPPED': 'Error!',
     'ENGINE_TIMEDOUT': 'Job timeout!',
-    'ENGINE_SCHEDULING': 'Export is in progress!',
-    'ENGINE_RUNNING': 'Export is in progress!',
+    'ENGINE_SCHEDULING': 'Scheduling!',
+    'ENGINE_RUNNING': 'Engine running!',
     'default': 'Check the job in the application!',
     'null': 'No job was executed'
 }
