@@ -130,6 +130,14 @@ const DatasetsTab: React.FC = () => {
             align: 'center',
             sorter: sortItemsByKey('num_questions'),
             width: 120
+        }, 
+        {
+            key: 'total_count',
+            title: 'Total Count',
+            dataIndex: 'total_count',
+            align: 'center',
+            sorter: sortItemsByKey('total_count'),
+            width: 80
         }, {
             key: 'use_case',
             title: 'Use Case',
