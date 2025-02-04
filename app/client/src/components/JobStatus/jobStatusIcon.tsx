@@ -13,9 +13,9 @@ const defaultTooltipTitles: Record<JobStatus, string> = {
     'ENGINE_TIMEDOUT': 'Job timeout!',
     'ENGINE_SCHEDULING': 'Export is in progress!',
     'ENGINE_RUNNING': 'Export is in progress!',
-    'default': 'Error during job execution!',
+    'default': 'Check the job in the application!',
     'null': 'No job was executed'
-};
+}
 
 export default function JobStatusIcon({ status, customTooltipTitles }: JobStatusProps) {
     const tooltipTitles = {...defaultTooltipTitles, ...customTooltipTitles};
@@ -32,10 +32,10 @@ export default function JobStatusIcon({ status, customTooltipTitles }: JobStatus
                 return <Tooltip title={tooltipTitles.ENGINE_SCHEDULING}><LoadingOutlined spin /></Tooltip>;
             case 'ENGINE_RUNNING':
                 return <Tooltip title={tooltipTitles.ENGINE_RUNNING}><LoadingOutlined spin /></Tooltip>;
-            case 'null':
+            case null:
                 return <Tooltip title={tooltipTitles.null}><InfoCircleTwoTone /></Tooltip>;
             default:
-                return <Tooltip title={`Error during job execution!`}><ExclamationCircleTwoTone twoToneColor="red" /></Tooltip>;
+                return <Tooltip title={tooltipTitles.default}><InfoCircleTwoTone /></Tooltip>;
         }
     }
 
