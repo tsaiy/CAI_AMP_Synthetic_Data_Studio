@@ -1,5 +1,8 @@
 import { ModelParameters, Pages } from "./types";
 
+// No job is being executed if dataset or evaluation on dataset total_count is less than this threshold
+export const JOB_EXECUTION_TOTAL_COUNT_THRESHOLD = 25;
+
 export const LABELS = {
     [Pages.HOME]: 'Home',
     [Pages.GENERATOR]: 'Generation',
