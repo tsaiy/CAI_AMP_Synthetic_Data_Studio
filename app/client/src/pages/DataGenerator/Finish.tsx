@@ -109,6 +109,7 @@ const getJobsURL = () => {
 // or will create a batch job and return a job id
 const isDemoMode = (numQuestions: number, topics: [], form: FormInstance) => {
     const workflow_type = form.getFieldValue('workflow_type');
+    const doc_paths = form.getFieldValue('doc_paths');
     if (workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) {
         const total_dataset_size = form.getFieldValue('total_dataset_size');
         if (isNumber(total_dataset_size)) {
@@ -119,6 +120,10 @@ const isDemoMode = (numQuestions: number, topics: [], form: FormInstance) => {
 
     if (numQuestions * topics?.length <= DEMO_MODE_THRESHOLD) {
         return true
+    }
+    if (workflow_type === WorkflowType.SUPERVISED_FINE_TUNING && !isEmpty(doc_paths)) {
+        const dataset_size = form.getFieldValue('dataset_size');
+        return dataset_size <= DEMO_MODE_THRESHOLD;
     }
     return false
 }

@@ -42,7 +42,6 @@ export const MODEL_TYPE_OPTIONS: ModelProvidersDropdownOpts = [
 const Configure = () => {
     const form = Form.useFormInstance();
     const formData = Form.useWatch((values) => values, form);
-    console.log('formData', formData);
     const { setIsStepValid } = useWizardCtx();
     const { data } = useFetchModels();
     const [selectedFiles, setSelectedFiles] = useState(
@@ -51,7 +50,6 @@ const Configure = () => {
     const validateForm = async () => {
         const values = form.getFieldsValue();
         delete values.custom_prompt_instructions;
-        delete values.workflow_type;
         delete values.doc_paths;
         delete values.output_key;
         delete values.output_value;
@@ -86,13 +84,19 @@ const Configure = () => {
     }
 
     const onFilesChange = (selections: any) => {
-        const paths = selections.map((file: File) => (
-            { 
-                value: file.name,
-                label: file.name
-            }));
-        setSelectedFiles(paths);
-        form.setFieldValue('doc_paths', paths);    
+        if (Array.isArray(selections) && !isEmpty(selections)) {
+            const paths = selections.map((file: File) => (
+                { 
+                    value: file.name,
+                    label: file.name
+                }));
+            setSelectedFiles(paths);
+            form.setFieldValue('doc_paths', paths); 
+        } else {
+            setSelectedFiles([]);
+            form.setFieldValue('doc_paths', []); 
+        }
+          
     }
 
     const onWorkflowTypeChange = (value: string) => {
@@ -233,8 +237,9 @@ const Configure = () => {
                     label='Files'
                     labelCol={labelCol}
                     dependencies={['workflow_type']}
-                    validateTrigger={['workflow_type', 'doc_paths', 'onChange']}
                     shouldUpdate
+                    validateTrigger="['onBlur','onChange']"
+                    validateFirst
                     rules={[
                         () => ({
                             validator(_, value) {
@@ -267,7 +272,7 @@ const Configure = () => {
                     ]}
                 >
                     <Flex>
-                        <Select placeholder={'Select project files'} mode="multiple" value={selectedFiles} onChange={onFilesChange} allowClear/>    
+                        <Select placeholder={'Select project files'} mode="multiple" value={selectedFiles || []} onChange={onFilesChange} allowClear/>    
                         <FileSelectorButton onAddFiles={onAddFiles} workflowType={form.getFieldValue('workflow_type')} />
                     </Flex>
                 </Form.Item>}

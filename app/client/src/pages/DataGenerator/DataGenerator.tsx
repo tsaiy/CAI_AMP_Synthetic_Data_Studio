@@ -96,6 +96,7 @@ const DataGenerator = () => {
     const [isStepValid, setIsStepValid] = useState<boolean>(false);
     // Data passed from listing table to prepopulate form
     const location = useLocation();
+    console.log('DatGenerator >> location?.state?.data:', location?.state?.data);
     const formData = useRef(location?.state?.data || { num_questions: 20, topics: [] });
 
     const [form] = Form.useForm<FormInstance>();

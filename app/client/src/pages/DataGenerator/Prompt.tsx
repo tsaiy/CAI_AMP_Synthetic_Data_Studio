@@ -1,4 +1,5 @@
 import isEmpty from 'lodash/isEmpty';
+import isNumber from 'lodash/isNumber';
 import { useEffect, useRef, useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
 import { Alert, Button, Col, Divider, Flex, Form, Input, InputNumber, Modal, notification, Row, Select, Space, Tooltip, Typography } from 'antd';
@@ -12,7 +13,6 @@ import { MAX_NUM_QUESTION, MIN_SEED_INSTRUCTIONS,  MAX_SEED_INSTRUCTIONS } from 
 import { Usecases, WorkflowType } from './types';
 import { useWizardCtx } from './utils';
 import { useDatasetSize, useGetPromptByUseCase } from './hooks';
-import Loading from '../Evaluator/Loading';
 import CustomPromptButton from './CustomPromptButton';
 
 const { Title } = Typography;
@@ -58,6 +58,7 @@ const Prompt = () => {
     const form = Form.useFormInstance();
     const selectedTopics = Form.useWatch('topics');
     const numQuestions = Form.useWatch('num_questions');
+    const datasetSize = Form.useWatch('dataset_size');
     const [items, setItems] = useState<string[]>([]);
     const [customTopic, setCustomTopic] = useState('');
 
@@ -74,6 +75,7 @@ const Prompt = () => {
     const input_value = form.getFieldValue('input_value');
     const output_key = form.getFieldValue('output_key');
     const caii_endpoint = form.getFieldValue('caii_endpoint');
+    
     const { data: defaultPrompt, loading: promptsLoading } = useFetchDefaultPrompt(useCase);
 
     // Page Bootstrap requests and useEffect
@@ -132,11 +134,13 @@ const Prompt = () => {
                 isStepValid = true;
             }
             setIsStepValid(isStepValid)
+        } else if(!isEmpty(doc_paths) && workflow_type === WorkflowType.SUPERVISED_FINE_TUNING) {
+            setIsStepValid(isNumber(datasetSize) && datasetSize > 0);
         } else {
             setIsStepValid(true);
         }
         
-    }, [selectedTopics, numQuestions]);
+    }, [selectedTopics, numQuestions, datasetSize]);
 
     const onTopicTextChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setCustomTopic(event.target.value);
@@ -238,14 +242,16 @@ const Prompt = () => {
                                     </Space>
                                 </FormLabel>
                             }
-                            
+                            rules={[
+                                { required: workflow_type === WorkflowType.SUPERVISED_FINE_TUNING, message: `Please select a workflow.` }
+                            ]}
                             labelCol={{ span: 24 }}
                             wrapperCol={{ span: 24 }}
                             shouldUpdate
                            
                         >
                         
-                            <InputNumber disabled value={dataset_size} />
+                            <InputNumber disabled={workflow_type === WorkflowType.CUSTOM_DATA_GENERATION} value={dataset_size} />
                         </StyledFormItem>    
                     }
                     {isEmpty(doc_paths) && (workflow_type === WorkflowType.SUPERVISED_FINE_TUNING ||
