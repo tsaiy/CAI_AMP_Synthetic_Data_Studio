@@ -27,13 +27,6 @@ const SeedResultTable: React.FC<Props> = ({ results }) => {
 
     const columns = [
         {
-            title: 'Seed',
-            key: 'seed',
-            dataIndex: 'seed',
-            ellipsis: true,
-            render: (seed: string) => <>{seed}</>
-        },
-        {
             title: 'Question',
             key: 'question',
             dataIndex: 'question',

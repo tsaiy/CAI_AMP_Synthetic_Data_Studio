@@ -45,23 +45,21 @@ interface TopicsTableProps {
     topic: string;
 }
 const TopicsTable: FC<TopicsTableProps> = ({ formData, topic }) => {
-    console.log('-TopicsTable', topic);
     const cols = [
         {
-            title: 'Prompts',
+            title: 'Prompt',
             dataIndex: 'prompts',
             ellipsis: true,
             render: (_text: QuestionSolution, record: QuestionSolution) => <>{record.question}</>
         },
         {
-            title: 'Completions',
+            title: 'Completion',
             dataIndex: 'completions',
             ellipsis: true,
             render: (_text: QuestionSolution, record: QuestionSolution) => <>{record.solution}</>
         },
     ]
     const dataSource = formData.results[topic];
-    console.log('dataSource', dataSource);
 
     return (
         <StyledTable
