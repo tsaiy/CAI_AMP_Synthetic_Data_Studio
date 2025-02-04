@@ -442,7 +442,7 @@ async def generate_examples(request: SynthesisRequest):
                 'inference_type': request.inference_type,
                 'use_case': request.use_case,
                 'final_prompt': custom_prompt_str,
-                'model_parameters': model_params.model_dump() if model_params else None,
+                'model_parameters': json.dumps(model_params.model_dump()) if model_params else None,
                 'display_name': request.display_name,
                 'num_questions':request.num_questions,
                 'topics': topic_str,
