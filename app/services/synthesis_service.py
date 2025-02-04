@@ -207,6 +207,7 @@ class SynthesisService:
                     topics = request.topics
                     num_questions = request.num_questions
                     total_count = request.num_questions*len(request.topics)
+                    
                 else:
                     self.logger.error("Generation failed: No topics provided")
                     raise RuntimeError("Invalid input: No topics provided")
@@ -272,13 +273,35 @@ class SynthesisService:
                 
             output_path['local']= file_path
 
-            custom_prompt_str = PromptHandler.get_default_custom_prompt(request.use_case, request.custom_prompt)  
-            examples_str = PromptHandler.get_default_example(request.use_case,request.examples)
-            schema_str = PromptHandler.get_default_schema(request.use_case, request.schema)
-            if request.doc_paths:
-                topic_str = []
-            else:
-                topic_str = topics
+            
+            
+           
+            # Handle custom prompt, examples and schema
+            custom_prompt_str = PromptHandler.get_default_custom_prompt(request.use_case, request.custom_prompt)
+           # For examples
+            examples_value = (
+                PromptHandler.get_default_example(request.use_case, request.examples) 
+                if hasattr(request, 'examples') 
+                else None
+            )
+            examples_str = self.safe_json_dumps(examples_value)
+
+            # For schema
+            schema_value = (
+                PromptHandler.get_default_schema(request.use_case, request.schema)
+                if hasattr(request, 'schema') 
+                else None
+            )
+            schema_str = self.safe_json_dumps(schema_value)
+
+            # For topics
+            topics_value = topics if not getattr(request, 'doc_paths', None) else None
+            topic_str = self.safe_json_dumps(topics_value)
+
+            # For doc_paths and input_path
+            doc_paths_str = self.safe_json_dumps(getattr(request, 'doc_paths', None))
+            input_path_str = self.safe_json_dumps(getattr(request, 'input_path', None))
+           
             
             metadata = {
                 'timestamp': timestamp,
@@ -287,19 +310,20 @@ class SynthesisService:
                 'inference_type': request.inference_type,
                 'use_case': request.use_case,
                 'final_prompt': custom_prompt_str,
-                'model_parameters': model_params.model_dump(),
+                'model_parameters': json.dumps(model_params.model_dump()) if model_params else None,
                 'generate_file_name': os.path.basename(output_path['local']),
                 'display_name': request.display_name,
                 'output_path': output_path,
-                'num_questions':request.num_questions,
+                'num_questions':getattr(request, 'num_questions', None),
                 'topics': topic_str,
                 'examples': examples_str,
                 "total_count":total_count,
                 'schema': schema_str,
-                'doc_paths': request.doc_paths,
-                
-                'output_key':output_key,
-                'output_value':output_value
+                'doc_paths': doc_paths_str,
+                'input_path':input_path_str,
+                'input_key': request.input_key,
+                'output_key':request.output_key,
+                'output_value':request.output_value
                 }
             
             print("metadata: ",metadata)
@@ -447,10 +471,35 @@ class SynthesisService:
 
             output_path['local']= file_path
 
-            custom_prompt_str = PromptHandler.get_default_custom_prompt(request.use_case, request.custom_prompt)  
-            examples_str = PromptHandler.get_default_example(request.use_case,request.examples)
-            schema_str = PromptHandler.get_default_schema(request.use_case, request.schema)
             
+            # Handle custom prompt, examples and schema
+            custom_prompt_str = PromptHandler.get_default_custom_prompt(request.use_case, request.custom_prompt)
+            # For examples
+            examples_value = (
+                PromptHandler.get_default_example(request.use_case, request.examples) 
+                if hasattr(request, 'examples') 
+                else None
+            )
+            examples_str = self.safe_json_dumps(examples_value)
+
+            # For schema
+            schema_value = (
+                PromptHandler.get_default_schema(request.use_case, request.schema)
+                if hasattr(request, 'schema') 
+                else None
+            )
+            schema_str = self.safe_json_dumps(schema_value)
+
+            # For topics
+            topics_value =  None
+            topic_str = self.safe_json_dumps(topics_value)
+
+            # For doc_paths and input_path
+            doc_paths_str = self.safe_json_dumps(getattr(request, 'doc_paths', None))
+            input_path_str = self.safe_json_dumps(getattr(request, 'input_path', None))
+
+           
+
             metadata = {
                 'timestamp': timestamp,
                 'technique': request.technique,
@@ -458,18 +507,21 @@ class SynthesisService:
                 'inference_type': request.inference_type,
                 'use_case': request.use_case,
                 'final_prompt': custom_prompt_str,
-                'model_parameters': model_params.model_dump(),
+                'model_parameters': json.dumps(model_params.model_dump()) if model_params else None,
                 'generate_file_name': os.path.basename(output_path['local']),
                 'display_name': request.display_name,
                 'output_path': output_path,
-                'output_key':request.output_key,
-                'output_value':request.output_value,
+                'num_questions':getattr(request, 'num_questions', None),
+                'topics': topic_str,
                 'examples': examples_str,
-                'input_path': request.input_path,
                 "total_count":len(inputs),
-                'schema': schema_str
-                
-            }
+                'schema': schema_str,
+                'doc_paths': doc_paths_str,
+                'input_path':input_path_str,
+                'input_key': request.input_key,
+                'output_key':request.output_key,
+                'output_value':request.output_value
+                }
             
             
             if is_demo:
@@ -543,3 +595,7 @@ class SynthesisService:
             }
             self.logger.error("Health check failed", extra=status, exc_info=True)
             return status
+        
+    def safe_json_dumps(self, value):
+        """Convert value to JSON string only if it's not None"""
+        return json.dumps(value) if value is not None else None

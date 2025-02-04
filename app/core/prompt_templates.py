@@ -226,8 +226,8 @@ class PromptHandler:
                     ]
                     return examples
                 elif use_case == UseCase.CUSTOM:
-                    examples = []
-                    return examples
+                    
+                    return None
         
         return PromptHandler.format_examples_eval(examples)
     
