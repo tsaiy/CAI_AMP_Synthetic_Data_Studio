@@ -68,7 +68,7 @@ export const useGetDataset = (generate_file_name: string) => {
     );
 
     const dataset = get(data, 'dataset');
-    const prompt = get(data, 'prompt');
+    const prompt = get(data, 'prompt') || get(data, 'custom_prompt');
     const examples = get(data, 'examples');
     console.log('error:', error);  
 

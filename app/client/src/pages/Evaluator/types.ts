@@ -30,6 +30,10 @@ export interface Dataset {
   local_export_path: string;
   output_key: string;
   output_value: string;
+  doc_paths: string[] | null;
+  input_path: string[] | null;
+  workflow_type: string;
+  technique: string;
 }
 
 export interface TopicEvaluationResult {

@@ -109,6 +109,7 @@ const ReevaluatorPage: React.FC = () => {
             loading={loading} />}
       {viewType === ViewType.SUCCESS_VIEW && 
         <EvaluatorSuccess 
+          dataset={dataset}
           result={evaluateResult}
           demo={get(dataset, 'total_count', 0) <= 25} />}      
     </>

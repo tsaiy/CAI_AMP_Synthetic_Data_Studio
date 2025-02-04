@@ -1,4 +1,5 @@
 import get from 'lodash/get';
+import set from 'lodash/set';
 import isEmpty from 'lodash/isEmpty';
 import isObject from 'lodash/isObject';
 import forEach from 'lodash/forEach';
@@ -206,22 +207,21 @@ export const EVALUATION_RESULT = {
 
 export const getTopicMap = (evaluateResult: EvaluateResult) => {
   const result = get(evaluateResult, 'result');
-  const topicMap = {};
+  let topicMap = {};
   const topics = [];
   
   if (!isEmpty(result)) {
     const keys = Object.keys(result);
-    forEach(keys, (topicName: string) => {
+    forEach(keys, (topicName: string) => { 
       const value = get(result, topicName);
       if (topicName !== 'Overall_Average') {
         topics.push(topicName);   
       }
       if (isObject(value)) {
-        topicMap[topicName] = value;
+        topicMap = set(topicMap, topicName, value);
       }
     });
   }
-  
   
   return {
     topics,
@@ -263,4 +263,5 @@ export const getColorCode = (value: number) => {
     } = import.meta.env
     return `${VITE_WORKBENCH_URL}/${VITE_PROJECT_OWNER}/${VITE_CDSW_PROJECT}/preview/${fileName}`
   } 
+
 

@@ -1,6 +1,6 @@
 import get from 'lodash/get';
 import isEmpty from 'lodash/isEmpty';
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar, Button, Card, Flex, Layout, List, Tabs, Typography } from 'antd';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -10,6 +10,9 @@ import EvaluateTopicTable from './EvaluateTopicTable';
 import { EVALUATOR_JOB_SUCCESS, getTopicMap } from './util';
 import styled from 'styled-components';
 import { getProjectJobsUrl } from './hooks';
+import { Dataset } from './types';
+import { WorkflowType } from '../DataGenerator/types';
+import SeedEvaluateTable from './SeedEvaluateTable';
 
 
 const { Content } = Layout;
@@ -17,7 +20,8 @@ const { Title } = Typography;
 
 interface Props {
   result: any;
-  demo: boolean
+  demo: boolean;
+  dataset: Dataset;
 }
 
 
@@ -35,14 +39,18 @@ const StyleContent = styled(Content)`
 `;
 
 
-const EvaluatorSuccess: React.FC<Props> = ({ result }) => {
-  console.log('result', result)
+const EvaluatorSuccess: React.FC<Props> = ({ result, dataset, demo }) => {
   const hasTopics = (result: any) => {
     return !Array.isArray(result?.results)
   }
 
+  const hasCustomSeed = (_dataset: Dataset) => (_dataset?.technique === 'sft' && !isEmpty(_dataset?.doc_paths)) ||
+      (_dataset?.technique === WorkflowType.CUSTOM_DATA_GENERATION && !isEmpty(_dataset?.input_path))
+  
+
+  const isCustom = hasCustomSeed(dataset)    
   let topicTabs = null;
-  if (isEmpty(get(result, 'job_id')) && isEmpty(get(result, 'job_name')) && !isEmpty(result) && hasTopics(result)) {
+  if (!isCustom && isEmpty(get(result, 'job_id')) && isEmpty(get(result, 'job_name')) && !isEmpty(result) && hasTopics(result)) {
     const { topics, topicMap } = getTopicMap(result);
     topicTabs = topics.map((topicName: string, index: number) => ({
       key: `${topicName}-${index}`,
@@ -61,7 +69,7 @@ const EvaluatorSuccess: React.FC<Props> = ({ result }) => {
             {'Success'}
           </Flex>
           </Title>
-          {topicTabs === null &&
+          {!demo &&
             (<Flex gap={20} vertical>
                <Typography>
                  {EVALUATOR_JOB_SUCCESS}
@@ -80,9 +88,16 @@ const EvaluatorSuccess: React.FC<Props> = ({ result }) => {
             <Typography>
               {'Your dataset evaluation was successfully generated. You can review your evaluation in the table below.'}
             </Typography>
-            <Card title={'Generated Evaluations'} style={{ marginTop: '36px' }}>
+            {!isCustom && !isEmpty(topicTabs) && <Card title={'Generated Evaluations'} style={{ marginTop: '36px' }}>
               <Tabs tabPosition='left' items={topicTabs}/>
-            </Card>
+            </Card>}
+          </>}
+          {isCustom && 
+          <>
+            <Typography>
+              {'Your dataset evaluation was successfully generated. You can review your evaluation in the table below.'}
+            </Typography>
+            <SeedEvaluateTable results={result} />
           </>}
 
           <Title level={2}>{'Next Steps'}</Title>

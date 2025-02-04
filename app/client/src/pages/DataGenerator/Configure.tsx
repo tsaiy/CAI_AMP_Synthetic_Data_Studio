@@ -152,7 +152,7 @@ const Configure = () => {
                         <Input placeholder={'Enter Cloudera AI Inference Model ID'}/>
                     ) : (
                         <Select placeholder={'Select a Model'} notFoundContent={'You must select a Model Provider before selecting a Model'}>
-                            {data?.models[ModelProviders.BEDROCK]?.map((model, i) =>
+                            {!isEmpty(data?.models) && data?.models[ModelProviders.BEDROCK]?.map((model, i) =>
                                 <Select.Option key={`${model}-${i}`} value={model}>
                                     {model}
                                 </Select.Option>
