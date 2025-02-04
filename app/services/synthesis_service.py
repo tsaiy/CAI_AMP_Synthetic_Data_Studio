@@ -275,6 +275,10 @@ class SynthesisService:
             custom_prompt_str = PromptHandler.get_default_custom_prompt(request.use_case, request.custom_prompt)  
             examples_str = PromptHandler.get_default_example(request.use_case,request.examples)
             schema_str = PromptHandler.get_default_schema(request.use_case, request.schema)
+            if request.doc_paths:
+                topic_str = []
+            else:
+                topic_str = topics
             
             metadata = {
                 'timestamp': timestamp,
@@ -288,7 +292,7 @@ class SynthesisService:
                 'display_name': request.display_name,
                 'output_path': output_path,
                 'num_questions':request.num_questions,
-                'topics': topics,
+                'topics': topic_str,
                 'examples': examples_str,
                 "total_count":total_count,
                 'schema': schema_str,

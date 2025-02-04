@@ -401,6 +401,11 @@ async def generate_examples(request: SynthesisRequest):
         
         model_params = request.model_params or ModelParameters()
         print(job_run.job_id, job_name)
+
+        if request.doc_paths:
+            topic_str = []
+        else:
+            topic_str = topics
         
         metadata = {
                 'technique': request.technique,
@@ -411,7 +416,7 @@ async def generate_examples(request: SynthesisRequest):
                 'model_parameters': model_params.model_dump(),
                 'display_name': request.display_name,
                 'num_questions':num_questions,
-                'topics': topics,
+                'topics': topic_str,
                 'examples': examples_str,
                 "total_count":total_count,
                 'schema': schema_str,
