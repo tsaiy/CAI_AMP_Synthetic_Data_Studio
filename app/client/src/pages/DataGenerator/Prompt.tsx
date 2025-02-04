@@ -58,7 +58,7 @@ const Prompt = () => {
     const form = Form.useFormInstance();
     const selectedTopics = Form.useWatch('topics');
     const numQuestions = Form.useWatch('num_questions');
-    const datasetSize = Form.useWatch('dataset_size');
+    const datasetSize = Form.useWatch('num_questions');
     const [items, setItems] = useState<string[]>([]);
     const [customTopic, setCustomTopic] = useState('');
 
@@ -233,7 +233,7 @@ const Prompt = () => {
                     {((workflow_type === WorkflowType.CUSTOM_DATA_GENERATION && !isEmpty(doc_paths)) ||
                     (workflow_type === WorkflowType.SUPERVISED_FINE_TUNING && !isEmpty(doc_paths))) && 
                         <StyledFormItem
-                            name={'dataset_size'}
+                            name={'num_questions'}
                             label={
                                 <FormLabel level={4}>
                                     <Space>

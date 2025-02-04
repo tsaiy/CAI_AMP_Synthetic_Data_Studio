@@ -42,13 +42,14 @@ const CustomPromptButton: React.FC<Props> = ({ model_id, inference_type, caii_en
   }, [mutation.error, mutation.isSuccess]);
 
   const onFinish = async () => {
+    const custom_prompt = form.getFieldValue('custom_prompt_instructions');
     try { 
 
       mutation.mutate({
         model_id,
         inference_type,
         caii_endpoint,
-        custom_prompt: 'Translate Language to Language',
+        custom_prompt,
         use_case
       })
     } catch(e) {
@@ -89,7 +90,7 @@ const CustomPromptButton: React.FC<Props> = ({ model_id, inference_type, caii_en
                     <Form.Item
                         name='custom_prompt_instructions'
                         label='Custom Prompt Instructions'
-                        rules={[{ required: true }]}
+                        rules={[{ required: true, message: "This field is required." }]}
                     >
                         <StyledTextArea 
                             autoSize 
