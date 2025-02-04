@@ -1,6 +1,6 @@
 import { Descriptions, Flex, Form, Input, List, Modal, Table, Typography } from 'antd';
 import styled from 'styled-components';
-
+import isEmpty from 'lodash/isEmpty';
 import Markdown from '../../components/Markdown';
 import PCModalContent from './PCModalContent'
 import { MODEL_PROVIDER_LABELS } from './constants'
@@ -46,9 +46,9 @@ const Summary= () => {
         num_questions,
         custom_prompt,
         model_parameters,
-        topics,
+        topics = [],
         schema,
-        examples
+        examples = []
     } = form.getFieldsValue(true)
 
     const cfgStepDataSource = [
@@ -57,7 +57,7 @@ const Summary= () => {
         { label: 'Model Provider', children: MODEL_PROVIDER_LABELS[inference_type as ModelProviders] },
         { label: 'Model Name', children: model_id },
         { label: 'Data Count', children: num_questions },
-        { label: 'Total Dataset Size', children: num_questions * topics.length },
+        { label: 'Total Dataset Size', children: topics === null ? num_questions : num_questions * topics.length },
     ];
     const exampleCols = [
         {
@@ -110,10 +110,11 @@ const Summary= () => {
                     style={{ maxWidth: 400}}
                 />
             </div>
+            {isEmpty(topics) && 
             <div>
                 <Title level={4}>{'Seed Instructions'}</Title>
                 <List
-                    dataSource={topics}
+                    dataSource={topics || []}
                     renderItem={(item: string) => (<List.Item>{item}</List.Item>)}
                     locale={{
                         emptyText: (
@@ -123,7 +124,7 @@ const Summary= () => {
                         )
                     }}
                 />
-            </div>
+            </div>}
             {(schema && use_case === Usecases.TEXT2SQL) && (
                 <div>
                     <Title level={4}>{'DB Schema'}</Title>
@@ -132,7 +133,8 @@ const Summary= () => {
                     </MarkdownWrapper>
                 </div>
             )}
-            <div>
+            {isEmpty(examples) && 
+              <div>
                 <Title level={4}>{'Examples'}</Title>
                 <StyledTable
                     bordered
@@ -150,7 +152,7 @@ const Summary= () => {
                     })}
                     rowKey={(_record, index) => `summary-examples-table-${index}`}
                 />
-            </div>
+            </div>}
         </Flex>
     )
 }

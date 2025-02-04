@@ -120,8 +120,8 @@ const Prompt = () => {
             }
         }
         if (dataset_size) {
-            if (form.getFieldValue('dataset_size') !== dataset_size) {
-                form.setFieldValue('dataset_size', dataset_size)
+            if (form.getFieldValue('num_questions') !== dataset_size) {
+                form.setFieldValue('num_questions', dataset_size)
             }
         }
     }, [defaultPromptRef, defaultSchema, defaultSchemaRef, defaultTopics, dataset_size, form, setItems]);

@@ -1,4 +1,5 @@
 import isNumber from 'lodash/isNumber';
+import filter from 'lodash/filter';
 import isString from 'lodash/isString';
 import { ComponentType, FC, useEffect } from 'react';
 import { HomeOutlined, PageviewOutlined } from '@mui/icons-material';
@@ -108,7 +109,9 @@ const getJobsURL = () => {
 // or will create a batch job and return a job id
 const isDemoMode = (numQuestions: number, topics: [], form: FormInstance) => {
     const workflow_type = form.getFieldValue('workflow_type');
-    const doc_paths = form.getFieldValue('doc_paths');
+    let doc_paths = form.getFieldValue('doc_paths');
+    doc_paths = filter(doc_paths, (path: string) => path !== null && !isEmpty(path));
+
     if (workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) {
         const total_dataset_size = form.getFieldValue('total_dataset_size');
         if (isNumber(total_dataset_size)) {
@@ -120,8 +123,9 @@ const isDemoMode = (numQuestions: number, topics: [], form: FormInstance) => {
     if (numQuestions * topics?.length <= DEMO_MODE_THRESHOLD) {
         return true
     }
+    // set dataset size for SFT & CDG
     if (workflow_type === WorkflowType.SUPERVISED_FINE_TUNING && !isEmpty(doc_paths)) {
-        const dataset_size = form.getFieldValue('dataset_size');
+        const dataset_size = form.getFieldValue('num_questions');
         return dataset_size <= DEMO_MODE_THRESHOLD;
     }
     return false
@@ -158,6 +162,25 @@ const Finish = () => {
         } else if (formValues.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) {
             formValues.technique = 'custom_workflow';
         }
+        // send examples as null when the array is empty
+        if (isEmpty(formValues.examples)) {
+            formValues.examples = null;
+        }
+        if (isEmpty(formValues.topics)) {
+            formValues.topics = null;
+        }
+        if (formValues.customTopic) {
+            delete formValues.customTopic;
+        }
+        if (formValues.customTopics) {
+            delete formValues.customTopics;
+        }
+        if (formValues.doc_paths) {
+            let doc_paths = formValues.doc_paths;
+            doc_paths = filter(doc_paths, (path: string) => path !== null && !isEmpty(path));
+            formValues.doc_paths = doc_paths
+        }
+
         const args = {...formValues, is_demo: isDemo, model_params: formValues.model_parameters }
         console.log('generate values', args);
         triggerPost(args)
@@ -168,7 +191,6 @@ const Finish = () => {
     }
 
     
-
     const formValues = form.getFieldsValue(true);
     let hasDocSeeds = false;
     if (isEmpty(formValues.topics) &&
