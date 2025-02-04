@@ -15,6 +15,8 @@ import EvaluateActions from "./EvaluateActions";
 import { JobStatus } from "../../types";
 import JobStatusIcon from "../../components/JobStatus/jobStatusIcon";
 import { getColorCode } from "../Evaluator/util";
+import { JobStatus } from "../../types";
+import JobStatusIcon from "../../components/JobStatus/jobStatusIcon";
 
 const { Search } = Input;
 
