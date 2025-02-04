@@ -111,3 +111,8 @@ export interface CustomResult {
     question: string;
     solution: string;
 }
+
+export enum TechniqueType {
+    SFT = 'sft',
+    CUSTOME_WORKFLOW = 'custom_workflow'
+}
