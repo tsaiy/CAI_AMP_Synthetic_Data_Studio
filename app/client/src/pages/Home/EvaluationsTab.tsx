@@ -1,6 +1,6 @@
 import throttle from "lodash/throttle";
 import { SyntheticEvent, useEffect } from "react";
-import { Col, Input, notification, Row, Table, TableProps } from "antd";
+import { Badge, Col, Input, notification, Row, Table, TableProps } from "antd";
 import styled from "styled-components";
 import Paragraph from 'antd/es/typography/Paragraph';
 import { TRANSLATIONS } from '../../constants';
@@ -12,6 +12,7 @@ import Loading from "../Evaluator/Loading";
 import { SearchProps } from "antd/es/input";
 import DateTime from "../../components/DateTime/DateTime";
 import EvaluateActions from "./EvaluateActions";
+import { getColorCode } from "../Evaluator/util";
 
 const { Search } = Input;
 
@@ -86,6 +87,7 @@ const EvaluationsTab: React.FC = () => {
               key: 'average_score',
               title: 'Average Score',
               dataIndex: 'average_score',
+              render: (average_score) => <Badge count={average_score} color={getColorCode(average_score)} showZero />,
               sorter: sortItemsByKey('average_score'),
         },{
               key: 'use_case',
