@@ -149,12 +149,17 @@ const Finish = () => {
         } else {
             delete formValues.doc_paths;
         }
+        if (formValues.workflow_type === WorkflowType.SUPERVISED_FINE_TUNING) {
+            formValues.technique = 'sft';
+        } else if (formValues.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) {
+            formValues.technique = 'custom_workflow';
+        }
         const args = {...formValues, is_demo: isDemo, model_params: formValues.model_parameters }
         console.log('generate values', args);
         triggerPost(args)
     }, []);
     
-    const hasTopics = (genDatasetResp) => {
+    const hasTopics = (genDatasetResp: any) => {
         return !Array.isArray(genDatasetResp?.results)
     }
 

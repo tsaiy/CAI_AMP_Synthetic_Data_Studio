@@ -37,8 +37,12 @@ const StyleContent = styled(Content)`
 
 const EvaluatorSuccess: React.FC<Props> = ({ result }) => {
   console.log('result', result)
+  const hasTopics = (result: any) => {
+    return !Array.isArray(result?.results)
+  }
+
   let topicTabs = null;
-  if (isEmpty(get(result, 'job_id')) && isEmpty(get(result, 'job_name'))) {
+  if (isEmpty(get(result, 'job_id')) && isEmpty(get(result, 'job_name')) && !isEmpty(result) && hasTopics(result)) {
     const { topics, topicMap } = getTopicMap(result);
     topicTabs = topics.map((topicName: string, index: number) => ({
       key: `${topicName}-${index}`,
@@ -47,8 +51,6 @@ const EvaluatorSuccess: React.FC<Props> = ({ result }) => {
       children: <EvaluateTopicTable data={get(topicMap, `${topicName}.evaluated_pairs`, [])} topicResult={get(topicMap, `${topicName}`)} topic={topicName} />
     }));
   }
-
-  
 
   return (
     <Layout>
@@ -75,13 +77,12 @@ const EvaluatorSuccess: React.FC<Props> = ({ result }) => {
            
           {topicTabs !== null && 
           <>
-          <Typography>
-            {'Your dataset evaluation was successfully generated. You can review your evaluation in the table below.'}
-          </Typography>
-
-          <Card title={'Generated Evaluations'} style={{ marginTop: '36px' }}>
-            <Tabs tabPosition='left' items={topicTabs}/>
-          </Card>
+            <Typography>
+              {'Your dataset evaluation was successfully generated. You can review your evaluation in the table below.'}
+            </Typography>
+            <Card title={'Generated Evaluations'} style={{ marginTop: '36px' }}>
+              <Tabs tabPosition='left' items={topicTabs}/>
+            </Card>
           </>}
 
           <Title level={2}>{'Next Steps'}</Title>
