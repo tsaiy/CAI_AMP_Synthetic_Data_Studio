@@ -815,13 +815,19 @@ class DatabaseManager:
                 cursor.execute(query)
                 
                 results = []
+                json_fields = ['model_parameters', 'topics', 'examples', 'doc_paths', 'input_path', 'schema']
+                
                 for row in cursor.fetchall():
                     result = dict(row)
-                    result['model_parameters'] = json.loads(result['model_parameters'])
-                    result['topics'] = json.loads(result['topics'])
-                    result['examples'] = json.loads(result['examples'])
+                    for field in json_fields:
+                        if field in result and result[field] is not None:
+                            try:
+                                result[field] = json.loads(result[field])
+                            except json.JSONDecodeError:
+                                print(f"Error decoding JSON for field {field}")
+                                result[field] = None
                     results.append(result)
-                #print(results)
+                    
                 conn.rollback()
                 return results
                 
@@ -830,28 +836,36 @@ class DatabaseManager:
             return []
         
     def get_all_evaluate_metadata(self) -> List[Dict]:
-        """Retrieve all metadata entries"""
-        try:
-            with self.get_connection() as conn:
-                conn.execute("BEGIN")
-                conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
-                
-                query = "SELECT * FROM evaluation_metadata ORDER BY timestamp DESC"
-                cursor.execute(query)
-                
-                results = []
-                for row in cursor.fetchall():
-                    result = dict(row)
-                    result['model_parameters'] = json.loads(result['model_parameters'])
-                    result['examples'] = json.loads(result['examples'])
-                    results.append(result)
-                conn.rollback()
-                return results
-                
-        except Exception as e:
-            print(f"Error retrieving all metadata: {str(e)}")
-            return []
+       """Retrieve all metadata entries"""
+       try:
+           with self.get_connection() as conn:
+               conn.execute("BEGIN")
+               conn.row_factory = sqlite3.Row
+               cursor = conn.cursor()
+               
+               query = "SELECT * FROM evaluation_metadata ORDER BY timestamp DESC"
+               cursor.execute(query)
+               
+               results = []
+               json_fields = ['model_parameters', 'examples']
+               
+               for row in cursor.fetchall():
+                   result = dict(row)
+                   for field in json_fields:
+                       if field in result and result[field] is not None:
+                           try:
+                               result[field] = json.loads(result[field])
+                           except json.JSONDecodeError:
+                               print(f"Error decoding JSON for field {field}")
+                               result[field] = None
+                   results.append(result)
+                   
+               conn.rollback()
+               return results
+               
+       except Exception as e:
+           print(f"Error retrieving all metadata: {str(e)}")
+           return []
 
     def get_evaldata_by_filename(self, file_name: str) -> Optional[Dict]:
         """Retrieve metadata by filename"""
