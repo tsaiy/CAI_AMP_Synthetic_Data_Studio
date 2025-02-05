@@ -112,8 +112,10 @@ const isDemoMode = (numQuestions: number, topics: [], form: FormInstance) => {
     let doc_paths = form.getFieldValue('doc_paths');
     doc_paths = filter(doc_paths, (path: string) => path !== null && !isEmpty(path));
 
-    if (workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) {
-        const total_dataset_size = form.getFieldValue('total_dataset_size');
+    if (workflow_type === WorkflowType.CUSTOM_DATA_GENERATION ||
+        (workflow_type === WorkflowType.SUPERVISED_FINE_TUNING && !isEmpty(doc_paths))
+    ) {
+        const total_dataset_size = form.getFieldValue('num_questions');
         if (isNumber(total_dataset_size)) {
             return total_dataset_size <= DEMO_MODE_THRESHOLD;
         }
