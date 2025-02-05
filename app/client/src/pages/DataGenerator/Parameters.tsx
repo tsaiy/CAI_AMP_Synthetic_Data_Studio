@@ -12,7 +12,7 @@ const StyledSlider = styled(Slider)`
     .ant-slider-rail, .ant-slider-track {
         height: 5px;
     }
-    width: 90% !important;
+    width: 80% !important;
 `
 const StyledInputNumber = styled(InputNumber)`
     float: right;
@@ -56,6 +56,7 @@ const Parameters = () => {
     });
 
     const formData = form.getFieldsValue(true);
+    console.log('formData', formData);
     const [values, setValues] = useState(formData?.model_parameters || null);
 
     const { data: defaultParams, loading: loadingDefaultParams } = useFetchDefaultModelParams();
@@ -196,7 +197,8 @@ const Parameters = () => {
                             onChange={(value) => handleValueChange(ModelParameters.MAX_TOKENS, value)}
                         />      
                     </Col>
-                    <Col span={4}>
+                    <Col span={1}/>
+                    <Col span={3}>
                         <StyledInputNumber
                             min={MODEL_PARAM_DEFAULTS.current[ModelParameters.MAX_TOKENS].min}
                             max={MODEL_PARAM_DEFAULTS.current[ModelParameters.MAX_TOKENS].max}
