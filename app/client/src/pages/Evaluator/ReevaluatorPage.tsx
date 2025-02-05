@@ -48,7 +48,10 @@ const ReevaluatorPage: React.FC = () => {
         model_id: get(evaluate, 'model_id'),
         inference_type: get(evaluate, 'inference_type'),
         model_parameters: parameters
-      })
+      });
+      setTimeout(() => {
+        form.setFieldValue('model_parameters', parameters);
+      }, 3000)
     }
   }, [evaluate]);
 
