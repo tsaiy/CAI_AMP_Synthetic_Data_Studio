@@ -114,7 +114,7 @@ const Parameters = () => {
                             step={MODEL_PARAM_DEFAULTS.current[ModelParameters.TEMPERATURE].step}
                             value={values?.temperature}
                             onChange={(value) => handleValueChange(ModelParameters.TEMPERATURE, value)}
-                            style={{ width: 72, float: 'right' }}
+                            style={{ width: 72, float: 'right', marginLeft: '12px' }}
                         />
                     </Col>
                 </Row>
@@ -143,7 +143,7 @@ const Parameters = () => {
                             step={MODEL_PARAM_DEFAULTS.current[ModelParameters.TOP_K].step}
                             value={values?.top_k}
                             onChange={(value) => handleValueChange(ModelParameters.TOP_K, value)}
-                            style={{ width: 72, float: 'right' }}
+                            style={{ width: 72, float: 'right', marginLeft: '12px' }}
                         />
                     </Col>
                 </Row>
@@ -173,7 +173,7 @@ const Parameters = () => {
                             step={MODEL_PARAM_DEFAULTS.current[ModelParameters.TOP_P].step}
                             value={values?.top_p}
                             onChange={(value) => handleValueChange(ModelParameters.TOP_P, value)}
-                            style={{ width: 72, float: 'right' }}
+                            style={{ width: 72, float: 'right', marginLeft: '12px' }}
                         />
                     </Col>
                 </Row>
@@ -203,7 +203,7 @@ const Parameters = () => {
                             step={MODEL_PARAM_DEFAULTS.current[ModelParameters.MAX_TOKENS].step}
                             value={values?.max_tokens}
                             onChange={(value) => handleValueChange(ModelParameters.MAX_TOKENS, value)}
-                            style={{ width: 72, float: 'right' }}
+                            style={{ width: 72, float: 'right', marginLeft: '12px' }}
                         />
                     </Col>
                 </Row>
