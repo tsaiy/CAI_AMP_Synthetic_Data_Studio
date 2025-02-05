@@ -6,6 +6,7 @@ import { Pages } from "./types";
 import EvaluatorPage from "./pages/Evaluator";
 import ReevaluatorPage from "./pages/Evaluator/ReevaluatorPage";
 import DatasetDetailsPage from "./pages/DatasetDetails/DatasetDetailsPage";
+import WelcomePage from "./pages/Home/WelcomePage";
 
 
 const router = createBrowserRouter([
@@ -32,12 +33,6 @@ const router = createBrowserRouter([
       {
         path: `${Pages.EVALUATOR}/create/:generate_file_name`,
         element: <EvaluatorPage />,
-        // element:(
-        //    <RouteAccessControl
-        //     element={<Evaluator/>}
-        //     validator={state => state.internalRedirect === true}
-        //   />
-        // ),
         loader: async () => null
       },
       {
@@ -49,8 +44,12 @@ const router = createBrowserRouter([
         path: `dataset/:generate_file_name`,
         element: <DatasetDetailsPage />,
         loader: async () => null
+      },
+      {
+        path: `welcome`,
+        element: <WelcomePage />,
+        loader: async () => null
       }
-      // { path: Pages.DATASETS, element: <Datasets/>, loader: async () => (null) },
     ]
   },
 ]);

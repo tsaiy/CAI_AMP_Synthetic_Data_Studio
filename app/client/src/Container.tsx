@@ -27,8 +27,18 @@ const BrandingContainer = styled(Flex)`
   padding: 10px;
 `
 const BrandingTitle = styled(Typography)`
-  color: white;
-  font-size: 16;
+    width: 192px;
+    height: 17px;
+    flex-grow: 0;
+    font-family: NeuePlakText;
+    font-size: 20px;
+    font-weight: normal;
+    font-stretch: normal;
+    font-style: normal;
+    line-height: 0.75;
+    letter-spacing: normal;
+    text-align: left;
+    color: #fff;
 `
 const BrandingTextContainer = styled(Flex)`
   padding-top: 5px;
@@ -76,9 +86,7 @@ const Container = () => {
             <PageHeader>
               <Flex justify='space-between' align='center'>
                 <BrandingContainer gap={5}>
-                  <StyledImg src={clouderaIcon} height={48} />
                   <BrandingTextContainer align='start' justify='center' vertical>
-                    <img src={clouderaText} height={12} />
                     <BrandingTitle>{'Synthetic Data Studio'}</BrandingTitle>
                   </BrandingTextContainer>
                 </BrandingContainer>
