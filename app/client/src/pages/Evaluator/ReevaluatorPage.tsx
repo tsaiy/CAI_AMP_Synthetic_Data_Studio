@@ -43,7 +43,8 @@ const ReevaluatorPage: React.FC = () => {
         max_tokens: get(parameters, 'max_tokens'),
         temperature: get(parameters, 'temperature'),
         model_id: get(evaluate, 'model_id'),
-        inference_type: get(evaluate, 'inference_type')
+        inference_type: get(evaluate, 'inference_type'),
+        model_parameters: parameters
       })
     }
   }, [evaluate]);

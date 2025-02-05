@@ -113,7 +113,8 @@ const onSubmit = async () => {
             examples={examples}
             modelsMap={modelsMap} 
             viewType={viewType}
-            loading={loading} />}
+            loading={loading} 
+          />}
         {viewType === ViewType.SUCCESS_VIEW && 
           <EvaluatorSuccess 
             dataset={dataset}
