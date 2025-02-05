@@ -79,7 +79,8 @@ const onSubmit = async () => {
         import_type: 'local',
         import_path: generate_file_name,
         is_demo: dataset.total_count > 25 ? false : true,
-        use_case: get(dataset, 'use_case')
+        use_case: get(dataset, 'use_case'),
+        model_params: values?.model_parameters
       }
       
       try {
