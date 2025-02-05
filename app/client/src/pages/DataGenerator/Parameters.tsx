@@ -6,6 +6,7 @@ import styled from 'styled-components';
 import { useFetchDefaultModelParams } from '../../api/api';
 import { LABELS } from '../../constants';
 import { ModelParameters } from '../../types';
+import StyledTitle from '../Evaluator/StyledTitle';
 
 const StyledSlider = styled(Slider)`
     .ant-slider-rail, .ant-slider-track {
@@ -87,6 +88,7 @@ const Parameters = () => {
     }
     return (
         <>
+            <StyledTitle>Parameters</StyledTitle>
             <StyledFormItem
                 name={['model_parameters', ModelParameters.TEMPERATURE]}
                 label={<ParamLabel>{LABELS[ModelParameters.TEMPERATURE]}</ParamLabel>}
@@ -175,7 +177,7 @@ const Parameters = () => {
                     </Col>
                 </Row>
             </StyledFormItem>
-            {/* <StyledFormItem
+            <StyledFormItem
                 name={['model_parameters', ModelParameters.MAX_TOKENS]}
                 label={<ParamLabel>{LABELS[ModelParameters.MAX_TOKENS]}</ParamLabel>}
                 labelCol={{ span: 24 }}
@@ -204,7 +206,7 @@ const Parameters = () => {
                         />
                     </Col>
                 </Row>
-            </StyledFormItem> */}
+            </StyledFormItem>
         </>
         
     )
