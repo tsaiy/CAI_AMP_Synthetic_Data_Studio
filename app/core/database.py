@@ -52,6 +52,7 @@ class DatabaseManager:
                         use_case TEXT,
                         custom_prompt TEXT,
                         model_parameters TEXT,
+                        input_key TEXT,
                         output_key TEXT,
                         output_value TEXT,
                         generate_file_name TEXT UNIQUE,
@@ -64,7 +65,7 @@ class DatabaseManager:
                         examples TEXT,
                         schema TEXT,
                         doc_paths TEXT,
-                        input_path, TEXT,
+                        input_path TEXT,
                         job_id TEXT,
                         job_name TEXT UNIQUE,
                         job_status TEXT,
@@ -139,18 +140,7 @@ class DatabaseManager:
                 
                 output_paths = {}
                 
-            model_params_json = json.dumps(metadata.get('model_parameters', {}))
-            topics_json = json.dumps(metadata.get('topics', []))
-            examples_json = json.dumps(metadata.get('examples', []))
-            doc_paths_json = json.dumps(metadata.get('doc_paths', []))
-            input_path_json = json.dumps(metadata.get('input_path', []))
-            print("docs_paths: ", doc_paths_json)
-            print("input_path: ", input_path_json)
-            display_name = (
-                metadata.get('display_name') or 
-                metadata.get('generate_file_name') or 
-                None
-            )
+            
             
             # Use a single connection with enhanced settings
             with self.get_connection() as conn:
@@ -160,13 +150,13 @@ class DatabaseManager:
                 cursor = conn.cursor()
                 
                 query = """
-                    INSERT INTO generation_metadata (
-                        timestamp, technique, model_id, inference_type, use_case,
-                        custom_prompt, model_parameters,output_key,output_value, generate_file_name,
-                        display_name, local_export_path, hf_export_path,
-                        num_questions, total_count, topics, examples, 
-                        schema, doc_paths, input_path,job_id, job_name, job_status, job_creator_name
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?, ?,?,?,?)
+                INSERT INTO generation_metadata (
+                timestamp, technique, model_id, inference_type, use_case,
+                custom_prompt, model_parameters, input_key, output_key, output_value, generate_file_name,
+                display_name, local_export_path, hf_export_path,
+                num_questions, total_count, topics, examples, 
+                schema, doc_paths, input_path, job_id, job_name, job_status, job_creator_name
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
                 
                 values = (
@@ -176,25 +166,27 @@ class DatabaseManager:
                     metadata.get('inference_type', None),
                     metadata.get('use_case', None),
                     metadata.get('final_prompt', None),
-                    model_params_json,
+                    metadata.get('model_parameters', None),
+                    metadata.get('input_key', None),
                     metadata.get('output_key', None),
                     metadata.get('output_value', None),
                     metadata.get('generate_file_name', None),
-                    display_name,
+                    metadata.get('display_name', None),
                     output_paths.get('local', None),
                     output_paths.get('huggingface', None),
                     metadata.get('num_questions', None),
                     metadata.get('total_count', None),
-                    topics_json,
-                    examples_json,
+                    metadata.get('topics', None),
+                    metadata.get('examples', None),
                     metadata.get('schema', None),
-                   doc_paths_json,
-                   input_path_json,
+                    metadata.get('doc_paths', None),
+                    metadata.get('input_path', None),
                     metadata.get('job_id', None),
                     metadata.get('job_name', None),
                     metadata.get('job_status', None),
                     metadata.get('job_creator_name', None)
                 )
+                #print(values)
                 
                 cursor.execute(query, values)
                 conn.commit()
@@ -288,8 +280,7 @@ class DatabaseManager:
             # Prepare data outside transaction
             
             
-            model_params_json = json.dumps(metadata.get('model_parameters', {}))
-            examples_json = json.dumps(metadata.get('examples', []))
+            
             
             try:
                 avg_score = round(float(metadata.get('Overall_Average', 0)), 2)
@@ -323,12 +314,12 @@ class DatabaseManager:
                     metadata.get('inference_type'),
                     metadata.get('use_case'),
                     metadata.get('custom_prompt'),
-                    model_params_json,
+                    metadata.get('model_parameters', None),
                     metadata.get('generate_file_name'),
                     metadata.get('evaluate_file_name'),
                     display_name,
                     metadata.get('local_export_path', None),
-                    examples_json,
+                    metadata.get('examples', None),
                     avg_score,
                    
                     metadata.get('job_id', None),
@@ -797,13 +788,19 @@ class DatabaseManager:
                 # Changed from file_name to generate_file_name to match your table schema
                 query = "SELECT * FROM generation_metadata WHERE generate_file_name = ?"
                 cursor.execute(query, (file_name,))
+
+                json_fields = ['model_parameters', 'topics', 'examples', 'doc_paths', 'input_path', 'schema']
                 
                 row = cursor.fetchone()
                 if row:
                     result = dict(row)
-                    result['model_parameters'] = json.loads(result['model_parameters'])
-                    result['topics'] = json.loads(result['topics'])
-                    result['examples'] = json.loads(result['examples'])
+                    for field in json_fields:
+                        if field in result and result[field] is not None:
+                            try:
+                                result[field] = json.loads(result[field])
+                            except json.JSONDecodeError:
+                                print(f"Error decoding JSON for field {field}")
+                                result[field] = None
                     conn.rollback()
                     return result
                 return None
@@ -824,13 +821,19 @@ class DatabaseManager:
                 cursor.execute(query)
                 
                 results = []
+                json_fields = ['model_parameters', 'topics', 'examples', 'doc_paths', 'input_path', 'schema']
+                
                 for row in cursor.fetchall():
                     result = dict(row)
-                    result['model_parameters'] = json.loads(result['model_parameters'])
-                    result['topics'] = json.loads(result['topics'])
-                    result['examples'] = json.loads(result['examples'])
+                    for field in json_fields:
+                        if field in result and result[field] is not None:
+                            try:
+                                result[field] = json.loads(result[field])
+                            except json.JSONDecodeError:
+                                print(f"Error decoding JSON for field {field}")
+                                result[field] = None
                     results.append(result)
-                #print(results)
+                    
                 conn.rollback()
                 return results
                 
@@ -839,28 +842,36 @@ class DatabaseManager:
             return []
         
     def get_all_evaluate_metadata(self) -> List[Dict]:
-        """Retrieve all metadata entries"""
-        try:
-            with self.get_connection() as conn:
-                conn.execute("BEGIN")
-                conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
-                
-                query = "SELECT * FROM evaluation_metadata ORDER BY timestamp DESC"
-                cursor.execute(query)
-                
-                results = []
-                for row in cursor.fetchall():
-                    result = dict(row)
-                    result['model_parameters'] = json.loads(result['model_parameters'])
-                    result['examples'] = json.loads(result['examples'])
-                    results.append(result)
-                conn.rollback()
-                return results
-                
-        except Exception as e:
-            print(f"Error retrieving all metadata: {str(e)}")
-            return []
+       """Retrieve all metadata entries"""
+       try:
+           with self.get_connection() as conn:
+               conn.execute("BEGIN")
+               conn.row_factory = sqlite3.Row
+               cursor = conn.cursor()
+               
+               query = "SELECT * FROM evaluation_metadata ORDER BY timestamp DESC"
+               cursor.execute(query)
+               
+               results = []
+               json_fields = ['model_parameters', 'examples']
+               
+               for row in cursor.fetchall():
+                   result = dict(row)
+                   for field in json_fields:
+                       if field in result and result[field] is not None:
+                           try:
+                               result[field] = json.loads(result[field])
+                           except json.JSONDecodeError:
+                               print(f"Error decoding JSON for field {field}")
+                               result[field] = None
+                   results.append(result)
+                   
+               conn.rollback()
+               return results
+               
+       except Exception as e:
+           print(f"Error retrieving all metadata: {str(e)}")
+           return []
 
     def get_evaldata_by_filename(self, file_name: str) -> Optional[Dict]:
         """Retrieve metadata by filename"""
@@ -873,13 +884,17 @@ class DatabaseManager:
                 # Changed from file_name to generate_file_name to match your table schema
                 query = "SELECT * FROM evaluation_metadata WHERE evaluate_file_name = ?"
                 cursor.execute(query, (file_name,))
-                
+                json_fields = ['model_parameters', 'examples']
                 row = cursor.fetchone()
                 if row:
                     result = dict(row)
-                    result['model_parameters'] = json.loads(result['model_parameters'])
-                    
-                    result['examples'] = json.loads(result['examples'])
+                    for field in json_fields:
+                       if field in result and result[field] is not None:
+                           try:
+                               result[field] = json.loads(result[field])
+                           except json.JSONDecodeError:
+                               print(f"Error decoding JSON for field {field}")
+                               result[field] = None
                     conn.rollback()
                     return result
                 return None

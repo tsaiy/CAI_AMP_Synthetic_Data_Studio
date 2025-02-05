@@ -150,7 +150,7 @@ const DatasetsTab: React.FC = () => {
             dataIndex: 'timestamp',
             defaultSortOrder: 'descend',
             sorter: sortItemsByKey('timestamp'),
-            render: (timestamp) => <DateTime dateTime={timestamp}></DateTime>
+            render: (timestamp) => <>{timestamp == null ? 'N/A' : <DateTime dateTime={timestamp}/>}</>
         }, {
             key: '7',
             title: 'Actions',

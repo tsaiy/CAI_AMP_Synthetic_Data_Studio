@@ -3,6 +3,7 @@ import isEmpty from 'lodash/isEmpty';
 import React from 'react';
 import { CustomResult } from './types';
 import { Table } from 'antd';
+import { forEach } from 'lodash';
 
 interface SeedResult {
   [key: string] : CustomResult;  
@@ -19,26 +20,30 @@ const SeedResultTable: React.FC<Props> = ({ results }) => {
         return null;
     }
     const seeds = Object.keys(results);
-    const data = seeds.map((seed: string) => ({
-        seed,
-        question: get(results, `${seed}.question`),
-        solution: get(results, `${seed}.solution`)
-    }))
+    const data = [];
+    forEach(seeds, (seed: string) => {
+        const pairs = get(results, `${seed}`);
+        if (Array.isArray(pairs)) {
+            forEach(pairs, (pair: any) => {
+                data.push({
+                    seed,
+                    question: get(pair, `question`),
+                    solution: get(pair, `solution`)
+                });
+            })
+        }
+    })
 
     const columns = [
-        {
-            title: 'Seed',
-            key: 'seed',
-            dataIndex: 'seed',
-            ellipsis: true,
-            render: (seed: string) => <>{seed}</>
-        },
         {
             title: 'Question',
             key: 'question',
             dataIndex: 'question',
             ellipsis: true,
-            render: (question: string) => <>{question}</>
+            render: (question: string) => {
+                console.log('question', question);
+                return <>{question}</>
+            }
         },
         {
             title: 'Solution',
