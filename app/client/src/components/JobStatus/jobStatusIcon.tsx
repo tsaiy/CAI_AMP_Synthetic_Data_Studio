@@ -32,9 +32,9 @@ export default function JobStatusIcon({ status, customTooltipTitles }: JobStatus
             case 'ENGINE_TIMEDOUT':
                 return <Tooltip title={tooltipTitles.ENGINE_TIMEDOUT}><StatusErrorIcon /></Tooltip>;
             case 'ENGINE_SCHEDULING':
-                return <Tooltip title={tooltipTitles.ENGINE_SCHEDULING}><StatusInProgress /></Tooltip>;
+                return <Tooltip title={tooltipTitles.ENGINE_SCHEDULING}><StatusInProgress className="anticon-spin" /></Tooltip>;
             case 'ENGINE_RUNNING':
-                return <Tooltip title={tooltipTitles.ENGINE_RUNNING}><StatusInProgress /></Tooltip>;
+                return <Tooltip title={tooltipTitles.ENGINE_RUNNING}><StatusInProgress className="anticon-spin" /></Tooltip>;
             case null:
                 return <Tooltip title={tooltipTitles.null}><StatusSuccessIcon /></Tooltip>;
             default:
