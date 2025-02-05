@@ -56,6 +56,7 @@ const Parameters = () => {
     });
 
     const formData = form.getFieldsValue(true);
+    console.log('formData', formData);
     const [values, setValues] = useState(formData?.model_parameters || null);
 
     const { data: defaultParams, loading: loadingDefaultParams } = useFetchDefaultModelParams();
