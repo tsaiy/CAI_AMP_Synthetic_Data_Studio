@@ -1,4 +1,6 @@
 import get from 'lodash/get';
+import isString from 'lodash/isString';
+import isObject from 'lodash/isObject';
 import { Badge, Col, Flex, Row, Table } from 'antd';
 import { EvaluatedPair, TopicEvaluationResult } from './types';
 import styled from 'styled-components';
@@ -49,6 +51,7 @@ const StyledTable = styled(Table)`
 
 
 const EvaluateTopicTable: React.FC<Props> = ({ data, topic, topicResult }) => {
+    console.log('EvaluateTopicTable > ', data, topic, topicResult);
     const [displayRecord, setDisplayRecord] = useState<EvaluatedPair | null>(null);
     const [showModal, setShowModal] = useState(false);
     const average_score = get(topicResult, 'average_score', 0);
@@ -69,8 +72,15 @@ const EvaluateTopicTable: React.FC<Props> = ({ data, topic, topicResult }) => {
             title: 'Justification',
             ellipsis: true,
             render: (pair: EvaluatedPair) => {
+              console.log('pair', pair);
               const justification = get(pair, 'evaluation.justification', 0);
-              return <>{justification}</>;
+              if (isString(justification)) {
+                return <>{justification}</>;
+              }
+              if (isObject(justification)) {
+                return <>{JSON.stringify(justification)}</>;
+              }
+              return 'N/A';
             } 
         },
         {
@@ -89,6 +99,7 @@ const EvaluateTopicTable: React.FC<Props> = ({ data, topic, topicResult }) => {
       setDisplayRecord(record);
       setShowModal(true);
     }
+
 
     return (
         <>

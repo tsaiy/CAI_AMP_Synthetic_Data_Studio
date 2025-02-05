@@ -5,6 +5,7 @@ import HomePage from "./pages/Home";
 import { Pages } from "./types";
 import EvaluatorPage from "./pages/Evaluator";
 import ReevaluatorPage from "./pages/Evaluator/ReevaluatorPage";
+import DatasetDetailsPage from "./pages/DatasetDetails/DatasetDetailsPage";
 
 
 const router = createBrowserRouter([
@@ -44,6 +45,11 @@ const router = createBrowserRouter([
         element: <ReevaluatorPage />,
         loader: async () => null
       },
+      {
+        path: `dataset/:generate_file_name`,
+        element: <DatasetDetailsPage />,
+        loader: async () => null
+      }
       // { path: Pages.DATASETS, element: <Datasets/>, loader: async () => (null) },
     ]
   },

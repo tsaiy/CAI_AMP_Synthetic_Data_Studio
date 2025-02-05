@@ -33,7 +33,7 @@ const EvaluatorPage: React.FC = () => {
         const values = form.getFieldsValue();
         form.setFieldsValue({
           ...values,
-          custom_prompt: prompt,
+          custom_prompt: prompt as string,
           top_p: get(parameters, 'top_p'),
           top_k: get(parameters, 'top_k'),
           min_p: get(parameters, 'min_p'),
@@ -85,11 +85,12 @@ const onSubmit = async () => {
       try {
         setLoading(true);
         const resp = await evaluateDataset(formData);
+        console.log('resp', resp);
         if (!isEmpty(resp.status) && resp.status === 'failed') {
           setErrorMessage(resp.error);
         }
         setLoading(false);
-        if (resp.output_path) {
+        if (resp.output_path || resp.job_name) {
           setEvaluateResult(resp);
         }
         setViewType(ViewType.SUCCESS_VIEW);
@@ -114,6 +115,7 @@ const onSubmit = async () => {
             loading={loading} />}
         {viewType === ViewType.SUCCESS_VIEW && 
           <EvaluatorSuccess 
+            dataset={dataset}
             result={evaluateResult}
             demo={get(dataset, 'total_count', 0) <= 25} />}
       </>
