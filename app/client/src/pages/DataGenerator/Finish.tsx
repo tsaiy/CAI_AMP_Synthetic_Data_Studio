@@ -149,8 +149,7 @@ const Finish = () => {
 
                 formValues.input_path = doc_paths.map(item => item.value);
                 delete formValues.doc_paths;
-                formValues.example_custom = Array.isArray(formValues.examples) ? formValues.examples.map(example => example.solution) : [];
-                delete formValues.examples;
+                // delete formValues.examples;
                 formValues.use_case = 'custom';
             }
         } else {

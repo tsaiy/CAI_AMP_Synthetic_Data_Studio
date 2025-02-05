@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import { Col, Form, InputNumber, Row, Slider, Spin, Typography } from 'antd';
+import { Col, Divider, Form, InputNumber, Row, Slider, Spin, Typography } from 'antd';
 import { merge } from 'lodash';
 import styled from 'styled-components';
 
 import { useFetchDefaultModelParams } from '../../api/api';
 import { LABELS } from '../../constants';
 import { ModelParameters } from '../../types';
+import StyledTitle from '../Evaluator/StyledTitle';
 
 const StyledSlider = styled(Slider)`
     .ant-slider-rail, .ant-slider-track {
         height: 5px;
     }
-    width: 90% !important;
+    width: 80% !important;
 `
 const StyledInputNumber = styled(InputNumber)`
     float: right;
@@ -21,7 +22,7 @@ const StyledFormItem = styled(Form.Item)`
     margin-bottom: 30px;
 `
 const ParamLabel = styled(Typography)`
-    font-size: 16px;
+    font-size: 14px;
 `
 
 const Parameters = () => {
@@ -55,6 +56,7 @@ const Parameters = () => {
     });
 
     const formData = form.getFieldsValue(true);
+    console.log('formData', formData);
     const [values, setValues] = useState(formData?.model_parameters || null);
 
     const { data: defaultParams, loading: loadingDefaultParams } = useFetchDefaultModelParams();
@@ -87,6 +89,8 @@ const Parameters = () => {
     }
     return (
         <>
+            <StyledTitle style={{ marginLeft: '0'}}>Parameters</StyledTitle>
+            <Divider />
             <StyledFormItem
                 name={['model_parameters', ModelParameters.TEMPERATURE]}
                 label={<ParamLabel>{LABELS[ModelParameters.TEMPERATURE]}</ParamLabel>}
@@ -111,7 +115,7 @@ const Parameters = () => {
                             step={MODEL_PARAM_DEFAULTS.current[ModelParameters.TEMPERATURE].step}
                             value={values?.temperature}
                             onChange={(value) => handleValueChange(ModelParameters.TEMPERATURE, value)}
-                            style={{ width: 72, float: 'right' }}
+                            style={{ width: 72, float: 'right', marginLeft: '12px' }}
                         />
                     </Col>
                 </Row>
@@ -140,7 +144,7 @@ const Parameters = () => {
                             step={MODEL_PARAM_DEFAULTS.current[ModelParameters.TOP_K].step}
                             value={values?.top_k}
                             onChange={(value) => handleValueChange(ModelParameters.TOP_K, value)}
-                            style={{ width: 72, float: 'right' }}
+                            style={{ width: 72, float: 'right', marginLeft: '12px' }}
                         />
                     </Col>
                 </Row>
@@ -170,12 +174,12 @@ const Parameters = () => {
                             step={MODEL_PARAM_DEFAULTS.current[ModelParameters.TOP_P].step}
                             value={values?.top_p}
                             onChange={(value) => handleValueChange(ModelParameters.TOP_P, value)}
-                            style={{ width: 72, float: 'right' }}
+                            style={{ width: 72, float: 'right', marginLeft: '12px' }}
                         />
                     </Col>
                 </Row>
             </StyledFormItem>
-            {/* <StyledFormItem
+            <StyledFormItem
                 name={['model_parameters', ModelParameters.MAX_TOKENS]}
                 label={<ParamLabel>{LABELS[ModelParameters.MAX_TOKENS]}</ParamLabel>}
                 labelCol={{ span: 24 }}
@@ -193,18 +197,19 @@ const Parameters = () => {
                             onChange={(value) => handleValueChange(ModelParameters.MAX_TOKENS, value)}
                         />      
                     </Col>
-                    <Col span={4}>
+                    <Col span={1}/>
+                    <Col span={3}>
                         <StyledInputNumber
                             min={MODEL_PARAM_DEFAULTS.current[ModelParameters.MAX_TOKENS].min}
                             max={MODEL_PARAM_DEFAULTS.current[ModelParameters.MAX_TOKENS].max}
                             step={MODEL_PARAM_DEFAULTS.current[ModelParameters.MAX_TOKENS].step}
                             value={values?.max_tokens}
                             onChange={(value) => handleValueChange(ModelParameters.MAX_TOKENS, value)}
-                            style={{ width: 72, float: 'right' }}
+                            style={{ width: 72, float: 'right', marginLeft: '12px' }}
                         />
                     </Col>
                 </Row>
-            </StyledFormItem> */}
+            </StyledFormItem>
         </>
         
     )
