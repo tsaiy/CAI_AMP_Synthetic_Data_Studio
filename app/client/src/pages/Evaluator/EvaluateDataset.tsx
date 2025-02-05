@@ -27,6 +27,7 @@ interface Props {
   dataset: Dataset | Evaluate;
   examples: EvaluateExample[];
   viewType: ViewType;
+  evaluate?: Evaluate;
 }
 
 const LeftCol = styled(Col)`
@@ -54,7 +55,7 @@ const StyledCard = styled(Card)`
 `;
 
 
-const EvaluateDataset: React.FC<Props> = ({ form, loading, modelsMap, dataset, examples, viewType, onEvaluate }) => {
+const EvaluateDataset: React.FC<Props> = ({ form, loading, modelsMap, dataset, examples, viewType, onEvaluate, evaluate }) => {
   const inference_type = get(dataset, 'inference_type', '');
   const [models, setModels] = useState<string[]>(get(modelsMap, inference_type, []));
   const selectedInferenceType = Form.useWatch('inference_type', form);
@@ -77,6 +78,9 @@ const EvaluateDataset: React.FC<Props> = ({ form, loading, modelsMap, dataset, e
   }, [selectedInferenceType]);
 
   const initialValues = {};
+  if(evaluate && evaluate?.model_parameters) {
+    initialValues.model_parameters = evaluate?.model_parameters;
+  }
 
   const promptLabel = (
     <Space>
@@ -159,7 +163,9 @@ const EvaluateDataset: React.FC<Props> = ({ form, loading, modelsMap, dataset, e
                       :
                       <Input placeholder={'Enter Cloudera AI Inference Model ID'}/>
                     }
-                    {selectedInferenceType === ModelProviders.CAII &&
+                    
+                </Form.Item>
+                {selectedInferenceType === ModelProviders.CAII &&
                       <Form.Item
                         name="caii_endpoint"
                         label={FORM_FIELD_META_DATA.caii_endpoint.label}
@@ -185,7 +191,6 @@ const EvaluateDataset: React.FC<Props> = ({ form, loading, modelsMap, dataset, e
                         <Input />
                     </Form.Item>
                     }
-                </Form.Item>
               </Flex>
             </LeftCol>
             <RightCol sm={7}>
