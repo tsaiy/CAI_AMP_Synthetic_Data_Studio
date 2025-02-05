@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Col, Form, InputNumber, Row, Slider, Spin, Typography } from 'antd';
+import { Col, Divider, Form, InputNumber, Row, Slider, Spin, Typography } from 'antd';
 import { merge } from 'lodash';
 import styled from 'styled-components';
 
@@ -22,7 +22,7 @@ const StyledFormItem = styled(Form.Item)`
     margin-bottom: 30px;
 `
 const ParamLabel = styled(Typography)`
-    font-size: 16px;
+    font-size: 14px;
 `
 
 const Parameters = () => {
@@ -88,7 +88,8 @@ const Parameters = () => {
     }
     return (
         <>
-            <StyledTitle>Parameters</StyledTitle>
+            <StyledTitle style={{ marginLeft: '0'}}>Parameters</StyledTitle>
+            <Divider />
             <StyledFormItem
                 name={['model_parameters', ModelParameters.TEMPERATURE]}
                 label={<ParamLabel>{LABELS[ModelParameters.TEMPERATURE]}</ParamLabel>}
