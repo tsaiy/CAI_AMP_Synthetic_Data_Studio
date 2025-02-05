@@ -35,6 +35,7 @@ const ReevaluatorPage: React.FC = () => {
       const parameters: ModelParameters = get(evaluate, 'model_parameters');
       console.log('parameters', parameters);
       const values = form.getFieldsValue();
+      console.log('prompt', prompt);
       form.setFieldsValue({
         ...values,
         display_name: get(evaluate, 'display_name'),
