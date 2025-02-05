@@ -1,6 +1,6 @@
 import throttle from "lodash/throttle";
 import { SyntheticEvent, useEffect } from "react";
-import { Badge, Col, Input, notification, Row, Table, TableProps } from "antd";
+import { Badge, Col, Flex, Input, notification, Row, Table, TableProps } from "antd";
 import styled from "styled-components";
 import Paragraph from 'antd/es/typography/Paragraph';
 import { JOB_EXECUTION_TOTAL_COUNT_THRESHOLD, TRANSLATIONS } from '../../constants';
