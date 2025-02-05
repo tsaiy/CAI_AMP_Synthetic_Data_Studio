@@ -2,7 +2,7 @@ import endsWith from 'lodash/endsWith';
 import filter from 'lodash/filter';
 import clone from 'lodash/clone';
 import React, { useEffect, useState } from 'react';
-import { Badge, Breadcrumb, Button, Col, Flex, List, Popover, Row, Table } from 'antd';
+import { Badge, Breadcrumb, Button, Col, Flex, List, Popover, Row, Table, Tooltip, Typography } from 'antd';
 import styled from 'styled-components';
 import { FileOutlined, FolderOutlined } from '@ant-design/icons';
 import { getFileSize, isDirectory } from './utils';
@@ -149,6 +149,7 @@ const FilesTable: React.FC<Props> = ({ onSelectedRows, workflowType }) => {
     {
       title: 'Name',
       key: 'name',
+      ellipsis: true,
       render: (file: File) => {
         const { name, url } = file;
 
@@ -156,7 +157,11 @@ const FilesTable: React.FC<Props> = ({ onSelectedRows, workflowType }) => {
           return (
             <Flex>
               <FileOutlined style={{ marginTop: '2px' }} />
-              <span style={{ marginLeft: '4px' }}>{name}</span>
+              <span style={{ marginLeft: '4px' }}>
+                 <Tooltip title={name}>
+                   <Typography.Text style={{ maxWidth: '300px' }} ellipsis={true}>{name}</Typography.Text>
+                 </Tooltip>
+              </span>
             </Flex>
           );
         }

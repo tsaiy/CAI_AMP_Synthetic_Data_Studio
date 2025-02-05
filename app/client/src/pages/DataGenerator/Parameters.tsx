@@ -89,9 +89,9 @@ const Parameters = () => {
     }
     return (
         <>
-            <StyledTitle style={{ marginLeft: '0'}}>Parameters</StyledTitle>
             <Divider />
             <StyledFormItem
+                style={{ marginTop: '16px' }}
                 name={['model_parameters', ModelParameters.TEMPERATURE]}
                 label={<ParamLabel>{LABELS[ModelParameters.TEMPERATURE]}</ParamLabel>}
                 labelCol={{ span: 24 }}
@@ -179,7 +179,7 @@ const Parameters = () => {
                     </Col>
                 </Row>
             </StyledFormItem>
-            <StyledFormItem
+            {/* <StyledFormItem
                 name={['model_parameters', ModelParameters.MAX_TOKENS]}
                 label={<ParamLabel>{LABELS[ModelParameters.MAX_TOKENS]}</ParamLabel>}
                 labelCol={{ span: 24 }}
@@ -209,7 +209,7 @@ const Parameters = () => {
                         />
                     </Col>
                 </Row>
-            </StyledFormItem>
+            </StyledFormItem> */}
         </>
         
     )
