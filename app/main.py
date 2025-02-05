@@ -309,7 +309,7 @@ async def generate_examples(request: SynthesisRequest):
         caii_endpoint = request.caii_endpoint
         if caii_endpoint:
             caii_endpoint = caii_endpoint.removesuffix('/chat/completions') 
-            caii_endpoint = caii_endpoint + "/health/ready"
+            caii_endpoint = caii_endpoint + "/models"
             response = requests.get(caii_endpoint, headers=headers, timeout=3)  # Will raise RequestException if fails
 
             try:
@@ -486,7 +486,7 @@ async def evaluate_examples(request: EvaluationRequest):
         if caii_endpoint:
              
             caii_endpoint = caii_endpoint.removesuffix('/chat/completions') 
-            caii_endpoint = caii_endpoint + "/health/ready"
+            caii_endpoint = caii_endpoint + "/models"
             try:
                     response = requests.get(caii_endpoint, headers = headers, timeout=3)
                     if response.status_code != 200:

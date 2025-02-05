@@ -163,7 +163,8 @@ def get_model_family(model_id: str) -> ModelFamily:
     elif model_id.startswith('Qwen') or model_id.startswith('qwen'):
         return ModelFamily.QWEN
     else:
-        raise ValueError(f"Unsupported model: {model_id}")
+        model_name = model_id.split('/')[-1] if '/' in model_id else model_id
+        return model_name
 
 def get_available_topics(use_case: UseCase) -> Dict:
     """Get available topics with their metadata for a use case"""
