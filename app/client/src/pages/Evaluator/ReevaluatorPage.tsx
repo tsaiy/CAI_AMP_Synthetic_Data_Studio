@@ -109,7 +109,8 @@ const ReevaluatorPage: React.FC = () => {
             dataset={evaluate} 
             examples={examples}
             modelsMap={modelsMap}
-            viewType={viewType} 
+            viewType={viewType}
+            evaluate={evaluate} 
             loading={loading} />}
       {viewType === ViewType.SUCCESS_VIEW && 
         <EvaluatorSuccess 
