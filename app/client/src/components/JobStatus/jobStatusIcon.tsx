@@ -1,6 +1,9 @@
 import { Tooltip } from "antd";
 import { JobStatus } from "../../types";
-import { CheckCircleTwoTone, ExclamationCircleTwoTone, InfoCircleTwoTone, LoadingOutlined } from '@ant-design/icons';
+import StatusInProgress from '@cloudera-internal/cuix-core/icons/react/StatusInProgressIcon';
+import StatusSuccessIcon from '@cloudera-internal/cuix-core/icons/react/StatusSuccessIcon';
+import StatusErrorIcon from '@cloudera-internal/cuix-core/icons/react/StatusErrorIcon';
+import InfoIcon from '@cloudera-internal/cuix-core/icons/react/InfoIcon';
 
 export type JobStatusProps = {
     status: JobStatus
@@ -23,19 +26,19 @@ export default function JobStatusIcon({ status, customTooltipTitles }: JobStatus
     function jobStatus() {
         switch (status) {
             case "ENGINE_SUCCEEDED":
-                return <Tooltip title={tooltipTitles.ENGINE_SUCCEEDED}><CheckCircleTwoTone twoToneColor="#52c41a" /></Tooltip>;
+                return <Tooltip title={tooltipTitles.ENGINE_SUCCEEDED}><StatusSuccessIcon /></Tooltip>;
             case 'ENGINE_STOPPED':
-                return <Tooltip title={tooltipTitles.ENGINE_STOPPED}><ExclamationCircleTwoTone twoToneColor="red" /></Tooltip>;
+                return <Tooltip title={tooltipTitles.ENGINE_STOPPED}><StatusErrorIcon /></Tooltip>;
             case 'ENGINE_TIMEDOUT':
-                return <Tooltip title={tooltipTitles.ENGINE_TIMEDOUT}><ExclamationCircleTwoTone twoToneColor="red" /></Tooltip>;
+                return <Tooltip title={tooltipTitles.ENGINE_TIMEDOUT}><StatusErrorIcon /></Tooltip>;
             case 'ENGINE_SCHEDULING':
-                return <Tooltip title={tooltipTitles.ENGINE_SCHEDULING}><LoadingOutlined spin /></Tooltip>;
+                return <Tooltip title={tooltipTitles.ENGINE_SCHEDULING}><StatusInProgress /></Tooltip>;
             case 'ENGINE_RUNNING':
-                return <Tooltip title={tooltipTitles.ENGINE_RUNNING}><LoadingOutlined spin /></Tooltip>;
+                return <Tooltip title={tooltipTitles.ENGINE_RUNNING}><StatusInProgress /></Tooltip>;
             case null:
-                return <Tooltip title={tooltipTitles.null}><InfoCircleTwoTone /></Tooltip>;
+                return <Tooltip title={tooltipTitles.null}><StatusSuccessIcon /></Tooltip>;
             default:
-                return <Tooltip title={tooltipTitles.default}><InfoCircleTwoTone /></Tooltip>;
+                return <Tooltip title={tooltipTitles.default}><InfoIcon /></Tooltip>;
         }
     }
 
