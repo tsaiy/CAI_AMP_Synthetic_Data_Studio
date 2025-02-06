@@ -24,3 +24,11 @@ export interface Evaluation {
     job_name: string;
     job_status: string;
 }
+
+export interface DatasetDetails {
+    generation: DatasetGeneration;
+}
+
+export interface DatasetGeneration {
+    [key: string]: string;
+}
