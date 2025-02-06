@@ -49,6 +49,7 @@ class DatabaseManager:
                         technique TEXT,
                         model_id TEXT,
                         inference_type TEXT,
+                        caii_endpoint TEXT,
                         use_case TEXT,
                         custom_prompt TEXT,
                         model_parameters TEXT,
@@ -80,6 +81,7 @@ class DatabaseManager:
                         timestamp TEXT,
                         model_id TEXT,
                         inference_type TEXT,
+                        caii_endpoint TEXT,
                         use_case TEXT,
                         custom_prompt TEXT,
                         model_parameters TEXT,
@@ -151,12 +153,12 @@ class DatabaseManager:
                 
                 query = """
                 INSERT INTO generation_metadata (
-                timestamp, technique, model_id, inference_type, use_case,
+                timestamp, technique, model_id, inference_type,  caii_endpoint, use_case,
                 custom_prompt, model_parameters, input_key, output_key, output_value, generate_file_name,
                 display_name, local_export_path, hf_export_path,
                 num_questions, total_count, topics, examples, 
                 schema, doc_paths, input_path, job_id, job_name, job_status, job_creator_name
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
                 
                 values = (
@@ -164,6 +166,7 @@ class DatabaseManager:
                     metadata.get('technique', None),
                     metadata.get('model_id', None),
                     metadata.get('inference_type', None),
+                    metadata.get('caii_endpoint', None),
                     metadata.get('use_case', None),
                     metadata.get('final_prompt', None),
                     metadata.get('model_parameters', None),
@@ -301,17 +304,18 @@ class DatabaseManager:
                 
                 query = """
                     INSERT INTO evaluation_metadata (
-                        timestamp, model_id, inference_type, use_case,
+                        timestamp, model_id, inference_type,caii_endpoint, use_case,
                         custom_prompt, model_parameters, generate_file_name,
                         evaluate_file_name, display_name, local_export_path,
                         examples, average_score, job_id, job_name, job_status, job_creator_name
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
                 
                 values = (
                     metadata.get('timestamp', None),
                     metadata.get('model_id'),
                     metadata.get('inference_type'),
+                    metadata.get('caii_endpoint', None),
                     metadata.get('use_case'),
                     metadata.get('custom_prompt'),
                     metadata.get('model_parameters', None),

@@ -385,12 +385,12 @@ class SynthesisService:
             doc_paths_str = self.safe_json_dumps(getattr(request, 'doc_paths', None))
             input_path_str = self.safe_json_dumps(getattr(request, 'input_path', None))
            
-            
             metadata = {
                 'timestamp': timestamp,
                 'technique': request.technique,
                 'model_id': request.model_id,
                 'inference_type': request.inference_type,
+                'caii_endpoint':request.caii_endpoint,
                 'use_case': request.use_case,
                 'final_prompt': custom_prompt_str,
                 'model_parameters': json.dumps(model_params.model_dump()) if model_params else None,
@@ -588,6 +588,7 @@ class SynthesisService:
                 'technique': request.technique,
                 'model_id': request.model_id,
                 'inference_type': request.inference_type,
+                'caii_endpoint':request.caii_endpoint,
                 'use_case': request.use_case,
                 'final_prompt': custom_prompt_str,
                 'model_parameters': json.dumps(model_params.model_dump()) if model_params else None,

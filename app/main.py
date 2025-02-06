@@ -440,6 +440,7 @@ async def generate_examples(request: SynthesisRequest):
                 'technique': request.technique,
                 'model_id': request.model_id,
                 'inference_type': request.inference_type,
+                'caii_endpoint':request.caii_endpoint,
                 'use_case': request.use_case,
                 'final_prompt': custom_prompt_str,
                 'model_parameters': json.dumps(model_params.model_dump()) if model_params else None,
@@ -564,6 +565,7 @@ async def evaluate_examples(request: EvaluationRequest):
         metadata = {
             'model_id': request.model_id,
         'inference_type': request.inference_type,
+        'caii_endpoint':request.caii_endpoint,
         'use_case': request.use_case,
             'custom_prompt': custom_prompt_str,
             'model_parameters': json.dumps(model_params.model_dump()) if model_params else None,
@@ -835,6 +837,21 @@ async def get_generation_by_filename(file_name: str):
         )
     
     return result
+
+@app.get("/dataset_details/{file_path}", include_in_schema=True)
+async def get_dataset(file_path: str):
+    with open(file_path) as f:
+            data = json.load(f)
+    
+   
+    if 'qa_pairs' and 'evaluated' in file_path:
+            for key in data:
+                if key != "Overall_Average" and isinstance(data[key], dict):
+                    data[key]["evaluated_pairs"] = data[key]["evaluated_pairs"][:100]
+            return {"evaluation": data}
+            
+    elif 'qa_pairs' in file_path:
+            return {'generation': data[0:100]}
 
 @app.get("/exports/history", include_in_schema =True)
 def get_exports_history():
