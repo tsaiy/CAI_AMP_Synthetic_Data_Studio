@@ -115,33 +115,33 @@ const WelcomePage: React.FC = () => {
                     <LeftSection>
                         <div className="section-title ">Synthetic Data Generator</div>
                         <div className="section-text">
-                        Use synthetic data generation to generate and validate a dataset at a fraction of the time and cost for testing LLM systems.
+                        Generate high-quality synthetic datasets for SFT & model alignment and evaluate the quality with LLM-as-a-judge.
                         </div>
 
                         <InfoSection>
                             <div className="lightbulb-icon"><StyledImg src={LightBulbIcon} height={16} /></div>
                             <Flex vertical>
-                                <div>Generate Domain Specific Input Queries</div>
+                                <div>Generate Synthetic Data with Domain Specific Input Queries</div>
                                 <div>
-                                    The user or an LLM provides the input topics or instructions on how to generate data. This part can be a simple instruction such as “generate one python programming question”
+                                Generate synthetic data with domain specific input data such as documents, examples or structured data.
                                 </div>
                             </Flex>
                         </InfoSection>
                         <InfoSection>
                             <div className="query-prompt-icon"><StyledImg src={QueryPromptIcon} height={16} /></div>
                             <Flex vertical>
-                                <div>Generate Synthetic Response Data</div>
+                                <div>Evaluate Datasets with LLM-as-a-judge</div>
                                 <div>
-                                Then this generated topic is passed to an LLM where we get synthetic topics. One example of a generated sample is “Provide the quicksort algorithm.
+                                Use models running on Cloudera AI Inference or AWS Bedrock as a judge for evaluating the quality of the generated datasets.
                                 </div>
                             </Flex>
                         </InfoSection>
                         <InfoSection>
                             <div className="numbers-icon"><StyledImg src={NumbersIcon} height={16} /></div>
                             <Flex vertical>
-                                <div>Generate Response Scores</div>
+                                <div>Export to Hugging Face or Data Lake</div>
                                 <div>
-                                An optional additional is to provide the output to an LLM to score the response of the LLM in step 2.
+                                Generated datasets are automatically persisted in the Cloudera AI Workbench project file system, and can be exported to Hugging Face and Data Lake.
                                 </div>
                             </Flex>
                         </InfoSection>
