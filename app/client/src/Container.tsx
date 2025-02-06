@@ -30,7 +30,7 @@ const BrandingTitle = styled(Typography)`
     width: 192px;
     height: 17px;
     flex-grow: 0;
-    font-family: NeuePlakText;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
     font-size: 20px;
     font-weight: normal;
     font-stretch: normal;
