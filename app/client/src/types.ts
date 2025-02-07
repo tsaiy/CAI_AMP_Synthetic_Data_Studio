@@ -5,6 +5,7 @@ export enum Pages {
     HOME = 'home',
     DATASETS = 'datasets',
     WELCOME = 'welcome',
+    FEEDBACK = 'feedback'
 }
 
 export enum ModelParameters {
