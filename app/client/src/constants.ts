@@ -18,3 +18,4 @@ export const TRANSLATIONS: Record<string, string> = {
   };
 
 export const CDSW_PROJECT_URL = import.meta.env.VITE_CDSW_PROJECT_URL;
+export const IS_COMPOSABLE = import.meta.env.VITE_IS_COMPOSABLE;

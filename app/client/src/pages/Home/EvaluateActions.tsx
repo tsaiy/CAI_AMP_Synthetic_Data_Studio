@@ -10,6 +10,7 @@ import { Evaluation } from "./types";
 import styled from "styled-components";
 import { useDeleteEvaluation } from "../../api/Evaluations/evaluations";
 import { Pages } from "../../types";
+import { getFilesURL } from "../Evaluator/util";
 
 const { Text } = Typography;
 
@@ -21,16 +22,6 @@ interface Props {
 const ModalButtonGroup = styled(Flex)`
     margin-top: 15px !important;
 `;
-
-const getFilesURL = (fileName: string) => {
-    const {
-      VITE_WORKBENCH_URL,
-      VITE_PROJECT_OWNER,
-      VITE_CDSW_PROJECT
-    } = import.meta.env
-    return `${VITE_WORKBENCH_URL}/${VITE_PROJECT_OWNER}/${VITE_CDSW_PROJECT}/preview/${fileName}`
-  }
-
 
 const EvaluationActions: React.FC<Props> = ({ evaluation, refetch }) => {
     const [showModal, setShowModal] = useState(false);

@@ -3,7 +3,6 @@ import { HomeOutlined, PageviewOutlined } from '@mui/icons-material';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import GradingIcon from '@mui/icons-material/Grading';
-import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import ModelTrainingIcon from '@mui/icons-material/ModelTraining';
 import { Avatar, Button, Card, Divider, Flex, List, Modal, Tabs, Table, Typography } from 'antd';
 import { Link } from 'react-router-dom';
@@ -11,7 +10,7 @@ import styled from 'styled-components';
 
 import PCModalContent from './PCModalContent'
 import { GenDatasetResponse, QuestionSolution } from './types';
-import { Pages } from '../../types';
+import { getFilesURL } from '../Evaluator/util';
 
 const { Title } = Typography;
 
@@ -72,15 +71,6 @@ const TopicsTable: FC<TopicsTableProps> = ({ formData, topic }) => {
         />
     )
 };
-
-const getFilesURL = (fileName: string) => {
-    const {
-        VITE_WORKBENCH_URL,
-        VITE_PROJECT_OWNER,
-        VITE_CDSW_PROJECT
-    } = import.meta.env
-    return `${VITE_WORKBENCH_URL}/${VITE_PROJECT_OWNER}/${VITE_CDSW_PROJECT}/preview/${fileName}`
-}
 
 const getJobsURL = () => {
     const {
@@ -173,7 +163,7 @@ const Success: FC<SuccessProps> = ({ formData, isDemo = true }) => {
             <ButtonGroup gap={8}>
                 {isDemo && (
                     <StyledButton icon={<PageviewOutlined/>}>
-                        <a href={getFilesURL(formData?.export_path)} target='_blank' rel='noreferrer'>
+                        <a href={getFilesURL(formData?.export_path?.local || "")} target='_blank' rel='noreferrer'>
                             {'View in Cloudera AI Workbench'}
                         </a>
                     </StyledButton>)}

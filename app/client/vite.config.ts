@@ -12,6 +12,7 @@ const prodEnvVar = {
   'import.meta.env.VITE_AMP_URL': JSON.stringify(''),
   'import.meta.env.VITE_CDSW_API_URL': JSON.stringify(process.env.CDSW_API_URL),
   'import.meta.env.VITE_CDSW_DOMAIN': JSON.stringify(process.env.CDSW_DOMAIN),
+  'import.meta.env.VITE_IS_COMPOSABLE': JSON.stringify(process.env.IS_COMPOSABLE),
   'import.meta.env.VITE_CDSW_APIV2_KEY': JSON.stringify(process.env.CDSW_APIV2_KEY),
 }
 

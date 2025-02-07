@@ -1,12 +1,11 @@
 import isNumber from 'lodash/isNumber';
 import filter from 'lodash/filter';
 import isString from 'lodash/isString';
-import { ComponentType, FC, useEffect } from 'react';
+import { FC, useEffect } from 'react';
 import { HomeOutlined, PageviewOutlined } from '@mui/icons-material';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import GradingIcon from '@mui/icons-material/Grading';
-import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import ModelTrainingIcon from '@mui/icons-material/ModelTraining';
 import { Avatar, Button, Card, Divider, Flex, Form, List, Modal, Result, Spin, Tabs, Table, Typography, FormInstance } from 'antd';
 import { Link } from 'react-router-dom';
@@ -17,9 +16,10 @@ import { useTriggerDatagen } from './../../api/api'
 import { DEMO_MODE_THRESHOLD } from './constants'
 import { GenDatasetResponse, QuestionSolution, WorkflowType } from './types';
 import { Pages } from '../../types';
-import { isEmpty, isObject } from 'lodash';
+import { isEmpty } from 'lodash';
 import CustomResultTable from './CustomResultTable';
 import SeedResultTable from './SeedResultTable';
+import { getFilesURL } from '../Evaluator/util';
 
 const { Title } = Typography;
 
@@ -85,15 +85,6 @@ const TopicsTable: FC<TopicsTableProps> = ({ formData, topic }) => {
         />
     )
 };
-
-const getFilesURL = (fileName: string | undefined) => {
-    const {
-        VITE_WORKBENCH_URL,
-        VITE_PROJECT_OWNER,
-        VITE_CDSW_PROJECT
-    } = import.meta.env
-    return `${VITE_WORKBENCH_URL}/${VITE_PROJECT_OWNER}/${VITE_CDSW_PROJECT}/preview/${fileName}`
-}
 
 const getJobsURL = () => {
     const {
@@ -218,7 +209,7 @@ const Finish = () => {
             title: 'Review Dataset',
             description: 'Review your dataset to ensure it properly fits your usecase.',
             icon: <GradingIcon/>,
-            href: getFilesURL(genDatasetResp?.export_path?.local)
+            href: getFilesURL(genDatasetResp?.export_path?.local || "")
         },
         {
             avatar: '',
