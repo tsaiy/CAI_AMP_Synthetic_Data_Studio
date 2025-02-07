@@ -341,12 +341,18 @@ class SynthesisService:
             mode_suffix = "test" if is_demo else "final"
             model_name = get_model_family(request.model_id).split('.')[-1]
             file_path = f"qa_pairs_{model_name}_{time_file}_{mode_suffix}.json"
-            
-            final_output = [{
-                                'Seeds': item['Topic'],
-                                output_key: item['question'],
-                                output_value: item['solution'] }
-                             for item in final_output]
+            if request.doc_paths:
+                final_output = [{
+                                    'Generated_From': item['Topic'],
+                                    output_key: item['question'],
+                                    output_value: item['solution'] }
+                                 for item in final_output]
+            else:
+                final_output = [{
+                                    'Seeds': item['Topic'],
+                                    output_key: item['question'],
+                                    output_value: item['solution'] }
+                                 for item in final_output]
             output_path = {}
             try:
                 with open(file_path, "w") as f:

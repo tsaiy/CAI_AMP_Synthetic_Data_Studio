@@ -13,6 +13,7 @@ import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
 import time
+import math
 import requests
 from requests.exceptions import ReadTimeout
 from urllib3.exceptions import ReadTimeoutError
@@ -58,6 +59,17 @@ runtime_identifier = template_job.runtime_identifier
 def get_job_status(job_id):
     response = client_cml.list_job_runs(project_id, job_id, sort="-created_at", page_size=1)
     return response.job_runs[0].status
+
+def get_total_size(file_paths):
+  
+    file_sizes = []
+    for file_path in file_paths:
+        file_sizes.append(client_cml.list_project_files(project_id, file_path).files[0].file_size)
+        
+    total_bytes = sum(int(float(size)) for size in file_sizes) 
+    total_gb = math.ceil(total_bytes / (1024 ** 3))
+
+    return total_gb
 
 #*************Comment this when running locally********************************************
 
@@ -324,10 +336,33 @@ async def generate_examples(request: SynthesisRequest):
                         status_code=503,  # Service Unavailable
                         content={"status": "failed", "error": message}
                     )
-
-    
-  
     is_demo = request.is_demo
+    mem = 4
+    core = 2
+    if request.doc_paths:
+        paths = request.doc_paths
+        data_size = get_total_size(paths)
+        if data_size > 1 and data_size <=10:
+            is_demo = False
+            mem = data_size +2
+            core = max(2,data_size//2)
+            
+        elif data_size >10:
+            return JSONResponse(
+                    status_code=413,  # Payload Too Large
+                    content={
+                        "status": "failed",
+                        "error": f"Total dataset size ({data_size:} GB) exceeds limit of 10 GB. Please select smaller datasets."
+                    }
+                )
+                            
+            
+        else:
+            is_demo = request.is_demo
+            mem = 4
+            core = 2
+  
+    
     
 
     if is_demo== True:
@@ -371,8 +406,8 @@ async def generate_examples(request: SynthesisRequest):
             name=job_name,
             script=script_path,
             runtime_identifier=runtime_identifier,
-            cpu=2,
-            memory=4,
+            cpu=core,
+            memory=mem,
             environment = {'file_name':file_name}
         )
 
@@ -500,7 +535,8 @@ async def evaluate_examples(request: EvaluationRequest):
                         status_code=503,  # Service Unavailable
                         content={"status": "failed", "error": message}
                     )
-                
+   
+    
     is_demo = request.is_demo
     if is_demo:
        return evaluator_service.evaluate_results(request)
