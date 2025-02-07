@@ -6,6 +6,7 @@ export const LABELS = {
     [Pages.EVALUATOR]: 'Evaluator',
     [Pages.DATASETS]: 'Datasets',
     [Pages.HISTORY]: 'History',
+    [Pages.FEEDBACK]: 'Feedback',
     [ModelParameters.TEMPERATURE]: 'Temperature',
     [ModelParameters.TOP_K]: 'Top K',
     [ModelParameters.TOP_P]: 'Top P',
