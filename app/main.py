@@ -64,6 +64,8 @@ def get_total_size(file_paths):
   
     file_sizes = []
     for file_path in file_paths:
+        if os.getenv("IS_COMPOSABLE"):
+            file_path = os.path.join('synthetic-data-studio', file_path)
         file_sizes.append(client_cml.list_project_files(project_id, file_path).files[0].file_size)
         
     total_bytes = sum(int(float(size)) for size in file_sizes) 
