@@ -30,7 +30,7 @@ import uuid
 
 class SynthesisService:
     """Service for generating synthetic QA pairs"""
-    QUESTIONS_PER_BATCH = 1  # Maximum questions per batch
+    QUESTIONS_PER_BATCH = 5  # Maximum questions per batch
     MAX_CONCURRENT_TOPICS = 5  # Limit concurrent I/O operations
 
 
