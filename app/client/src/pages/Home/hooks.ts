@@ -94,3 +94,29 @@ export const useEvaluations = () => {
       setSearchQuery   
     };
 }
+
+const fetchUpgradeStatus = async () => {
+    const upgrade_resp = await fetch(`${BASE_API_URL}/synthesis-studio/check-upgrade`, {
+      method: 'GET',
+    });
+    const upgradeStatus = await upgrade_resp.json();
+    return upgradeStatus;
+}
+
+export const useUpgradeStatus = () => {
+  const { data, isLoading, isError, refetch } = useQuery(
+    ["fetchUpgradeStatus", fetchUpgradeStatus],
+    () => fetchUpgradeStatus(),
+    {
+      keepPreviousData: false,
+      refetchInterval: 30000
+    },
+  );
+
+  return {
+    data,
+    isLoading,
+    isError,
+    refetch
+  };
+}

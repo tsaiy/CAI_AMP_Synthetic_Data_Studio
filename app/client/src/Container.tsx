@@ -10,6 +10,8 @@ import { Pages } from './types';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import React, { useMemo } from 'react';
 import { GithubOutlined, MailOutlined } from '@ant-design/icons';
+import { Upgrade } from '@mui/icons-material';
+import UpgradeButton from './pages/Home/UpgradeButton';
 
 const { Text } = Typography;
 const { Header, Content } = Layout;
@@ -96,9 +98,16 @@ const pages: MenuItem[] = [
           <span style={{ color: 'rgba(255, 255, 255, 0.65)'}}>{LABELS[Pages.FEEDBACK]}</span>
         </Button>
       </Popover>
-    ),
+    )
+  }, 
+  {
+    key: Pages.UPGRADE,
+    label: (
+      <UpgradeButton />
+    )
   }
 ]
+
 
 const NotificationContext = React.createContext({messagePlacement: 'topRight'});
 
