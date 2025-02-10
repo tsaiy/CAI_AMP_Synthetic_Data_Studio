@@ -24,6 +24,7 @@ const ReevaluatorPage: React.FC = () => {
     examples,
     isLoading
   } = useGetEvaluate(evaluate_file_name as string);
+  console.log('evaluate', evaluate);
   const modelsReq = useModels();
   const modelsMap = get(modelsReq, 'modelsMap', {});
   const model_inference_type = get(evaluate, 'inference_type');
@@ -32,7 +33,9 @@ const ReevaluatorPage: React.FC = () => {
   useEffect(() => {
     if (!isEmpty(evaluate)) {
       const parameters: ModelParameters = get(evaluate, 'model_parameters');
+      console.log('parameters', parameters);
       const values = form.getFieldsValue();
+      console.log('prompt', prompt);
       form.setFieldsValue({
         ...values,
         display_name: get(evaluate, 'display_name'),
@@ -43,7 +46,8 @@ const ReevaluatorPage: React.FC = () => {
         max_tokens: get(parameters, 'max_tokens'),
         temperature: get(parameters, 'temperature'),
         model_id: get(evaluate, 'model_id'),
-        inference_type: get(evaluate, 'inference_type')
+        inference_type: get(evaluate, 'inference_type'),
+        model_parameters: parameters
       })
     }
   }, [evaluate]);
@@ -105,10 +109,12 @@ const ReevaluatorPage: React.FC = () => {
             dataset={evaluate} 
             examples={examples}
             modelsMap={modelsMap}
-            viewType={viewType} 
+            viewType={viewType}
+            evaluate={evaluate} 
             loading={loading} />}
       {viewType === ViewType.SUCCESS_VIEW && 
         <EvaluatorSuccess 
+          dataset={dataset}
           result={evaluateResult}
           demo={get(dataset, 'total_count', 0) <= 25} />}      
     </>

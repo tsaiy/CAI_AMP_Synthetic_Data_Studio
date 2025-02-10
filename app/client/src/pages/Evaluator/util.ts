@@ -1,4 +1,5 @@
 import get from 'lodash/get';
+import set from 'lodash/set';
 import isEmpty from 'lodash/isEmpty';
 import isObject from 'lodash/isObject';
 import forEach from 'lodash/forEach';
@@ -205,40 +206,39 @@ export const EVALUATION_RESULT = {
 
 
 export const getTopicMap = (evaluateResult: EvaluateResult) => {
-  const result = get(evaluateResult, 'result');
-  const topicMap = {};
-  const topics = [];
-  
-  if (!isEmpty(result)) {
-    const keys = Object.keys(result);
-    forEach(keys, (topicName: string) => {
-      const value = get(result, topicName);
-      if (topicName !== 'Overall_Average') {
-        topics.push(topicName);   
-      }
-      if (isObject(value)) {
-        topicMap[topicName] = value;
-      }
-    });
-  }
-  
-  
-  return {
-    topics,
-    topicMap
-  }
+    const result = get(evaluateResult, 'result');
+    let topicMap = {};
+    const topics = [];
+
+    if (!isEmpty(result)) {
+        const keys = Object.keys(result);
+        forEach(keys, (topicName: string) => {
+            const value = get(result, topicName);
+            if (topicName !== 'Overall_Average') {
+                topics.push(topicName);
+            }
+            if (isObject(value)) {
+                topicMap = set(topicMap, topicName, value);
+            }
+        });
+    }
+
+    return {
+        topics,
+        topicMap
+    }
 };
 
 export enum MODE {
-  CREATE = 'CREATE',
-  EDIT = 'EDIT'    
+    CREATE = 'CREATE',
+    EDIT = 'EDIT'
 }
 
 export const FORM_FIELD_META_DATA = {
     caii_endpoint: {
-      label: 'Cloudera AI Inference Endpoint',
-      tooltip: 'The inference enpoint of your model deployed in Cloudera AI Inference Service',
-      doc_link: 'https://docs.cloudera.com/machine-learning/cloud/ai-inference/topics/ml-caii-use-caii.html'   
+        label: 'Cloudera AI Inference Endpoint',
+        tooltip: 'The inference enpoint of your model deployed in Cloudera AI Inference Service',
+        doc_link: 'https://docs.cloudera.com/machine-learning/cloud/ai-inference/topics/ml-caii-use-caii.html'
     }
 }
 
@@ -248,19 +248,30 @@ export const EVALUATOR_JOB_SUCCESS = 'Your evaluator job has successfully starte
 
 export const getColorCode = (value: number) => {
     if (value < 3) {
-      return '#FF0000';
+        return '#FF0000';
     } else if (value < 5) {
-      return '#faad14';
+        return '#faad14';
     }
-    return '#52c41a'; 
-  }
+    return '#52c41a';
+}
 
- export const getFilesURL = (fileName: string) => {
+export const getFilesURL = (fileName: string) => {
     const {
-      VITE_WORKBENCH_URL,
-      VITE_PROJECT_OWNER,
-      VITE_CDSW_PROJECT
+        VITE_WORKBENCH_URL,
+        VITE_PROJECT_OWNER,
+        VITE_CDSW_PROJECT,
+        VITE_IS_COMPOSABLE
     } = import.meta.env
-    return `${VITE_WORKBENCH_URL}/${VITE_PROJECT_OWNER}/${VITE_CDSW_PROJECT}/preview/${fileName}`
-  } 
+
+    let previewFileUrl = `${VITE_WORKBENCH_URL}/${VITE_PROJECT_OWNER}/${VITE_CDSW_PROJECT}/preview/${fileName}`;
+
+    // Needed because in prod environment we deploy this app within an iframe and the folder structure is different from CML point of view
+    // IS_COMPOSABLE tells us if the app is deployed in prod environment
+    if (VITE_IS_COMPOSABLE) {
+        previewFileUrl = `${VITE_WORKBENCH_URL}/${VITE_PROJECT_OWNER}/${VITE_CDSW_PROJECT}/preview/synthetic-data-studio/${fileName}`
+    }
+
+    return previewFileUrl;
+}
+
 

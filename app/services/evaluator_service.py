@@ -98,6 +98,9 @@ class EvaluatorService:
 
             try:
                 response = model_handler.generate_response(prompt)
+            except ModelHandlerError as e:
+                self.logger.error(f"ModelHandlerError in generate_response: {str(e)}")
+                raise  
             except Exception as e:
                 error_msg = f"Error generating model response: {str(e)}"
                 self.logger.error(error_msg)
@@ -128,7 +131,9 @@ class EvaluatorService:
                 self.logger.error(error_msg)
                 error_response["evaluation"]["justification"] = error_msg
                 return error_response
-
+            
+        except ModelHandlerError:
+            raise 
         except Exception as e:
             self.logger.error(f"Critical error in evaluate_single_pair: {str(e)}")
             return error_response
@@ -158,6 +163,8 @@ class EvaluatorService:
                             try:
                                 result = future.result()
                                 evaluated_pairs.append(result)
+                            except ModelHandlerError:
+                                raise  
                             except Exception as e:
                                 error_msg = f"Error processing future result: {str(e)}"
                                 self.logger.error(error_msg)
@@ -171,6 +178,8 @@ class EvaluatorService:
                         self.logger.error(error_msg)
                         raise
 
+            except ModelHandlerError:
+                raise              
             except Exception as e:
                 error_msg = f"Error in ThreadPoolExecutor setup: {str(e)}"
                 self.logger.error(error_msg)
@@ -212,7 +221,8 @@ class EvaluatorService:
                     "failed_pairs": failed_pairs,
                     "error": error_msg
                 }
-
+        except ModelHandlerError:
+            raise  
         except Exception as e:
             error_msg = f"Critical error in evaluate_topic: {str(e)}"
             self.logger.error(error_msg)
@@ -281,13 +291,18 @@ class EvaluatorService:
                 }
                 
                 for future in as_completed(future_to_topic):
-                    topic = future_to_topic[future]
-                    topic_stats = future.result()
-                    evaluated_results[topic] = topic_stats
-                    all_scores.extend([
-                        pair["evaluation"]["score"] 
-                        for pair in topic_stats["evaluated_pairs"]
-                    ])
+                    try:
+                        topic = future_to_topic[future]
+                        topic_stats = future.result()
+                        evaluated_results[topic] = topic_stats
+                        all_scores.extend([
+                            pair["evaluation"]["score"] 
+                            for pair in topic_stats["evaluated_pairs"]
+                        ])
+                    except ModelHandlerError as e:
+                        self.logger.error(f"ModelHandlerError in future processing: {str(e)}")
+                        raise APIError(f"Model evaluation failed: {str(e)}")
+
             
             overall_average = sum(all_scores) / len(all_scores) if all_scores else 0
             overall_average = round(overall_average, 2)
@@ -309,18 +324,24 @@ class EvaluatorService:
                 request.use_case, 
                 request.custom_prompt
             )
-            examples_str = PromptHandler.get_default_eval_example(
-                request.use_case,
-                request.examples
-            )
+            
+
+            examples_value = (
+            PromptHandler.get_default_eval_example(request.use_case, request.examples) 
+            if hasattr(request, 'examples') 
+            else None
+        )
+            examples_str = self.safe_json_dumps(examples_value)
+            print(examples_value, '\n',examples_str)
             
             metadata = {
                 'timestamp': timestamp,
                 'model_id': request.model_id,
                 'inference_type': request.inference_type,
+                'caii_endpoint':request.caii_endpoint,
                 'use_case': request.use_case,
                 'custom_prompt': custom_prompt_str,
-                'model_parameters': model_params.model_dump(),
+                'model_parameters': json.dumps(model_params.model_dump()) if model_params else None,
                 'generate_file_name': os.path.basename(request.import_path),
                 'evaluate_file_name': os.path.basename(output_path),
                 'display_name': request.display_name,
@@ -350,7 +371,8 @@ class EvaluatorService:
                     "status": "completed",
                     "output_path": output_path
                 }
-            
+        except APIError:
+            raise      
         except Exception as e:
             error_msg = f"Error in evaluation process: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
@@ -365,3 +387,7 @@ class EvaluatorService:
                 self.db.update_job_evaluate(job_name,file_name, output_path, time_stamp, job_status)
                 
                 raise
+
+    def safe_json_dumps(self, value):
+        """Convert value to JSON string only if it's not None"""
+        return json.dumps(value) if value is not None else None

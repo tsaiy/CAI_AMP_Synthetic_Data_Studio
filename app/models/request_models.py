@@ -141,47 +141,47 @@ class SynthesisRequest(BaseModel):
 
 
 
-    @field_validator('schema', mode='before')
-    @classmethod
-    def validate_schema(cls, v: Optional[str], info) -> Optional[str]:
-        use_case = info.data.get('use_case')
-        if use_case == UseCase.TEXT2SQL:
-            # Use provided schema or default from config
-            return v or USE_CASE_CONFIGS[UseCase.TEXT2SQL].schema
-        return None  # No schema for other use cases
+    # @field_validator('schema', mode='before')
+    # @classmethod
+    # def validate_schema(cls, v: Optional[str], info) -> Optional[str]:
+    #     use_case = info.data.get('use_case')
+    #     if use_case == UseCase.TEXT2SQL:
+    #         # Use provided schema or default from config
+    #         return v or USE_CASE_CONFIGS[UseCase.TEXT2SQL].schema
+    #     return None  # No schema for other use cases
 
-    @field_validator('topics', mode='before')
-    @classmethod
-    def validate_topics(cls, v: Optional[List[str]], info) -> List[str]:
-        if v is None:
-            # If no topics provided, use defaults
-            use_case_str = info.data.get('use_case')
-            use_case = UseCase(use_case_str)
-            if use_case:
-                return list(USE_CASE_CONFIGS[use_case].topics.keys())
-            return []
+    # @field_validator('topics', mode='before')
+    # @classmethod
+    # def validate_topics(cls, v: Optional[List[str]], info) -> List[str]:
+    #     if v is None:
+    #         # If no topics provided, use defaults
+    #         use_case_str = info.data.get('use_case')
+    #         use_case = UseCase(use_case_str)
+    #         if use_case:
+    #             return list(USE_CASE_CONFIGS[use_case].topics.keys())
+    #         return []
         
-        return v
+    #     return v
 
-    @field_validator('examples', mode='before')
-    @classmethod
-    def validate_examples(cls, v: Optional[List[Example]], info) -> List[Example]:
-        if v is None:
-            # If no examples provided, use defaults
-            use_case_str = info.data.get('use_case')
-            use_case = UseCase(use_case_str)
-            if use_case:
-                print(use_case)
-                print(USE_CASE_CONFIGS[use_case].default_examples)
-                print("say hi-2")
-                return [
-                    Example(**example)
-                    for example in USE_CASE_CONFIGS[use_case].default_examples
-                ]
-            print("say hi-1")
-            return []
-        print("say hi")
-        return v
+    # @field_validator('examples', mode='before')
+    # @classmethod
+    # def validate_examples(cls, v: Optional[List[Example]], info) -> List[Example]:
+    #     if v is None:
+    #         # If no examples provided, use defaults
+    #         use_case_str = info.data.get('use_case')
+    #         use_case = UseCase(use_case_str)
+    #         if use_case:
+    #             print(use_case)
+    #             print(USE_CASE_CONFIGS[use_case].default_examples)
+    #             print("say hi-2")
+    #             return [
+    #                 Example(**example)
+    #                 for example in USE_CASE_CONFIGS[use_case].default_examples
+    #             ]
+    #         print("say hi-1")
+    #         return []
+    #     print("say hi")
+    #     return v
 
     model_config = ConfigDict(protected_namespaces=(),
         json_schema_extra={

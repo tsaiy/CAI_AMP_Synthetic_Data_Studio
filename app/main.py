@@ -13,6 +13,7 @@ import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
 import time
+import math
 import requests
 from requests.exceptions import ReadTimeout
 from urllib3.exceptions import ReadTimeoutError
@@ -58,6 +59,19 @@ runtime_identifier = template_job.runtime_identifier
 def get_job_status(job_id):
     response = client_cml.list_job_runs(project_id, job_id, sort="-created_at", page_size=1)
     return response.job_runs[0].status
+
+def get_total_size(file_paths):
+  
+    file_sizes = []
+    for file_path in file_paths:
+        if os.getenv("IS_COMPOSABLE"):
+            file_path = os.path.join('synthetic-data-studio', file_path)
+        file_sizes.append(client_cml.list_project_files(project_id, file_path).files[0].file_size)
+        
+    total_bytes = sum(int(float(size)) for size in file_sizes) 
+    total_gb = math.ceil(total_bytes / (1024 ** 3))
+
+    return total_gb
 
 #*************Comment this when running locally********************************************
 
@@ -309,7 +323,7 @@ async def generate_examples(request: SynthesisRequest):
         caii_endpoint = request.caii_endpoint
         if caii_endpoint:
             caii_endpoint = caii_endpoint.removesuffix('/chat/completions') 
-            caii_endpoint = caii_endpoint + "/health/ready"
+            caii_endpoint = caii_endpoint + "/models"
             response = requests.get(caii_endpoint, headers=headers, timeout=3)  # Will raise RequestException if fails
 
             try:
@@ -324,10 +338,33 @@ async def generate_examples(request: SynthesisRequest):
                         status_code=503,  # Service Unavailable
                         content={"status": "failed", "error": message}
                     )
-
-    
-  
     is_demo = request.is_demo
+    mem = 4
+    core = 2
+    if request.doc_paths:
+        paths = request.doc_paths
+        data_size = get_total_size(paths)
+        if data_size > 1 and data_size <=10:
+            is_demo = False
+            mem = data_size +2
+            core = max(2,data_size//2)
+            
+        elif data_size >10:
+            return JSONResponse(
+                    status_code=413,  # Payload Too Large
+                    content={
+                        "status": "failed",
+                        "error": f"Total dataset size ({data_size:} GB) exceeds limit of 10 GB. Please select smaller datasets."
+                    }
+                )
+                            
+            
+        else:
+            is_demo = request.is_demo
+            mem = 4
+            core = 2
+  
+    
     
 
     if is_demo== True:
@@ -371,8 +408,8 @@ async def generate_examples(request: SynthesisRequest):
             name=job_name,
             script=script_path,
             runtime_identifier=runtime_identifier,
-            cpu=2,
-            memory=4,
+            cpu=core,
+            memory=mem,
             environment = {'file_name':file_name}
         )
 
@@ -381,45 +418,81 @@ async def generate_examples(request: SynthesisRequest):
         )
         job_run = client_cml.create_job_run(cmlapi.CreateJobRunRequest(), project_id=project_id, job_id=created_job.id)
 
+        
+            
+        inputs = []   
         if request.input_path:
-            file_path = request.input_path
-            with open(file_path, 'r') as file:
-                    inputs = json.load(file)
+            file_paths = request.input_path
+            for path in file_paths:
+                try:
+                    with open(path) as f:
+                        data = json.load(f)
+                        inputs.extend(item.get(request.input_key, '') for item in data)
+                except Exception as e:
+                    print(f"Error processing {path}: {str(e)}")
             total_count = len(inputs)
             
-            topics = []
-            num_questions = None
+            topics = None
+           
+        elif request.doc_paths:
+            total_count = request.num_questions
         else:
             total_count = request.num_questions*len(request.topics)
-            
             topics = request.topics
-            num_questions = request.num_questions
-        examples_str = PromptHandler.get_default_example(request.use_case,request.examples)
-        custom_prompt_str = PromptHandler.get_default_custom_prompt(request.use_case, request.custom_prompt)  
-       
-        schema_str = PromptHandler.get_default_schema(request.use_case, request.schema)
+            
+            
+        
         
         model_params = request.model_params or ModelParameters()
         print(job_run.job_id, job_name)
+        # Handle custom prompt, examples and schema
+        custom_prompt_str = PromptHandler.get_default_custom_prompt(request.use_case, request.custom_prompt)
+        # For examples
+        examples_value = (
+            PromptHandler.get_default_example(request.use_case, request.examples) 
+            if hasattr(request, 'examples') 
+            else None
+        )
+        examples_str = synthesis_service.safe_json_dumps(examples_value)
+
+        # For schema
+        schema_value = (
+            PromptHandler.get_default_schema(request.use_case, request.schema)
+            if hasattr(request, 'schema') 
+            else None
+        )
+        
+        schema_str = synthesis_service.safe_json_dumps(schema_value)
+
+        # For topics
+        topics_value = topics if not getattr(request, 'doc_paths', None) else None
+        topic_str = synthesis_service.safe_json_dumps(topics_value)
+
+        # For doc_paths and input_path
+        doc_paths_str = synthesis_service.safe_json_dumps(getattr(request, 'doc_paths', None))
+        input_path_str = synthesis_service.safe_json_dumps(getattr(request, 'input_path', None))
+           
         
         metadata = {
                 'technique': request.technique,
                 'model_id': request.model_id,
                 'inference_type': request.inference_type,
+                'caii_endpoint':request.caii_endpoint,
                 'use_case': request.use_case,
                 'final_prompt': custom_prompt_str,
-                'model_parameters': model_params.model_dump(),
+                'model_parameters': json.dumps(model_params.model_dump()) if model_params else None,
                 'display_name': request.display_name,
-                'num_questions':num_questions,
-                'topics': topics,
+                'num_questions':request.num_questions,
+                'topics': topic_str,
                 'examples': examples_str,
                 "total_count":total_count,
                 'schema': schema_str,
-                'doc_paths': request.doc_paths,
-                'input_path': request.input_path,
+                'doc_paths': doc_paths_str,
+                'input_path':input_path_str,
                 'job_name':job_name,
                 'job_id': job_run.job_id,
                 'job_status': get_job_status(job_run.job_id),
+                'input_key': request.input_key,
                  'output_key':request.output_key,
                 'output_value':request.output_value,
                'job_creator_name' : client_cml.list_job_runs(project_id, job_run.job_id,sort="-created_at", page_size=1).job_runs[0].creator.name
@@ -451,7 +524,7 @@ async def evaluate_examples(request: EvaluationRequest):
         if caii_endpoint:
              
             caii_endpoint = caii_endpoint.removesuffix('/chat/completions') 
-            caii_endpoint = caii_endpoint + "/health/ready"
+            caii_endpoint = caii_endpoint + "/models"
             try:
                     response = requests.get(caii_endpoint, headers = headers, timeout=3)
                     if response.status_code != 200:
@@ -464,7 +537,8 @@ async def evaluate_examples(request: EvaluationRequest):
                         status_code=503,  # Service Unavailable
                         content={"status": "failed", "error": message}
                     )
-                
+   
+    
     is_demo = request.is_demo
     if is_demo:
        return evaluator_service.evaluate_results(request)
@@ -518,18 +592,21 @@ async def evaluate_examples(request: EvaluationRequest):
                 request.use_case, 
                 request.custom_prompt
             )
-        examples_str = PromptHandler.get_default_eval_example(
-            request.use_case,
-            request.examples
+        examples_value = (
+            PromptHandler.get_default_eval_example(request.use_case, request.examples) 
+            if hasattr(request, 'examples') 
+            else None
         )
+        examples_str = evaluator_service.safe_json_dumps(examples_value)
         model_params = request.model_params or ModelParameters()
         
         metadata = {
             'model_id': request.model_id,
-            'inference_type': request.inference_type,
-            'use_case': request.use_case,
+        'inference_type': request.inference_type,
+        'caii_endpoint':request.caii_endpoint,
+        'use_case': request.use_case,
             'custom_prompt': custom_prompt_str,
-            'model_parameters': model_params.model_dump(),
+            'model_parameters': json.dumps(model_params.model_dump()) if model_params else None,
             'generate_file_name': os.path.basename(request.import_path),
             'display_name': request.display_name,
             'examples': examples_str,
@@ -798,6 +875,21 @@ async def get_generation_by_filename(file_name: str):
         )
     
     return result
+
+@app.get("/dataset_details/{file_path}", include_in_schema=True)
+async def get_dataset(file_path: str):
+    with open(file_path) as f:
+            data = json.load(f)
+    
+   
+    if 'qa_pairs' and 'evaluated' in file_path:
+            for key in data:
+                if key != "Overall_Average" and isinstance(data[key], dict):
+                    data[key]["evaluated_pairs"] = data[key]["evaluated_pairs"][:100]
+            return {"evaluation": data}
+            
+    elif 'qa_pairs' in file_path:
+            return {'generation': data[0:100]}
 
 @app.get("/exports/history", include_in_schema =True)
 def get_exports_history():

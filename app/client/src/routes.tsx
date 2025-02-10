@@ -5,6 +5,9 @@ import HomePage from "./pages/Home";
 import { Pages } from "./types";
 import EvaluatorPage from "./pages/Evaluator";
 import ReevaluatorPage from "./pages/Evaluator/ReevaluatorPage";
+import DatasetDetailsPage from "./pages/DatasetDetails/DatasetDetailsPage";
+import WelcomePage from "./pages/Home/WelcomePage";
+import ErrorPage from "./pages/ErrorPage";
 
 
 const router = createBrowserRouter([
@@ -13,38 +16,45 @@ const router = createBrowserRouter([
     element: <Layout/>,
     children: [
       {
-        path: '/', // Redirect root to Pages.GENERATOR
-        element: <Navigate to={Pages.HOME} replace />,
+        path: '/', // Redirect root to Pages.WELCOME
+        element: <Navigate to={Pages.WELCOME} replace />,
       },
-      { path: Pages.HOME, element: <HomePage key={Pages.HOME}/>, loader: async () => null},
-      { path: Pages.GENERATOR, element: <DataGenerator key={Pages.GENERATOR}/>, loader: async () => null},
-      // {
-      //   path: Pages.EVALUATOR,
-      //   element:(
-      //      <RouteAccessControl
-      //       element={<Evaluator key={Pages.EVALUATOR}/>}
-      //       validator={state => state.internalRedirect === true}
-      //     />
-      //   ),
-      //   loader: async () => null
-      // },
+      { 
+        path: Pages.HOME, 
+        element: <HomePage key={Pages.HOME}/>, 
+        errorElement: <ErrorPage />,
+        loader: async () => null
+      },
+      { 
+        path: Pages.GENERATOR, 
+        element: <DataGenerator key={Pages.GENERATOR}/>, 
+        errorElement: <ErrorPage />,
+        loader: async () => null
+      },
       {
         path: `${Pages.EVALUATOR}/create/:generate_file_name`,
         element: <EvaluatorPage />,
-        // element:(
-        //    <RouteAccessControl
-        //     element={<Evaluator/>}
-        //     validator={state => state.internalRedirect === true}
-        //   />
-        // ),
+        errorElement: <ErrorPage />,
         loader: async () => null
       },
       {
         path: `${Pages.EVALUATOR}/reevaluate/:evaluate_file_name`,
         element: <ReevaluatorPage />,
+        errorElement: <ErrorPage />,
         loader: async () => null
       },
-      // { path: Pages.DATASETS, element: <Datasets/>, loader: async () => (null) },
+      {
+        path: `dataset/:generate_file_name`,
+        element: <DatasetDetailsPage />,
+        errorElement: <ErrorPage />,
+        loader: async () => null
+      },
+      {
+        path: `welcome`,
+        element: <WelcomePage />,
+        errorElement: <ErrorPage />,
+        loader: async () => null
+      }
     ]
   },
 ]);

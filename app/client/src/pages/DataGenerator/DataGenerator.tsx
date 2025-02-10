@@ -1,3 +1,5 @@
+import isEmpty from 'lodash/isEmpty';
+import isString from 'lodash/isString';
 import { useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Button, Flex, Form, Layout, Steps, Typography } from 'antd';
@@ -13,7 +15,7 @@ import Examples from './Examples';
 import Summary from './Summary';
 import Finish from './Finish';
 
-import { DataGenWizardSteps, WizardStepConfig } from './types';
+import { DataGenWizardSteps, WizardStepConfig, WorkflowType } from './types';
 import { WizardCtx } from './utils';
 
 const { Content } = Layout;
@@ -96,7 +98,31 @@ const DataGenerator = () => {
     const [isStepValid, setIsStepValid] = useState<boolean>(false);
     // Data passed from listing table to prepopulate form
     const location = useLocation();
-    const formData = useRef(location?.state?.data || { num_questions: 20, topics: [] });
+    console.log('DatGenerator >> location?.state?.data:', location?.state?.data);
+    const initialData = location?.state?.data;
+    if (initialData?.technique) {
+        initialData.workflow_type = initialData?.technique === 'sft' ? WorkflowType.SUPERVISED_FINE_TUNING :
+        WorkflowType.CUSTOM_DATA_GENERATION;
+    }
+    if (Array.isArray(initialData?.doc_paths) && !isEmpty(initialData?.doc_paths) ) {
+        initialData.doc_paths = initialData?.doc_paths.map((path: string) => ({
+            value: path,
+            label: path
+        }));
+        
+    }
+    if (Array.isArray(initialData?.input_paths) && !isEmpty(initialData?.input_paths) ) {
+        initialData.doc_paths = initialData?.input_paths.map((path: string) => ({
+            value: path,
+            label: path
+        }));
+    }
+    if (isString(initialData?.doc_paths)) {
+        initialData.doc_paths = [];
+    }
+
+
+    const formData = useRef(initialData || { num_questions: 20, topics: [] });
 
     const [form] = Form.useForm<FormInstance>();
 

@@ -1,10 +1,11 @@
 import isNumber from 'lodash/isNumber';
-import { ComponentType, FC, useEffect } from 'react';
+import filter from 'lodash/filter';
+import isString from 'lodash/isString';
+import { FC, useEffect } from 'react';
 import { HomeOutlined, PageviewOutlined } from '@mui/icons-material';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import GradingIcon from '@mui/icons-material/Grading';
-import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import ModelTrainingIcon from '@mui/icons-material/ModelTraining';
 import { Avatar, Button, Card, Divider, Flex, Form, List, Modal, Result, Spin, Tabs, Table, Typography, FormInstance } from 'antd';
 import { Link } from 'react-router-dom';
@@ -15,9 +16,10 @@ import { useTriggerDatagen } from './../../api/api'
 import { DEMO_MODE_THRESHOLD } from './constants'
 import { GenDatasetResponse, QuestionSolution, WorkflowType } from './types';
 import { Pages } from '../../types';
-import { isEmpty, isObject } from 'lodash';
+import { isEmpty } from 'lodash';
 import CustomResultTable from './CustomResultTable';
 import SeedResultTable from './SeedResultTable';
+import { getFilesURL } from '../Evaluator/util';
 
 const { Title } = Typography;
 
@@ -45,23 +47,21 @@ interface TopicsTableProps {
     topic: string;
 }
 const TopicsTable: FC<TopicsTableProps> = ({ formData, topic }) => {
-    console.log('-TopicsTable', topic);
     const cols = [
         {
-            title: 'Prompts',
+            title: 'Prompt',
             dataIndex: 'prompts',
             ellipsis: true,
             render: (_text: QuestionSolution, record: QuestionSolution) => <>{record.question}</>
         },
         {
-            title: 'Completions',
+            title: 'Completion',
             dataIndex: 'completions',
             ellipsis: true,
             render: (_text: QuestionSolution, record: QuestionSolution) => <>{record.solution}</>
         },
     ]
     const dataSource = formData.results[topic];
-    console.log('dataSource', dataSource);
 
     return (
         <StyledTable
@@ -86,15 +86,6 @@ const TopicsTable: FC<TopicsTableProps> = ({ formData, topic }) => {
     )
 };
 
-const getFilesURL = (fileName: string | undefined) => {
-    const {
-        VITE_WORKBENCH_URL,
-        VITE_PROJECT_OWNER,
-        VITE_CDSW_PROJECT
-    } = import.meta.env
-    return `${VITE_WORKBENCH_URL}/${VITE_PROJECT_OWNER}/${VITE_CDSW_PROJECT}/preview/${fileName}`
-}
-
 const getJobsURL = () => {
     const {
         VITE_WORKBENCH_URL,
@@ -109,8 +100,13 @@ const getJobsURL = () => {
 // or will create a batch job and return a job id
 const isDemoMode = (numQuestions: number, topics: [], form: FormInstance) => {
     const workflow_type = form.getFieldValue('workflow_type');
-    if (workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) {
-        const total_dataset_size = form.getFieldValue('total_dataset_size');
+    let doc_paths = form.getFieldValue('doc_paths');
+    doc_paths = filter(doc_paths, (path: string) => path !== null && !isEmpty(path));
+
+    if (workflow_type === WorkflowType.CUSTOM_DATA_GENERATION ||
+        (workflow_type === WorkflowType.SUPERVISED_FINE_TUNING && !isEmpty(doc_paths))
+    ) {
+        const total_dataset_size = form.getFieldValue('num_questions');
         if (isNumber(total_dataset_size)) {
             return total_dataset_size <= DEMO_MODE_THRESHOLD;
         }
@@ -119,6 +115,11 @@ const isDemoMode = (numQuestions: number, topics: [], form: FormInstance) => {
 
     if (numQuestions * topics?.length <= DEMO_MODE_THRESHOLD) {
         return true
+    }
+    // set dataset size for SFT & CDG
+    if (workflow_type === WorkflowType.SUPERVISED_FINE_TUNING && !isEmpty(doc_paths)) {
+        const dataset_size = form.getFieldValue('num_questions');
+        return dataset_size <= DEMO_MODE_THRESHOLD;
     }
     return false
 }
@@ -139,28 +140,53 @@ const Finish = () => {
 
                 formValues.input_path = doc_paths.map(item => item.value);
                 delete formValues.doc_paths;
-                formValues.example_custom = Array.isArray(formValues.examples) ? formValues.examples.map(example => example.solution) : [];
-                delete formValues.examples;
+                // delete formValues.examples;
                 formValues.use_case = 'custom';
             }
         } else {
             delete formValues.doc_paths;
         }
+        if (isString(formValues?.input_path)) {
+            formValues.input_path = [];
+        }
+        if (formValues.workflow_type === WorkflowType.SUPERVISED_FINE_TUNING) {
+            formValues.technique = 'sft';
+        } else if (formValues.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) {
+            formValues.technique = 'custom_workflow';
+        }
+        // send examples as null when the array is empty
+        if (isEmpty(formValues.examples)) {
+            formValues.examples = null;
+        }
+        if (isEmpty(formValues.topics)) {
+            formValues.topics = null;
+        }
+        if (formValues.customTopic) {
+            delete formValues.customTopic;
+        }
+        if (formValues.customTopics) {
+            delete formValues.customTopics;
+        }
+        if (formValues.doc_paths) {
+            let doc_paths = formValues.doc_paths;
+            doc_paths = filter(doc_paths, (path: string) => path !== null && !isEmpty(path));
+            formValues.doc_paths = doc_paths
+        }
+
         const args = {...formValues, is_demo: isDemo, model_params: formValues.model_parameters }
         console.log('generate values', args);
         triggerPost(args)
     }, []);
     
-    const hasTopics = (genDatasetResp) => {
+    const hasTopics = (genDatasetResp: any) => {
         return !Array.isArray(genDatasetResp?.results)
     }
 
     
-
     const formValues = form.getFieldsValue(true);
     let hasDocSeeds = false;
     if (isEmpty(formValues.topics) &&
-        formValues.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION && 
+        (formValues.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION || formValues.workflow_type === WorkflowType.SUPERVISED_FINE_TUNING) && 
         !isEmpty(formValues.doc_paths)) {
             hasDocSeeds = true;
     }
@@ -183,7 +209,7 @@ const Finish = () => {
             title: 'Review Dataset',
             description: 'Review your dataset to ensure it properly fits your usecase.',
             icon: <GradingIcon/>,
-            href: getFilesURL(genDatasetResp?.export_path?.local)
+            href: getFilesURL(genDatasetResp?.export_path?.local || "")
         },
         {
             avatar: '',

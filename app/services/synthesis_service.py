@@ -30,7 +30,7 @@ import uuid
 
 class SynthesisService:
     """Service for generating synthetic QA pairs"""
-    QUESTIONS_PER_BATCH = 1  # Maximum questions per batch
+    QUESTIONS_PER_BATCH = 5  # Maximum questions per batch
     MAX_CONCURRENT_TOPICS = 5  # Limit concurrent I/O operations
 
 
@@ -80,7 +80,7 @@ class SynthesisService:
     def process_single_topic(self, topic: str, model_handler: any, request: SynthesisRequest, num_questions: int) -> Tuple[str, List[Dict], List[str], List[Dict]]:
         """
         Process a single topic to generate questions and solutions.
-        Optimized for processing one question at a time, but handles multiple questions.
+        Attempts batch processing first (default 5 questions), falls back to single question processing if batch fails.
         
         Args:
             topic: The topic to generate questions for
@@ -94,76 +94,166 @@ class SynthesisService:
             - list of validated QA pairs
             - list of error messages
             - list of output dictionaries with topic information
+        
+        Raises:
+            ModelHandlerError: When there's an error in model generation that should stop processing
         """
         topic_results = []
         topic_output = []
         topic_errors = []
+        questions_remaining = num_questions
         omit_questions = []
-    
-        # Process one question at a time for the total number requested
-        for question_idx in range(num_questions):
-            try:
-                self.logger.info(f"Processing topic: {topic}, question: {question_idx + 1}/{num_questions}")
-                
-                # Build prompt for single question
-                prompt = PromptBuilder.build_prompt(
-                    model_id=request.model_id,
-                    use_case=request.use_case,
-                    topic=topic,
-                    num_questions=1,  # Process one question at a time
-                    omit_questions=omit_questions,
-                    examples=request.examples or [],
-                    technique=request.technique,
-                    schema=request.schema,
-                    custom_prompt=request.custom_prompt,
-                )
-                #print(prompt)
-                # Generate response
-                qa_pairs = model_handler.generate_response(prompt)
-                
-                # Process single QA pair
-                if qa_pairs and len(qa_pairs) > 0:
-                    pair = qa_pairs[0]  # Take first (and should be only) pair
-                    
-                    if self._validate_qa_pair(pair):
-                        validated_pair = {
-                            "question": pair["question"],
-                            "solution": pair["solution"]
-                        }
-                        validated_output = {
-                            "Topic": topic,
-                            "question": pair["question"],
-                            "solution": pair["solution"]
-                        }
-                        
-                        topic_results.append(validated_pair)
-                        topic_output.append(validated_output)
-                        
-                        # Update omit_questions list with the new question
-                        omit_questions.append(pair["question"])
-                        omit_questions = omit_questions[-100:]  # Keep last 100 questions
-                        
-                        self.logger.info(f"Generated valid QA pair {question_idx + 1} for topic {topic}")
-                    else:
-                        error_msg = f"Invalid QA pair structure received for topic {topic}, question {question_idx + 1}"
-                        self.logger.warning(error_msg)
-                        topic_errors.append(error_msg)
-                else:
-                    error_msg = f"No QA pair generated for topic {topic}, question {question_idx + 1}"
-                    self.logger.warning(error_msg)
-                    topic_errors.append(error_msg)
-                    
-            except Exception as e:
-                error_msg = f"Error processing topic {topic}, question {question_idx + 1}: {str(e)}"
-                self.logger.error(error_msg)
-                topic_errors.append(error_msg)
-                continue
-    
-        return topic, topic_results, topic_errors, topic_output
         
-
-       
-    
+        try:
+            # Process questions in batches
+            for batch_idx in range(0, num_questions, self.QUESTIONS_PER_BATCH):
+                if questions_remaining <= 0:
+                    break
+                    
+                batch_size = min(self.QUESTIONS_PER_BATCH, questions_remaining)
+                self.logger.info(f"Processing topic: {topic}, attempting batch {batch_idx+1}-{batch_idx+batch_size}")
+                
+                try:
+                    # Attempt batch processing
+                    prompt = PromptBuilder.build_prompt(
+                        model_id=request.model_id,
+                        use_case=request.use_case,
+                        topic=topic,
+                        num_questions=batch_size,
+                        omit_questions=omit_questions,
+                        examples=request.examples or [],
+                        technique=request.technique,
+                        schema=request.schema,
+                        custom_prompt=request.custom_prompt,
+                    )
+                    
+                    batch_qa_pairs = None
+                    try:
+                        batch_qa_pairs = model_handler.generate_response(prompt)
+                    except ModelHandlerError as e:
+                        self.logger.warning(f"Batch processing failed for topic {topic}, batch {batch_idx+1}: {str(e)}")
+                        # Don't raise here - we'll fall back to single processing
+                    
+                    if batch_qa_pairs:
+                        # Process batch results
+                        valid_pairs = []
+                        valid_outputs = []
+                        invalid_count = 0
+                        
+                        for pair in batch_qa_pairs:
+                            if self._validate_qa_pair(pair):
+                                valid_pairs.append({
+                                    "question": pair["question"],
+                                    "solution": pair["solution"]
+                                })
+                                valid_outputs.append({
+                                    "Topic": topic,
+                                    "question": pair["question"],
+                                    "solution": pair["solution"]
+                                })
+                                omit_questions.append(pair["question"])
+                            else:
+                                invalid_count += 1
+                        
+                        if valid_pairs:
+                            topic_results.extend(valid_pairs)
+                            topic_output.extend(valid_outputs)
+                            questions_remaining -= len(valid_pairs)
+                            omit_questions = omit_questions[-100:]  # Keep last 100 questions
+                            self.logger.info(f"Successfully generated {len(valid_pairs)} questions in batch for topic {topic}")
+                            
+                            # If all pairs were valid, skip fallback
+                            if invalid_count == 0:
+                                continue
+                    
+                    # Fall back to single processing for remaining or failed questions
+                    self.logger.info(f"Falling back to single processing for remaining questions in topic {topic}")
+                    remaining_batch = batch_size if not batch_qa_pairs else invalid_count
+                    
+                    for _ in range(remaining_batch):
+                        if questions_remaining <= 0:
+                            break
+                            
+                        try:
+                            # Single question processing
+                            prompt = PromptBuilder.build_prompt(
+                                model_id=request.model_id,
+                                use_case=request.use_case,
+                                topic=topic,
+                                num_questions=1,
+                                omit_questions=omit_questions,
+                                examples=request.examples or [],
+                                technique=request.technique,
+                                schema=request.schema,
+                                custom_prompt=request.custom_prompt,
+                            )
+                            
+                            try:
+                                single_qa_pairs = model_handler.generate_response(prompt)
+                            except ModelHandlerError as e:
+                                error_msg = f"Single processing failed for topic {topic}: {str(e)}"
+                                self.logger.error(error_msg)
+                                # Propagate ModelHandlerError with context
+                                raise ModelHandlerError(error_msg) from e
+                            
+                            if single_qa_pairs and len(single_qa_pairs) > 0:
+                                pair = single_qa_pairs[0]
+                                if self._validate_qa_pair(pair):
+                                    validated_pair = {
+                                        "question": pair["question"],
+                                        "solution": pair["solution"]
+                                    }
+                                    validated_output = {
+                                        "Topic": topic,
+                                        "question": pair["question"],
+                                        "solution": pair["solution"]
+                                    }
+                                    
+                                    topic_results.append(validated_pair)
+                                    topic_output.append(validated_output)
+                                    omit_questions.append(pair["question"])
+                                    omit_questions = omit_questions[-100:]
+                                    questions_remaining -= 1
+                                    
+                                    self.logger.info(f"Successfully generated single question for topic {topic}")
+                                else:
+                                    error_msg = f"Invalid QA pair structure in single processing for topic {topic}"
+                                    self.logger.warning(error_msg)
+                                    topic_errors.append(error_msg)
+                            else:
+                                error_msg = f"No QA pair generated in single processing for topic {topic}"
+                                self.logger.warning(error_msg)
+                                topic_errors.append(error_msg)
+                                
+                        except ModelHandlerError:
+                            # Re-raise ModelHandlerError to propagate up
+                            raise
+                        except Exception as e:
+                            error_msg = f"Error in single processing for topic {topic}: {str(e)}"
+                            self.logger.error(error_msg)
+                            topic_errors.append(error_msg)
+                            continue
+                            
+                except ModelHandlerError:
+                    # Re-raise ModelHandlerError to propagate up
+                    raise
+                except Exception as e:
+                    error_msg = f"Error processing batch for topic {topic}: {str(e)}"
+                    self.logger.error(error_msg)
+                    topic_errors.append(error_msg)
+                    continue
+                    
+        except ModelHandlerError:
+            # Re-raise ModelHandlerError to propagate up
+            raise
+        except Exception as e:
+            error_msg = f"Critical error processing topic {topic}: {str(e)}"
+            self.logger.error(error_msg)
+            topic_errors.append(error_msg)
+            
+        return topic, topic_results, topic_errors, topic_output
+               
+        
     async def generate_examples(self, request: SynthesisRequest , job_name = None, is_demo: bool = True) -> Dict:
         """Generate examples based on request parameters"""
         try:
@@ -200,6 +290,7 @@ class SynthesisService:
                     topics = request.topics
                     num_questions = request.num_questions
                     total_count = request.num_questions*len(request.topics)
+                    
                 else:
                     self.logger.error("Generation failed: No topics provided")
                     raise RuntimeError("Invalid input: No topics provided")
@@ -226,7 +317,11 @@ class SynthesisService:
                 ]
                 
                 # Wait for all futures to complete
-                completed_topics = await asyncio.gather(*topic_futures)
+                try:
+                    completed_topics = await asyncio.gather(*topic_futures)
+                except ModelHandlerError as e:
+                    self.logger.error(f"Model generation failed: {str(e)}")
+                    raise APIError(f"Failed to generate content: {str(e)}")
                 
             # Process results
             
@@ -246,12 +341,18 @@ class SynthesisService:
             mode_suffix = "test" if is_demo else "final"
             model_name = get_model_family(request.model_id).split('.')[-1]
             file_path = f"qa_pairs_{model_name}_{time_file}_{mode_suffix}.json"
-            
-            final_output = [{
-                                'Seeds': item['Topic'],
-                                output_key: item['question'],
-                                output_value: item['solution'] }
-                             for item in final_output]
+            if request.doc_paths:
+                final_output = [{
+                                    'Generated_From': item['Topic'],
+                                    output_key: item['question'],
+                                    output_value: item['solution'] }
+                                 for item in final_output]
+            else:
+                final_output = [{
+                                    'Seeds': item['Topic'],
+                                    output_key: item['question'],
+                                    output_value: item['solution'] }
+                                 for item in final_output]
             output_path = {}
             try:
                 with open(file_path, "w") as f:
@@ -261,30 +362,57 @@ class SynthesisService:
                 
             output_path['local']= file_path
 
-            custom_prompt_str = PromptHandler.get_default_custom_prompt(request.use_case, request.custom_prompt)  
-            examples_str = PromptHandler.get_default_example(request.use_case,request.examples)
-            schema_str = PromptHandler.get_default_schema(request.use_case, request.schema)
             
+            
+           
+            # Handle custom prompt, examples and schema
+            custom_prompt_str = PromptHandler.get_default_custom_prompt(request.use_case, request.custom_prompt)
+           # For examples
+            examples_value = (
+                PromptHandler.get_default_example(request.use_case, request.examples) 
+                if hasattr(request, 'examples') 
+                else None
+            )
+            examples_str = self.safe_json_dumps(examples_value)
+
+            # For schema
+            schema_value = (
+                PromptHandler.get_default_schema(request.use_case, request.schema)
+                if hasattr(request, 'schema') 
+                else None
+            )
+            schema_str = self.safe_json_dumps(schema_value)
+
+            # For topics
+            topics_value = topics if not getattr(request, 'doc_paths', None) else None
+            topic_str = self.safe_json_dumps(topics_value)
+
+            # For doc_paths and input_path
+            doc_paths_str = self.safe_json_dumps(getattr(request, 'doc_paths', None))
+            input_path_str = self.safe_json_dumps(getattr(request, 'input_path', None))
+           
             metadata = {
                 'timestamp': timestamp,
                 'technique': request.technique,
                 'model_id': request.model_id,
                 'inference_type': request.inference_type,
+                'caii_endpoint':request.caii_endpoint,
                 'use_case': request.use_case,
                 'final_prompt': custom_prompt_str,
-                'model_parameters': model_params.model_dump(),
+                'model_parameters': json.dumps(model_params.model_dump()) if model_params else None,
                 'generate_file_name': os.path.basename(output_path['local']),
                 'display_name': request.display_name,
                 'output_path': output_path,
-                'num_questions':request.num_questions,
-                'topics': topics,
+                'num_questions':getattr(request, 'num_questions', None),
+                'topics': topic_str,
                 'examples': examples_str,
                 "total_count":total_count,
                 'schema': schema_str,
-                'doc_paths': request.doc_paths,
-                
-                'output_key':output_key,
-                'output_value':output_value
+                'doc_paths': doc_paths_str,
+                'input_path':input_path_str,
+                'input_key': request.input_key,
+                'output_key':request.output_key,
+                'output_value':request.output_value
                 }
             
             print("metadata: ",metadata)
@@ -309,6 +437,8 @@ class SynthesisService:
                     "status": "completed" if final_output else "failed",
                     "export_path": output_path
                 }
+        except APIError:
+            raise
             
         except Exception as e:
             self.logger.error(f"Generation failed: {str(e)}", exc_info=True)
@@ -336,36 +466,33 @@ class SynthesisService:
         )
     
     async def process_single_input(self, input, model_handler, request):
-        prompt = PromptBuilder.build_generate_result_prompt(
-            model_id=request.model_id,
-            use_case=request.use_case,
-            input=input,
-            examples=request.examples or [],
-            schema=request.schema,
-            custom_prompt=request.custom_prompt,
-        )
+        try:
+            prompt = PromptBuilder.build_generate_result_prompt(
+                model_id=request.model_id,
+                use_case=request.use_case,
+                input=input,
+                examples=request.examples or [],
+                schema=request.schema,
+                custom_prompt=request.custom_prompt,
+            )
+            try:
+                result = model_handler.generate_response(prompt)
+            except ModelHandlerError as e:
+                self.logger.error(f"ModelHandlerError in generate_response: {str(e)}")
+                raise
+                    
+            return {"question": input, "solution": result}
         
-        result = model_handler.generate_response(prompt)
-        return {"question": input, "solution": result}
+        except ModelHandlerError:
+            raise
+        except Exception as e:
+            self.logger.error(f"Error processing input: {str(e)}")
+            raise APIError(f"Failed to process input: {str(e)}")
 
     async def generate_result(self, request: SynthesisRequest , job_name = None, is_demo: bool = True) -> Dict:
         try:
             self.logger.info(f"Starting example generation - Demo Mode: {is_demo}")
-            # json_str = request.model_dump_json()  
-            # random_id = uuid.uuid4().hex[:4]  # Generate a random 8-character ID
-        
-
-        
-
-            # params = json.loads(json_str)
-           
-    
-            # # Create unique filename with UUID
-            # file_name = f"job_args_{random_id}.json"
             
-            # # Write to local file
-            # with open(file_name, 'w') as f:
-            #     json.dump(params, f)
                 
             # Use default parameters if none provided
             model_params = request.model_params or ModelParameters()
@@ -400,7 +527,12 @@ class SynthesisService:
                 ]
                 
                 # Wait for all futures to complete
-                final_output = await asyncio.gather(*input_futures)
+                try:
+                    final_output = await asyncio.gather(*input_futures)
+                except ModelHandlerError as e:
+                    self.logger.error(f"Model generation failed: {str(e)}")
+                    raise APIError(f"Failed to generate content: {str(e)}")
+                
          
             
             
@@ -428,29 +560,58 @@ class SynthesisService:
 
             output_path['local']= file_path
 
-            custom_prompt_str = PromptHandler.get_default_custom_prompt(request.use_case, request.custom_prompt)  
-            examples_str = PromptHandler.get_default_example(request.use_case,request.examples)
-            schema_str = PromptHandler.get_default_schema(request.use_case, request.schema)
             
+            # Handle custom prompt, examples and schema
+            custom_prompt_str = PromptHandler.get_default_custom_prompt(request.use_case, request.custom_prompt)
+            # For examples
+            examples_value = (
+                PromptHandler.get_default_example(request.use_case, request.examples) 
+                if hasattr(request, 'examples') 
+                else None
+            )
+            examples_str = self.safe_json_dumps(examples_value)
+
+            # For schema
+            schema_value = (
+                PromptHandler.get_default_schema(request.use_case, request.schema)
+                if hasattr(request, 'schema') 
+                else None
+            )
+            schema_str = self.safe_json_dumps(schema_value)
+
+            # For topics
+            topics_value =  None
+            topic_str = self.safe_json_dumps(topics_value)
+
+            # For doc_paths and input_path
+            doc_paths_str = self.safe_json_dumps(getattr(request, 'doc_paths', None))
+            input_path_str = self.safe_json_dumps(getattr(request, 'input_path', None))
+
+           
+
             metadata = {
                 'timestamp': timestamp,
                 'technique': request.technique,
                 'model_id': request.model_id,
                 'inference_type': request.inference_type,
+                'caii_endpoint':request.caii_endpoint,
                 'use_case': request.use_case,
                 'final_prompt': custom_prompt_str,
-                'model_parameters': model_params.model_dump(),
+                'model_parameters': json.dumps(model_params.model_dump()) if model_params else None,
                 'generate_file_name': os.path.basename(output_path['local']),
                 'display_name': request.display_name,
                 'output_path': output_path,
-                'output_key':request.output_key,
-                'output_value':request.output_value,
+                'num_questions':getattr(request, 'num_questions', None),
+                'topics': topic_str,
                 'examples': examples_str,
-                'input_path': request.input_path,
                 "total_count":len(inputs),
-                'schema': schema_str
-                
-            }
+                'schema': schema_str,
+                'doc_paths': doc_paths_str,
+                'input_path':input_path_str,
+                'input_key': request.input_key,
+                'output_key':request.output_key,
+                'output_value':request.output_value
+                }
             
             
             if is_demo:
@@ -474,6 +635,8 @@ class SynthesisService:
                     "export_path": output_path
                 }
 
+        except APIError:
+            raise 
         except Exception as e:
             self.logger.error(f"Generation failed: {str(e)}", exc_info=True)
             if is_demo:
@@ -522,3 +685,7 @@ class SynthesisService:
             }
             self.logger.error("Health check failed", extra=status, exc_info=True)
             return status
+        
+    def safe_json_dumps(self, value):
+        """Convert value to JSON string only if it's not None"""
+        return json.dumps(value) if value is not None else None

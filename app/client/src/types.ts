@@ -3,7 +3,9 @@ export enum Pages {
     EVALUATOR = 'evaluator',
     HISTORY = 'history',
     HOME = 'home',
-    DATASETS = 'datasets'
+    DATASETS = 'datasets',
+    WELCOME = 'welcome',
+    FEEDBACK = 'feedback'
 }
 
 export enum ModelParameters {

@@ -1,11 +1,10 @@
 import get from 'lodash/get';
+import isString from 'lodash/isString';
 import React from 'react';  
 import { EvaluatedPair } from "./types";
 import { Badge, Button, Flex, Layout, Modal, Tooltip } from 'antd';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import styled from 'styled-components';
-import TooltipIcon from '../../components/TooltipIcon';
-import StyledTitle from './StyledTitle';
 import Markdown from '../../components/Markdown';
 import { getColorCode } from './util';
 
@@ -129,7 +128,7 @@ const GeneratedEvaluationrModal: React.FC<Props> = ({ evaluatedPair, onClose }) 
             </StyledIcon>
           </div>
           <Section>
-            <Markdown text={justification} /> 
+            <Markdown text={isString(justification) ? justification : JSON.stringify(justification)} /> 
           </Section>
         </Item>
       </Flex>
