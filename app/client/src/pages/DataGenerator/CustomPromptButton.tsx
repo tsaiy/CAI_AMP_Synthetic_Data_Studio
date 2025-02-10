@@ -1,6 +1,6 @@
 import { Button, Flex, Form, Input, Modal, notification, Spin } from "antd";
 import { useEffect, useState } from "react";
-import { useMutation } from "react-query";
+import { useMutation } from "@tanstack/react-query";
 import styled from "styled-components";
 import { LoadingOutlined } from '@ant-design/icons';
 import { fetchCustomPrompt, fetchPrompt } from "./hooks";

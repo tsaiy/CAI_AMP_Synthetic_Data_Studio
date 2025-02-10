@@ -2,7 +2,7 @@ import get from 'lodash/get';
 import set from 'lodash/set';
 import isEmpty from 'lodash/isEmpty';
 import React, { useEffect, useState } from 'react';
-import { useMutation } from 'react-query';
+import { useMutation } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { ModelParameters } from '../../types';
 import { Form, FormInstance } from 'antd';

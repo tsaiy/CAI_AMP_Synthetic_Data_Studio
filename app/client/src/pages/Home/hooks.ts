@@ -1,6 +1,6 @@
 import isEmpty from 'lodash/isEmpty';
 import { useState } from 'react';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 
 
 const BASE_API_URL = import.meta.env.VITE_AMP_URL;

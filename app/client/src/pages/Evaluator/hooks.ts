@@ -1,6 +1,6 @@
 import { notification } from 'antd';
 import get from 'lodash/get';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 
 const BASE_API_URL = import.meta.env.VITE_AMP_URL;
 
