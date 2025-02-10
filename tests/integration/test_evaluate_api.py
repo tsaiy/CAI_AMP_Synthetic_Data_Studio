@@ -3,6 +3,7 @@ from unittest.mock import patch, Mock
 import json
 from fastapi.testclient import TestClient
 from app.main import app, db_manager
+from tests.mocks.dummy_bedrock_client import DummyBedrockClient
 client = TestClient(app)
 
 # Dummy CML client for testing purposes
@@ -54,7 +55,6 @@ def mock_qa_file(tmp_path, mock_qa_data):
     return str(file_path)
 
 def test_evaluate_endpoint(mock_qa_file):
-    # In demo mode our /synthesis/evaluate endpoint returns a dict with keys "status", "result", and "output_path"
     request_data = {
         "use_case": "custom",
         "model_id": "us.anthropic.claude-3-5-haiku-20241022-v1:0",
@@ -64,14 +64,14 @@ def test_evaluate_endpoint(mock_qa_file):
         "output_key": "Prompt",
         "output_value": "Completion"
     }
-    response = client.post("/synthesis/evaluate", json=request_data)
-    # Expect 200 and keys as returned by your app
+    # Patch get_bedrock_client to return DummyBedrockClient
+    with patch('app.services.aws_bedrock.get_bedrock_client', return_value=DummyBedrockClient()):
+        response = client.post("/synthesis/evaluate", json=request_data)
     assert response.status_code == 200
     res_json = response.json()
     assert res_json["status"] == "completed"
     assert "output_path" in res_json
     assert "result" in res_json
-    # Do not expect "job_id" in demo mode
 
 def test_evaluation_by_filename():
     # Patch the global db_manager so that get_evaldata_by_filename returns a dummy result.
