@@ -32,8 +32,11 @@ python-dotenv==1.0.0
 # Optional: Logging and monitoring
 loguru==0.7.2
 
-#frontend
-#streamlit==1.39.0
 
-# Note: Install Git LFS manually from https://git-lfs.github.com/ and run `git lfs install`.
+#testing
+
+pyflakes==3.2.0 
+pytest==8.3.4 
+pytest-asyncio==0.25.3 
+pytest-cov==6.0.0
 
