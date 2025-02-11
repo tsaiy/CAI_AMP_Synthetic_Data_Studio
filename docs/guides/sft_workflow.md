@@ -1,4 +1,4 @@
-# Supervised Finetuning Workflow:
+# Generation Workflow:
 
 In this workflow we will see how we can create synthetic data for finetuning our models. The users in this workflow can chose from provided templates like.
 
