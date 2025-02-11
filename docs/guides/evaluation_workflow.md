@@ -4,7 +4,7 @@ In this workflow we will see how we can evaluate synthetic data generated in pre
 
 User can Trigger evaluation via List view where they can chose evaluation to begin from the dropdown.
 
-<img src="screenshots/evaluation_sds.png" width="600">
+<img src="screenshots/evaluation_sds.png" style="width:100%; max-width:1200px;">
 
 
 ## Evaluation Workflow
@@ -88,11 +88,12 @@ Finally user can see how their output looks like with corresponding Scores and J
 
 The output will be saved in Project File System within Cloudera environment.
 
-<img src="screenshots/evaluate_output.png" width="600">
+<img src="screenshots/evaluate_output.png" style="width:100%; max-width:1200px;">
 
 The output and corresponding metadata (scores,model etc.) can be seen on the **Evaluations** list view as well as shown in screen shot below.
 
-<img src="screenshots/evaluate_list.png" width="600">
+<img src="screenshots/evaluate_list.png" style="width:100%; max-width:1200px;">
+
 
 
 
