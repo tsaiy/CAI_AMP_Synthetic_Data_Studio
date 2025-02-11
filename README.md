@@ -83,7 +83,7 @@ Built using:
    python build/start_application.py
    ```
 
-## Technical Overview(docs/technical_overview.md):  
+## [Technical Overview](docs/technical_overview.md):  
 
 The given document gives overall capabilities, tech stack, and general idea to get started on this application.
 
