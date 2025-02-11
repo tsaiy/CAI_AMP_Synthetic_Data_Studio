@@ -17,7 +17,7 @@ Custom template on the other hand allows users to define everything from scratch
 ### Home Page
 On home Page user can click on Create Datasets to Get Started
 
-<img src="screenshots/sds_home_page.png" width="600">
+<img src="screenshots/sds_home_page.png" style="width:100%; max-width:1200px;">
 
 ### Generate Configuration: In the next step user gets to specify following fields:
 
@@ -29,7 +29,7 @@ On home Page user can click on Create Datasets to Get Started
         b. Custom Data Curation:- Use Input as json array(which can be uploaded) from the user and generate response based on that. In this case user can have their own inputs, instructions and get customised generated output for corresponding input. 
 5. #### Files: Input Files user can chose from their project file system for above workflows
 
-<img src="screenshots/sds_generation.png" width="600">
+<img src="screenshots/sds_generation.png" style="width:100%; max-width:1200px;">
 
 ### Prompt and Model Parameters
 
@@ -73,7 +73,7 @@ We let user decide on following model Parameters:
 
 #### Dataset Size
 
-<img src="screenshots/sds_prompt.png" width="600">
+<img src="screenshots/sds_prompt.png" style="width:100%; max-width:1200px;">
 
 ### Examples:
 
@@ -94,14 +94,14 @@ The examples for code geneartion would be like following:
 }
 ```
 
-<img src="screenshots/sds_examples.png" width="600">
+<img src="screenshots/sds_examples.png" style="width:100%; max-width:1200px;">
 
 
 ### Summary:
 
 This allows user to finally look at prompt, seeds, dataset size and other parameters they have selected for data generation.
 
-<img src="screenshots/sds_summary.png" width="600">
+<img src="screenshots/sds_summary.png" style="width:100%; max-width:1200px;">
 
 ### Final Output:
 
@@ -109,7 +109,7 @@ Finally user can see how their output looks like with corresponding Prompts and 
 
 The output will be saved in Project File System within Cloudera environment.
 
-<img src="screenshots/sds_output.png" width="600">
+<img src="screenshots/sds_output.png" style="width:100%; max-width:1200px;">
 
 
 
