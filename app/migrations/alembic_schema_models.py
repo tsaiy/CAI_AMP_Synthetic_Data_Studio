@@ -70,3 +70,10 @@ class ExportMetadataModel(Base):
     job_name = Column(Text, unique=True)
     job_status = Column(Text)
     job_creator_name = Column(Text)
+
+class TestMetadataModel(Base):
+    __tablename__ = 'test_metadata'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(Text)
+    display_name = Column(Text)
+    
