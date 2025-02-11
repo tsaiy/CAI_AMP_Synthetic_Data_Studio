@@ -57,3 +57,12 @@ Khauneesh/
 # DB
 *metadata.db-shm
 *metadata.db-wal
+
+# Test and coverage reports
+.coverage
+.coverage.*
+htmlcov/
+*.cover
+coverage.xml
+.tox/
+.nox/

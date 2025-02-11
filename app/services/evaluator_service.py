@@ -338,6 +338,7 @@ class EvaluatorService:
                 'timestamp': timestamp,
                 'model_id': request.model_id,
                 'inference_type': request.inference_type,
+                'caii_endpoint':request.caii_endpoint,
                 'use_case': request.use_case,
                 'custom_prompt': custom_prompt_str,
                 'model_parameters': json.dumps(model_params.model_dump()) if model_params else None,

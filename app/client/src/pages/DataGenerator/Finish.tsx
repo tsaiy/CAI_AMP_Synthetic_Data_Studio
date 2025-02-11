@@ -1,12 +1,11 @@
 import isNumber from 'lodash/isNumber';
 import filter from 'lodash/filter';
 import isString from 'lodash/isString';
-import { ComponentType, FC, useEffect } from 'react';
+import { FC, useEffect } from 'react';
 import { HomeOutlined, PageviewOutlined } from '@mui/icons-material';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import GradingIcon from '@mui/icons-material/Grading';
-import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import ModelTrainingIcon from '@mui/icons-material/ModelTraining';
 import { Avatar, Button, Card, Divider, Flex, Form, List, Modal, Result, Spin, Tabs, Table, Typography, FormInstance } from 'antd';
 import { Link } from 'react-router-dom';
@@ -17,9 +16,10 @@ import { useTriggerDatagen } from './../../api/api'
 import { DEMO_MODE_THRESHOLD } from './constants'
 import { GenDatasetResponse, QuestionSolution, WorkflowType } from './types';
 import { Pages } from '../../types';
-import { isEmpty, isObject } from 'lodash';
+import { isEmpty } from 'lodash';
 import CustomResultTable from './CustomResultTable';
 import SeedResultTable from './SeedResultTable';
+import { getFilesURL } from '../Evaluator/util';
 
 const { Title } = Typography;
 
@@ -86,15 +86,6 @@ const TopicsTable: FC<TopicsTableProps> = ({ formData, topic }) => {
     )
 };
 
-const getFilesURL = (fileName: string | undefined) => {
-    const {
-        VITE_WORKBENCH_URL,
-        VITE_PROJECT_OWNER,
-        VITE_CDSW_PROJECT
-    } = import.meta.env
-    return `${VITE_WORKBENCH_URL}/${VITE_PROJECT_OWNER}/${VITE_CDSW_PROJECT}/preview/${fileName}`
-}
-
 const getJobsURL = () => {
     const {
         VITE_WORKBENCH_URL,
@@ -112,8 +103,10 @@ const isDemoMode = (numQuestions: number, topics: [], form: FormInstance) => {
     let doc_paths = form.getFieldValue('doc_paths');
     doc_paths = filter(doc_paths, (path: string) => path !== null && !isEmpty(path));
 
-    if (workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) {
-        const total_dataset_size = form.getFieldValue('total_dataset_size');
+    if (workflow_type === WorkflowType.CUSTOM_DATA_GENERATION ||
+        (workflow_type === WorkflowType.SUPERVISED_FINE_TUNING && !isEmpty(doc_paths))
+    ) {
+        const total_dataset_size = form.getFieldValue('num_questions');
         if (isNumber(total_dataset_size)) {
             return total_dataset_size <= DEMO_MODE_THRESHOLD;
         }
@@ -147,8 +140,7 @@ const Finish = () => {
 
                 formValues.input_path = doc_paths.map(item => item.value);
                 delete formValues.doc_paths;
-                formValues.example_custom = Array.isArray(formValues.examples) ? formValues.examples.map(example => example.solution) : [];
-                delete formValues.examples;
+                // delete formValues.examples;
                 formValues.use_case = 'custom';
             }
         } else {
@@ -217,7 +209,7 @@ const Finish = () => {
             title: 'Review Dataset',
             description: 'Review your dataset to ensure it properly fits your usecase.',
             icon: <GradingIcon/>,
-            href: getFilesURL(genDatasetResp?.export_path?.local)
+            href: getFilesURL(genDatasetResp?.export_path?.local || "")
         },
         {
             avatar: '',

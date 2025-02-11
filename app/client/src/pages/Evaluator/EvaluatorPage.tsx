@@ -33,7 +33,7 @@ const EvaluatorPage: React.FC = () => {
         const values = form.getFieldsValue();
         form.setFieldsValue({
           ...values,
-          custom_prompt: prompt as string,
+          custom_prompt: '',
           top_p: get(parameters, 'top_p'),
           top_k: get(parameters, 'top_k'),
           min_p: get(parameters, 'min_p'),
@@ -79,7 +79,8 @@ const onSubmit = async () => {
         import_type: 'local',
         import_path: generate_file_name,
         is_demo: dataset.total_count > 25 ? false : true,
-        use_case: get(dataset, 'use_case')
+        use_case: get(dataset, 'use_case'),
+        model_params: values?.model_parameters
       }
       
       try {
@@ -112,7 +113,8 @@ const onSubmit = async () => {
             examples={examples}
             modelsMap={modelsMap} 
             viewType={viewType}
-            loading={loading} />}
+            loading={loading} 
+          />}
         {viewType === ViewType.SUCCESS_VIEW && 
           <EvaluatorSuccess 
             dataset={dataset}

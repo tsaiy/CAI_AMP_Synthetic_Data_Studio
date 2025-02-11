@@ -30,7 +30,7 @@ import uuid
 
 class SynthesisService:
     """Service for generating synthetic QA pairs"""
-    QUESTIONS_PER_BATCH = 1  # Maximum questions per batch
+    QUESTIONS_PER_BATCH = 5  # Maximum questions per batch
     MAX_CONCURRENT_TOPICS = 5  # Limit concurrent I/O operations
 
 
@@ -94,6 +94,9 @@ class SynthesisService:
             - list of validated QA pairs
             - list of error messages
             - list of output dictionaries with topic information
+        
+        Raises:
+            ModelHandlerError: When there's an error in model generation that should stop processing
         """
         topic_results = []
         topic_output = []
@@ -102,7 +105,7 @@ class SynthesisService:
         omit_questions = []
         
         try:
-            # Try batch processing first
+            # Process questions in batches
             for batch_idx in range(0, num_questions, self.QUESTIONS_PER_BATCH):
                 if questions_remaining <= 0:
                     break
@@ -124,20 +127,20 @@ class SynthesisService:
                         custom_prompt=request.custom_prompt,
                     )
                     
+                    batch_qa_pairs = None
                     try:
-                        qa_pairs = model_handler.generate_response(prompt)
-                        batch_success = True
+                        batch_qa_pairs = model_handler.generate_response(prompt)
                     except ModelHandlerError as e:
                         self.logger.warning(f"Batch processing failed for topic {topic}, batch {batch_idx+1}: {str(e)}")
-                        batch_success = False
-                        
-                    if batch_success and qa_pairs:
+                        # Don't raise here - we'll fall back to single processing
+                    
+                    if batch_qa_pairs:
                         # Process batch results
                         valid_pairs = []
                         valid_outputs = []
                         invalid_count = 0
                         
-                        for pair in qa_pairs:
+                        for pair in batch_qa_pairs:
                             if self._validate_qa_pair(pair):
                                 valid_pairs.append({
                                     "question": pair["question"],
@@ -159,15 +162,15 @@ class SynthesisService:
                             omit_questions = omit_questions[-100:]  # Keep last 100 questions
                             self.logger.info(f"Successfully generated {len(valid_pairs)} questions in batch for topic {topic}")
                             
-                            # Adjust batch_size for fallback to only process invalid pairs
-                            batch_size = invalid_count
-                            if batch_size == 0:  # If all pairs were valid, skip fallback
+                            # If all pairs were valid, skip fallback
+                            if invalid_count == 0:
                                 continue
                     
-                    # If batch processing failed or produced no valid results, fall back to single processing
-                    self.logger.info(f"Falling back to single processing for remaining questions in batch for topic {topic}")
+                    # Fall back to single processing for remaining or failed questions
+                    self.logger.info(f"Falling back to single processing for remaining questions in topic {topic}")
+                    remaining_batch = batch_size if not batch_qa_pairs else invalid_count
                     
-                    for _ in range(batch_size):
+                    for _ in range(remaining_batch):
                         if questions_remaining <= 0:
                             break
                             
@@ -188,8 +191,10 @@ class SynthesisService:
                             try:
                                 single_qa_pairs = model_handler.generate_response(prompt)
                             except ModelHandlerError as e:
-                                self.logger.error(f"Single processing failed for topic {topic}: {str(e)}")
-                                raise
+                                error_msg = f"Single processing failed for topic {topic}: {str(e)}"
+                                self.logger.error(error_msg)
+                                # Propagate ModelHandlerError with context
+                                raise ModelHandlerError(error_msg) from e
                             
                             if single_qa_pairs and len(single_qa_pairs) > 0:
                                 pair = single_qa_pairs[0]
@@ -221,6 +226,7 @@ class SynthesisService:
                                 topic_errors.append(error_msg)
                                 
                         except ModelHandlerError:
+                            # Re-raise ModelHandlerError to propagate up
                             raise
                         except Exception as e:
                             error_msg = f"Error in single processing for topic {topic}: {str(e)}"
@@ -228,20 +234,26 @@ class SynthesisService:
                             topic_errors.append(error_msg)
                             continue
                             
+                except ModelHandlerError:
+                    # Re-raise ModelHandlerError to propagate up
+                    raise
                 except Exception as e:
                     error_msg = f"Error processing batch for topic {topic}: {str(e)}"
                     self.logger.error(error_msg)
                     topic_errors.append(error_msg)
                     continue
                     
+        except ModelHandlerError:
+            # Re-raise ModelHandlerError to propagate up
+            raise
         except Exception as e:
             error_msg = f"Critical error processing topic {topic}: {str(e)}"
             self.logger.error(error_msg)
             topic_errors.append(error_msg)
             
         return topic, topic_results, topic_errors, topic_output
-           
-    
+               
+        
     async def generate_examples(self, request: SynthesisRequest , job_name = None, is_demo: bool = True) -> Dict:
         """Generate examples based on request parameters"""
         try:
@@ -329,12 +341,18 @@ class SynthesisService:
             mode_suffix = "test" if is_demo else "final"
             model_name = get_model_family(request.model_id).split('.')[-1]
             file_path = f"qa_pairs_{model_name}_{time_file}_{mode_suffix}.json"
-            
-            final_output = [{
-                                'Seeds': item['Topic'],
-                                output_key: item['question'],
-                                output_value: item['solution'] }
-                             for item in final_output]
+            if request.doc_paths:
+                final_output = [{
+                                    'Generated_From': item['Topic'],
+                                    output_key: item['question'],
+                                    output_value: item['solution'] }
+                                 for item in final_output]
+            else:
+                final_output = [{
+                                    'Seeds': item['Topic'],
+                                    output_key: item['question'],
+                                    output_value: item['solution'] }
+                                 for item in final_output]
             output_path = {}
             try:
                 with open(file_path, "w") as f:
@@ -373,12 +391,12 @@ class SynthesisService:
             doc_paths_str = self.safe_json_dumps(getattr(request, 'doc_paths', None))
             input_path_str = self.safe_json_dumps(getattr(request, 'input_path', None))
            
-            
             metadata = {
                 'timestamp': timestamp,
                 'technique': request.technique,
                 'model_id': request.model_id,
                 'inference_type': request.inference_type,
+                'caii_endpoint':request.caii_endpoint,
                 'use_case': request.use_case,
                 'final_prompt': custom_prompt_str,
                 'model_parameters': json.dumps(model_params.model_dump()) if model_params else None,
@@ -576,6 +594,7 @@ class SynthesisService:
                 'technique': request.technique,
                 'model_id': request.model_id,
                 'inference_type': request.inference_type,
+                'caii_endpoint':request.caii_endpoint,
                 'use_case': request.use_case,
                 'final_prompt': custom_prompt_str,
                 'model_parameters': json.dumps(model_params.model_dump()) if model_params else None,
