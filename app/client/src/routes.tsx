@@ -23,37 +23,31 @@ const router = createBrowserRouter([
         path: Pages.HOME, 
         element: <HomePage key={Pages.HOME}/>, 
         errorElement: <ErrorPage />,
-        loader: async () => null
       },
       { 
         path: Pages.GENERATOR, 
         element: <DataGenerator key={Pages.GENERATOR}/>, 
         errorElement: <ErrorPage />,
-        loader: async () => null
       },
       {
         path: `${Pages.EVALUATOR}/create/:generate_file_name`,
         element: <EvaluatorPage />,
         errorElement: <ErrorPage />,
-        loader: async () => null
       },
       {
         path: `${Pages.EVALUATOR}/reevaluate/:evaluate_file_name`,
         element: <ReevaluatorPage />,
         errorElement: <ErrorPage />,
-        loader: async () => null
       },
       {
-        path: `dataset/:generate_file_name`,
+        path: `${Pages.DATASET_DETAIL}/:generate_file_name`,
         element: <DatasetDetailsPage />,
         errorElement: <ErrorPage />,
-        loader: async () => null
       },
       {
-        path: `welcome`,
+        path: `${Pages.WELCOME}`,
         element: <WelcomePage />,
         errorElement: <ErrorPage />,
-        loader: async () => null
       }
     ]
   },

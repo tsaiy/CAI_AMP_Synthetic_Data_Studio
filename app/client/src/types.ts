@@ -4,6 +4,7 @@ export enum Pages {
     HISTORY = 'history',
     HOME = 'home',
     DATASETS = 'datasets',
+    DATASET_DETAIL = 'dataset',
     WELCOME = 'welcome',
     FEEDBACK = 'feedback'
 }

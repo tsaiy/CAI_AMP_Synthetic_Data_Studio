@@ -13,6 +13,8 @@ import { sortItemsByKey } from '../../utils/sortutils';
 import { SyntheticEvent, useEffect } from 'react';
 import DatasetExportModal, { ExportResult } from '../../components/Export/ExportModal';
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { Pages } from '../../types';
 
 const { Search } = Input;
 
@@ -105,7 +107,7 @@ const DatasetsTab: React.FC = () => {
             title: 'Dataset Name',
             dataIndex: 'generate_file_name',
             sorter: sortItemsByKey('generate_file_name'),
-            render: (generate_file_name) => <Tooltip title={generate_file_name}><StyledParagraph style={{ width: 200, marginBottom: 0 }} ellipsis={{ rows: 1 }}>{generate_file_name}</StyledParagraph></Tooltip>
+            render: (generate_file_name) => <Link to={`/${Pages.DATASET_DETAIL}/${generate_file_name}`}><StyledParagraph style={{ width: 200, marginBottom: 0 }} ellipsis={{ rows: 1 }}>{generate_file_name}</StyledParagraph></Link>
         }, {
             key: 'model_id',
             title: 'Model',
@@ -114,17 +116,17 @@ const DatasetsTab: React.FC = () => {
             render: (modelId) => <Tooltip title={modelId}><StyledParagraph style={{ width: 200, marginBottom: 0 }} ellipsis={{ rows: 1 }}>{modelId}</StyledParagraph></Tooltip>
         }, {
             key: 'num_questions',
-            title: 'Questions Per Topic',
+            title: 'Dataset Size',
             dataIndex: 'num_questions',
             align: 'center',
             sorter: sortItemsByKey('num_questions'),
             width: 120
         }, {
             key: 'use_case',
-            title: 'Use Case',
+            title: 'Workflow',
             dataIndex: 'use_case',
             sorter: sortItemsByKey('use_case'),
-            render: (useCase) => TRANSLATIONS[useCase]
+            render: (workflow) => TRANSLATIONS[workflow]
         }, {
             key: 'timestamp',
             title: 'Creation Time',

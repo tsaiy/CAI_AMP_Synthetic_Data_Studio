@@ -91,7 +91,7 @@ const EvaluationsTab: React.FC = () => {
               sorter: sortItemsByKey('average_score'),
         },{
               key: 'use_case',
-              title: 'Use Case',
+              title: 'Workflow',
               dataIndex: 'use_case',
               sorter: sortItemsByKey('use_case'),
               render: (useCase) => <StyledParagraph style={{ width: 200, marginBottom: 0 }} ellipsis={{ rows: 1 }}>{TRANSLATIONS[useCase]}</StyledParagraph>
