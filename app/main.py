@@ -8,7 +8,9 @@ from asyncio import TimeoutError, wait_for
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 from typing import Dict, List, Optional
+import subprocess
 import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -42,6 +44,7 @@ from app.core.exceptions import APIError, InvalidModelError, ModelHandlerError
 from app.services.model_alignment import ModelAlignment
 from app.core.model_handlers import create_handler
 from app.services.aws_bedrock import get_bedrock_client
+from app.migrations.alembic_manager import AlembicMigrationManager
 
 #*************Comment this when running locally********************************************
 import cmlapi
@@ -73,7 +76,44 @@ def get_total_size(file_paths):
 
     return total_gb
 
+def restart_application():
+    """Restart the CML application"""
+    try:
+        cml = cmlapi.default_client()
+        project_id = os.getenv("CDSW_PROJECT_ID")
+        apps_list = cml.list_applications(project_id).applications
+        found_app_list = list(filter(lambda app: 'Synthetic Data Studio' in app.name, apps_list))
+            
+        if len(found_app_list) > 0:
+            app = found_app_list[0]
+            if app.status == "APPLICATION_RUNNING":
+                try:
+                    cml.restart_application(project_id, app.id)
+                except Exception as e:
+                    raise (f"Failed to restart application {app.name}: {str(e)}")
+        else:
+            raise ValueError("Synthetic Data Studio application not found")
+                
+    except Exception as e:
+        print(f"Error restarting application: {e}")
+        raise
+
 #*************Comment this when running locally********************************************
+
+# Add these models
+class StudioUpgradeStatus(BaseModel):
+    git_local_commit: str
+    git_remote_commit: str
+    updates_available: bool
+
+class StudioUpgradeResponse(BaseModel):
+    success: bool
+    message: str
+    git_updated: bool
+    frontend_rebuilt: bool
+
+
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -242,8 +282,16 @@ synthesis_service = SynthesisService()
 evaluator_service = EvaluatorService()
 export_service = Export_Service()
 db_manager = DatabaseManager()
+# Initialize the migration manager
+alembic_manager = AlembicMigrationManager()
+alembic_manager = AlembicMigrationManager("metadata.db")
 
-
+@app.on_event("startup")
+async def startup_event():
+    """Check for and apply any pending migrations on startup"""
+    success, message = await alembic_manager.handle_database_upgrade()
+    if not success:
+        print(f"Warning: {message}")
 
 @app.post("/get_project_files", include_in_schema=True, responses = responses, 
            description = "get project file details")
@@ -1186,6 +1234,140 @@ async def get_example_payloads(use_case:UseCase):
 
     return payload
 
+
+# Add these two endpoints
+@app.get("/synthesis-studio/check-upgrade", response_model=StudioUpgradeStatus)
+async def check_upgrade_status():
+    """Check if any upgrades are available"""
+    try:
+        # Fetch latest changes
+        subprocess.run(["git", "fetch"], check=True, capture_output=True)
+        
+        # Get current branch
+        branch = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            check=True, 
+            capture_output=True, 
+            text=True
+        ).stdout.strip()
+        
+        # Get local and remote commits
+        local_commit = subprocess.run(
+            ["git", "rev-parse", branch],
+            check=True,
+            capture_output=True,
+            text=True
+        ).stdout.strip()
+        
+        remote_commit = subprocess.run(
+            ["git", "rev-parse", f"origin/{branch}"],
+            check=True,
+            capture_output=True,
+            text=True
+        ).stdout.strip()
+        
+        updates_available = local_commit != remote_commit
+        
+        return StudioUpgradeStatus(
+            git_local_commit=local_commit,
+            git_remote_commit=remote_commit,
+            updates_available=updates_available
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/synthesis-studio/upgrade", response_model=StudioUpgradeResponse)
+async def perform_upgrade():
+    """
+    Perform upgrade process:
+    1. Pull latest code
+    2. Run database migrations with Alembic
+    3. Run build_client.sh
+    4. Run start_application.py
+    5. Restart CML application
+    """
+    try:
+        messages = []
+        git_updated = False
+        frontend_rebuilt = False
+        db_upgraded = False
+        
+        # 1. Git operations
+        try:
+            # Stash any changes
+            subprocess.run(["git", "stash"], check=True, capture_output=True)
+            
+            # Pull updates
+            subprocess.run(["git", "pull"], check=True, capture_output=True)
+            
+            # Try to pop stash
+            try:
+                subprocess.run(["git", "stash", "pop"], check=True, capture_output=True)
+            except subprocess.CalledProcessError:
+                messages.append("Warning: Could not restore local changes")
+            
+            git_updated = True
+            messages.append("Git repository updated")
+            
+        except subprocess.CalledProcessError as e:
+            messages.append(f"Git update failed: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+        # 2. Database migrations
+        try:
+            db_success, db_message = await alembic_manager.handle_database_upgrade()
+            if db_success:
+                db_upgraded = True
+                messages.append(db_message)
+            else:
+                messages.append(f"Database upgrade failed: {db_message}")
+                raise HTTPException(status_code=500, detail=db_message)
+        except Exception as e:
+            messages.append(f"Database migration failed: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
+        
+        # 3. Run build_client.sh
+        try:
+            subprocess.run(["python", "build/build_client.py"], check=True)
+            frontend_rebuilt = True
+            messages.append("Frontend rebuilt successfully")
+        except subprocess.CalledProcessError as e:
+            messages.append(f"Frontend build failed: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+        
+        # 4. Run start_application.py
+        try:
+            subprocess.run(["python", "build/start_application.py"], check=True)
+            messages.append("Application start script completed")
+        except subprocess.CalledProcessError as e:
+            messages.append(f"Application start script failed: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+        
+        # 5. Restart CML application
+        if git_updated or frontend_rebuilt or db_upgraded:
+            try:
+                # Small delay to ensure logs are captured
+                time.sleep(10)
+                restart_application()
+                messages.append("Application restart initiated")
+                
+                # Note: This response might not reach the client due to the restart
+                return StudioUpgradeResponse(
+                    success=True,
+                    message="; ".join(messages),
+                    git_updated=git_updated,
+                    frontend_rebuilt=frontend_rebuilt
+                )
+                
+            except Exception as e:
+                messages.append(f"Application restart failed: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Upgrade failed: {str(e)}"
+        )
 #****** comment below for testing just backend**************
 current_directory = os.path.dirname(os.path.abspath(__file__))
 client_build_path = os.path.join(current_directory, "client", "dist")
