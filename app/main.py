@@ -1328,7 +1328,10 @@ async def perform_upgrade():
         
         # 3. Run build_client.sh
         try:
-            subprocess.run(["python", "build/build_client.py"], check=True)
+            script_path = "build/build_client.py"
+            if os.getenv("IS_COMPOSABLE"):
+                script_path = os.path.join('synthetic-data-studio', script_path)
+            subprocess.run(["python", script_path], check=True)
             frontend_rebuilt = True
             messages.append("Frontend rebuilt successfully")
         except subprocess.CalledProcessError as e:
