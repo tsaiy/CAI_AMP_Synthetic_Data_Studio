@@ -10,10 +10,10 @@ from sqlalchemy import create_engine
 class AlembicMigrationManager:
     def __init__(self, db_path: str = None):
         """Initialize Alembic with the same database path as DatabaseManager"""
-        self.app_path = Path(__file__).parent.parent
+        self.app_path = Path(__file__).parent.parent.parent
         
         if db_path is None:
-            db_path = self.app_path.parent / "metadata.db"
+            db_path = os.path.join(self.app_path,  "metadata.db")
         self.db_path = db_path
         
         # Initialize Alembic config
