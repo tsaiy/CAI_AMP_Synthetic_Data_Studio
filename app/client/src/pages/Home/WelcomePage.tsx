@@ -113,7 +113,7 @@ const WelcomePage: React.FC = () => {
                 <Row>
                     <Col sm={12}>
                     <LeftSection>
-                        <div className="section-title ">Synthetic Data Generator</div>
+                        <div className="section-title ">Synthetic Data Studio</div>
                         <div className="section-text">
                         Generate high-quality synthetic datasets for SFT & model alignment and evaluate the quality with LLM-as-a-judge.
                         </div>
