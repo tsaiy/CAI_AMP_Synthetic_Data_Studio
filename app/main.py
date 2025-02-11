@@ -1335,15 +1335,15 @@ async def perform_upgrade():
             messages.append(f"Frontend build failed: {e}")
             raise HTTPException(status_code=500, detail=str(e))
         
-        # 4. Run start_application.py
-        try:
-            subprocess.run(["python", "build/start_application.py"], check=True)
-            messages.append("Application start script completed")
-        except subprocess.CalledProcessError as e:
-            messages.append(f"Application start script failed: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
+        # # 4. Run start_application.py
+        # try:
+        #     subprocess.run(["python", "build/start_application.py"], check=True)
+        #     messages.append("Application start script completed")
+        # except subprocess.CalledProcessError as e:
+        #     messages.append(f"Application start script failed: {e}")
+        #     raise HTTPException(status_code=500, detail=str(e))
         
-        # 5. Restart CML application
+        # 4. Restart CML application
         if git_updated or frontend_rebuilt or db_upgraded:
             try:
                 # Small delay to ensure logs are captured
