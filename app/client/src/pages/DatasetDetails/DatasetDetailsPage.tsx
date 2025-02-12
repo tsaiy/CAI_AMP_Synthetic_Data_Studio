@@ -1,5 +1,5 @@
 import get from 'lodash/get';
-import { Avatar, Button, Card, Col, Divider, Dropdown, Flex, Layout, List, Row, Space, Tabs, TabsProps, Typography } from "antd";
+import { Avatar, Button, Card, Col, Divider, Dropdown, Flex, Layout, List, Row, Space, Tabs, TabsProps, Tag, Typography } from "antd";
 import styled from "styled-components";
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import { Link, useParams } from "react-router-dom";
@@ -8,7 +8,7 @@ import Loading from "../Evaluator/Loading";
 import { nextStepsList } from './constants';
 import { getModelProvider, getUsecaseType, getWorkflowType } from '../DataGenerator/constants';
 import { useState } from 'react';
-import ConfigurationTab from './ConfigurationTab';
+import ConfigurationTab, { TagsContainer } from './ConfigurationTab';
 import DatasetGenerationTab from './DatasetGenerationTab';
 import {
   ArrowLeftOutlined,
@@ -100,8 +100,6 @@ const DatasetDetailsPage: React.FC = () => {
     const dataset = get(data, 'dataset');
     const datasetDetails = get(data, 'datasetDetails');
     const total_count = get(dataset, 'total_count', []);
-    console.log('DatasetDetailsPage > dataset', dataset);
-    console.log('DatasetDetailsPage > datasetDetails', datasetDetails);
 
     if (isLoading) {
         return (
@@ -194,7 +192,7 @@ const DatasetDetailsPage: React.FC = () => {
                     <Row>
                         <Col sm={8}>
                           <Flex vertical>
-                            <StyledLabel>Model</StyledLabel>
+                            <StyledLabel>Model ID</StyledLabel>
                             <StyledValue>{dataset?.model_id}</StyledValue>
                           </Flex>
                         </Col>
@@ -219,6 +217,39 @@ const DatasetDetailsPage: React.FC = () => {
                           </Flex>
                         </Col>
                     </Row>
+                    {dataset?.technique === 'sft' && !isEmpty(dataset?.doc_paths) && (
+                    <Row style={{ marginTop: '16px' }}>
+                        <Col sm={8}>
+                          <Flex vertical>
+                            <StyledLabel>Files</StyledLabel>
+                            {/* <StyledValue>{dataset?.custom_prompt}</StyledValue> */}
+                            <TagsContainer>
+                              <Space size={[0, 'small']} wrap>
+                                {dataset?.doc_paths?.map((file: string) => (
+                                    <Tag key={file}>
+                                        <div className="tag-title" title={file}>
+                                            {file}
+                                        </div>
+                                    </Tag>
+                                ))}
+                              </Space>
+                            </TagsContainer> 
+                          </Flex>
+                        </Col>
+                        <Col sm={8}>
+                          <Flex vertical>
+                            <StyledLabel>Input Key</StyledLabel>
+                            <StyledValue>{dataset?.input_key}</StyledValue>
+                          </Flex>
+                        </Col>
+                        <Col sm={8}>
+                          <Flex vertical>
+                            <StyledLabel>Output Value</StyledLabel>
+                            <StyledValue>{dataset?.output_value}</StyledValue>
+                          </Flex>
+                        </Col>
+                      </Row>    
+                    )}
                     <Row style={{ marginTop: '16px' }}>
                         <Col sm={8}>
                           <Flex vertical>

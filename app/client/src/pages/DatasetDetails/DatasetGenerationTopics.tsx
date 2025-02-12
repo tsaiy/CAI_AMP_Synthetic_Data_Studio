@@ -58,10 +58,8 @@ const getTopicTree = (data: DatasetGeneration, topics: string[]) => {
 
 
 const DatasetGenerationTable: React.FC<Props> = ({ data, dataset  }) => {
-    console.log('DatasetGenerationTable > generation topics', data, dataset);
     const topics = get(dataset, 'topics', []);
     const topicTree = getTopicTree(data, topics);
-    console.log('topicTree', topicTree);
 
     let topicTabs = [];
     if (!isEmpty(topics)) {
@@ -72,27 +70,6 @@ const DatasetGenerationTable: React.FC<Props> = ({ data, dataset  }) => {
             children: <TopicGenerationTable results={topicTree[topic as string]} topic={topic} />
         }));
     }
-    console.log('topicTabs', topicTabs);
-
-    const columns = [
-        {
-            title: 'Prompt',
-            key: 'Prompt',
-            dataIndex: 'Prompt',
-            ellipsis: true,
-            render: (prompt: string) => {
-                console.log('prompt',  prompt);
-                return <>{prompt}</>
-            }
-        },
-        {
-            title: 'Completion',
-            key: 'Completion',
-            dataIndex: 'Completion',
-            ellipsis: true,
-            render: (completion: string) => <>{completion}</>
-        }
-    ];
 
     return (
         <>
