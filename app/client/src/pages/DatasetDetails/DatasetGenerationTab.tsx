@@ -1,11 +1,12 @@
-import { Col, Row } from "antd";
-import { Dataset } from "../Evaluator/types";
-import CustomGenerationTable from "./CustomGenerationTable";
-import DatasetGenerationTopics from "./DatasetGenerationTopics";
+import { Col, Row } from 'antd';
+import get from 'lodash/get';
+import isEmpty from 'lodash/isEmpty';
+import styled from 'styled-components';
+import { Dataset } from '../Evaluator/types';
+import CustomGenerationTable from './CustomGenerationTable';
+import DatasetGenerationTopics from './DatasetGenerationTopics';
 import { CustomResult } from "../DataGenerator/types";
-import { isEmpty } from "lodash";
-import { DatasetDetails, DatasetGeneration } from "../Home/types";
-import styled from "styled-components";
+import { DatasetDetails, DatasetGeneration } from '../Home/types';
 
 
 
@@ -24,7 +25,11 @@ const Container = styled.div`
 const DatasetGenerationTab: React.FC<Props> = ({ dataset, datasetDetails }) => {
     console.log(`DatasetGenerationTab > dataset`, dataset);
     console.log(` datasetDetails`, datasetDetails);
-    const hasCustomSeeds = !Array.isArray(datasetDetails?.generation);
+    const topics = get(dataset, 'topics', []);
+    console.log(` topics`, topics);
+    const hasCustomSeeds = !Array.isArray(datasetDetails?.generation) || isEmpty(topics) && topics !== null;
+    console.log(` hasCustomSeeds`, hasCustomSeeds);
+
     return (
         <Container>
             <Row>

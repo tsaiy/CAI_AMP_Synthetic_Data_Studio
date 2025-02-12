@@ -1,11 +1,13 @@
 import get from 'lodash/get';
+import isEmpty from 'lodash/isEmpty';
 import React from 'react';
 import { Dataset } from '../Evaluator/types';
-import { Col, Flex, Modal, Row, Space, Table, Tag } from 'antd';
+import { Col, Flex, Modal, Row, Space, Table, Tag, Typography } from 'antd';
 import ExampleModal from './ExampleModal';
 import { QuestionSolution } from '../DataGenerator/types';
 import styled from 'styled-components';
-import { isEmpty } from 'lodash';
+
+const { Text } = Typography;
 
 interface Props {
     dataset: Dataset;
@@ -108,9 +110,25 @@ const ConfigurationTab: React.FC<Props> = ({ dataset }) => {
         },
 
     ];
+    console.log('topics:', topics);
+    console.log('dataset:', dataset);
+    console.log('examples:', dataset.examples);
     
     return (
         <Container>
+            <Row>
+                <Col sm={24}>
+                    <Flex vertical>
+                        <StyledTitle>Custom Prompt</StyledTitle>
+                        <Text copyable={{
+                            text: dataset?.custom_prompt,
+                            tooltips: ['Copy Prompt', 'Copied!'],
+                        }}>
+                            {dataset?.custom_prompt}
+                        </Text>
+                    </Flex>
+                </Col>
+            </Row>    
             {!isEmpty(topics) && 
             <Row style={{ marginTop: '8px', marginBottom: '8px' }}>
                 <Col sm={24}>
