@@ -27,7 +27,7 @@ const DatasetGenerationTab: React.FC<Props> = ({ dataset, datasetDetails }) => {
     console.log(` datasetDetails`, datasetDetails);
     const topics = get(dataset, 'topics', []);
     console.log(` topics`, topics);
-    const hasCustomSeeds = !Array.isArray(datasetDetails?.generation) || isEmpty(topics) && topics !== null;
+    const hasCustomSeeds = !Array.isArray(datasetDetails?.generation) || isEmpty(topics) || topics !== null;
     console.log(` hasCustomSeeds`, hasCustomSeeds);
 
     return (

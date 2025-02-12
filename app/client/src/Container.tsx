@@ -88,7 +88,7 @@ const pages: MenuItem[] = [
           <Button type="link" icon={<MailOutlined />}>
           <Text copyable={{ text: 'ai_feedback@cloudera.com' }} style={{ color: '#1677ff' }}>ai_feedback@cloudera.com</Text>         
           </Button>
-          <Button type="link" icon={<GithubOutlined target = "_blank" />} href="https://github.com/cloudera/CAI_AMP_Synthetic_Data_Studio/discussions">Join the discussion on GitHub</Button>
+          <Button type="link" icon={<GithubOutlined />} target="_blank" rel="noopener noreferrer" href="https://github.com/cloudera/CAI_AMP_Synthetic_Data_Studio/discussions">Join the discussion on GitHub</Button>
           </Flex>
           <br/>
         </div>

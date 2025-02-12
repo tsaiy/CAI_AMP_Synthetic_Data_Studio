@@ -55,7 +55,7 @@ const Container = styled.div`
    background-color: #ffffff;
 `;
 
-const TagsContainer = styled.div`
+export const TagsContainer = styled.div`
   min-height: 30px;
   display: block;
   margin-bottom: 4px;
@@ -116,7 +116,7 @@ const ConfigurationTab: React.FC<Props> = ({ dataset }) => {
     
     return (
         <Container>
-            <Row>
+            <Row style={{ marginBottom: '16px', marginTop: '8px'  }}>
                 <Col sm={24}>
                     <Flex vertical>
                         <StyledTitle>Custom Prompt</StyledTitle>
@@ -135,7 +135,7 @@ const ConfigurationTab: React.FC<Props> = ({ dataset }) => {
                     <Flex vertical>
                         <StyledTitle>Seed Instructions</StyledTitle>
                         <TagsContainer>
-                            <Space size={[0, 'small']} wrap>
+                            <Space size={[0, 'middle']} wrap>
                                 {topics.map((tag: string) => (
                                     <Tag key={tag}>
                                         <div className="tag-title" title={tag}>
@@ -148,7 +148,7 @@ const ConfigurationTab: React.FC<Props> = ({ dataset }) => {
                     </Flex>
                 </Col>
             </Row>}            
-            <Row style={{ marginTop: '8px' }}>
+            <Row style={{ marginTop: '16px', marginBottom: '8px' }}>
                 <Col sm={24}>
                     <Flex vertical>
                         <StyledTitle>Examples</StyledTitle>

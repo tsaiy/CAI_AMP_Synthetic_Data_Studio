@@ -5,6 +5,7 @@ import { CustomResult } from '../DataGenerator/types';
 import { DatasetGeneration } from '../Home/types';
 import throttle from 'lodash/throttle';
 import { SearchProps } from 'antd/es/input';
+import { sortItemsByKey } from '../../utils/sortutils';
 
 const { Search } = Input;
 
@@ -36,6 +37,7 @@ const TopicGenerationTable: React.FC<Props> = ({ results }) => {
             key: 'Prompt',
             dataIndex: 'Prompt',
             ellipsis: true,
+            sorter: sortItemsByKey('Prompt'),
             render: (prompt: string) => {
                 return <>{prompt}</>
             }
@@ -45,6 +47,7 @@ const TopicGenerationTable: React.FC<Props> = ({ results }) => {
             key: 'Completion',
             dataIndex: 'Completion',
             ellipsis: true,
+            sorter: sortItemsByKey('Completion'),
             render: (completion: string) => <>{completion}</>
         }
     ];
