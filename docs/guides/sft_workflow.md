@@ -1,6 +1,6 @@
 # Generation Workflow:
 
-In this workflow we will see how we can create synthetic data for finetuning our models. The users in this workflow can chose from provided templates like.
+This workflow demonstrates how to create synthetic data for fine-tuning models. Users can choose from pre-defined templates or define their own.
 
 ## Templates
 
@@ -8,33 +8,46 @@ In this workflow we will see how we can create synthetic data for finetuning our
 2. **Text to SQL**
 3. **Custom**
 
-The code generation and text2sql are templates which allow users to select from already curated prompts, seeds(more on it below) and examples to produce datasets.
+The **Code Generation** and **Text-to-SQL** templates allow users to select from curated prompts, seeds (explained below), and examples to generate datasets.
 
-Custom template on the other hand allows users to define everything from scratch and create synthteic dataset for their custom Enterprise use cases.
+The **Custom** template, on the other hand, enables users to define everything from scratch, allowing them to generate synthetic datasets tailored to their **enterprise use cases**.
 
 ## Workflow Example: Code Generation
 
 ### Home Page
-On home Page user can click on Create Datasets to Get Started
+On the **Home Page**, users can click on **"Create Dataset"** to get started.
 
 <img src="screenshots/sds_home_page.png" style="width:100%; max-width:1200px;">
 
 ### Generate Configuration: In the next step user gets to specify following fields:
 
-1. #### Display Name
-2. #### Model Provider: AWS Bedrock or Cloudera AI Inference
-3. #### Model ID: Calude , LLAMA , Mistral etc.
-4. #### Workflow
-        a. Supervised Finetuning :- Generate Prompt and Completion Pairs with or without documents(pdfs, docs, txt etc.)
-        b. Custom Data Curation:- Use Input as json array(which can be uploaded) from the user and generate response based on that. In this case user can have their own inputs, instructions and get customised generated output for corresponding input. 
-5. #### Files: Input Files user can chose from their project file system for above workflows
+#### **1. Display Name**
+A user-defined name for the dataset.
+
+#### **2. Model Provider**  
+Choose from available providers such as **AWS Bedrock** or **Cloudera AI Inference**.
+
+#### **3. Model ID**  
+Select the target model: **Claude, LLaMA, Mistral**, etc.
+#### **4. Workflow**  
+
+##### **a. Supervised Fine-Tuning**  
+Generate prompt-completion pairs with or without additional documents (**PDFs, DOCs, TXTs**, etc.).
+
+##### **b. Custom Data Curation**  
+Use a **JSON array** (uploaded by the user) to generate responses. This allows users to provide their own **inputs, instructions**, and obtain customized outputs for corresponding inputs.
+
+#### **5. Files**  
+Users can select **input files** from their project file system for the workflows mentioned above.
 
 <img src="screenshots/sds_generation.png" style="width:100%; max-width:1200px;">
 
-### Prompt and Model Parameters
+---
 
-#### Prompt:
-This step allows user to curate their prompts manuallly, or chose from given templates or let LLM curate a prompt based on their description of use case.
+## Prompt and Model Parameters
+
+### **Prompt**:
+This step allows users to **curate prompts manually**, **select from predefined templates**, or **let the LLM generate a prompt** based on their use case description.
 
 ```json
 {
@@ -67,19 +80,19 @@ Similarly for language translation, seeds can be:
 
 We let user decide on following model Parameters:
 
-- **Temperature**
+- **Temperature**: 
 - **TopK**
 - **TopP**
 
-#### Dataset Size
-
+#### Dataset Size: 
+Users can specify how large the generated dataset should be.
 <img src="screenshots/sds_prompt.png" style="width:100%; max-width:1200px;">
 
 ### Examples:
 
-In the next step user can specify examples they would want to give for their synthetic dataset generation so that LLM can follow same format and create datasets accordingly.
+In this step, users can provide **example question-answer pairs** to help the LLM maintain a consistent format while generating synthetic datasets.
 
-The examples for code geneartion would be like following:
+For **code generation**, an example could be:
 
 ```json
 {
