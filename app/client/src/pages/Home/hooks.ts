@@ -1,6 +1,7 @@
+import { notification } from 'antd';
 import isEmpty from 'lodash/isEmpty';
 import { useState } from 'react';
-import { useQuery } from 'react-query';
+import { useMutation, useQuery } from 'react-query';
 
 
 const BASE_API_URL = import.meta.env.VITE_AMP_URL;
@@ -118,5 +119,35 @@ export const useUpgradeStatus = () => {
     isLoading,
     isError,
     refetch
+  };
+}
+
+const upgradeSynthesisStudio = async () => {
+  const upgrade_resp = await fetch(`${BASE_API_URL}/synthesis-studio/upgrade`, {
+    method: 'POST',
+  });
+  const body = await upgrade_resp.json();
+  console.log('upgradeSynthesisStudio', body);
+  return body;
+};
+
+export const useUpgradeSynthesisStudio = () => {
+  const mutation = useMutation({
+    mutationFn: upgradeSynthesisStudio
+  });
+
+  if (mutation.isError) {
+    notification.error({
+      message: 'Error',
+      description: `An error occurred while starting the upgrade action.\n`
+    });
+  }
+
+  return {
+    upgradeStudio: mutation.mutate,
+    fetching: mutation.isLoading,
+    error: mutation.error,
+    isError: mutation.isError,
+    data: mutation.data
   };
 }

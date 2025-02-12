@@ -1,9 +1,9 @@
 import isEmpty from 'lodash/isEmpty';
-import { Button } from 'antd';
+import { Alert, Button, Modal, Typography } from 'antd';
 import React, { useEffect } from 'react';
 import { useUpgradeStatus } from './hooks';
 
-
+const { Text } = Typography;
 
 
 const UpgradeButton: React.FC = () => {
@@ -17,7 +17,7 @@ const UpgradeButton: React.FC = () => {
         }
     },[data, isLoading, isError]);
 
-    const onUpgrade = () => {
+    const onClick = () => {
         // Logic to handle upgrade
         console.log("Upgrading...");
     }
@@ -26,8 +26,37 @@ const UpgradeButton: React.FC = () => {
         return null;
     }
 
+    const onFinish = async () => {
+        // Logic to handle upgrade
+        console.log("Upgrading...");
+        setShowModal(false);
+    }
+
     return (
-        <Button onClick={onUpgrade}>Upgrade</Button>
+        <> 
+        {enableUpgrade && <Button onClick={onClick}>Upgrade</Button>}
+        {showModal && (
+            <Modal
+                visible={showModal}
+                okText={`Upgrade`}
+                title={`Upgrade Synthesis Studio`}
+                onCancel={() => setShowModal(false)}
+                onOk={() => onFinish()}
+                width={400}>
+                <Text>
+                    {`Are you sure you want to upgrade Synthesis Studio?`}
+                </Text>
+                <Alert
+                    message="Upgrade in progress"
+                    description="Please wait while we upgrade Synthesis Studio."
+                    type="warning"
+                    showIcon
+                    style={{ marginTop: 16 }}
+                />    
+          </Modal>
+        )}
+        </>
+        
     )
 
 }
