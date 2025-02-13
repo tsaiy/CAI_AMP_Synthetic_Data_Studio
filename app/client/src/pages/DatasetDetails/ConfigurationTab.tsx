@@ -135,7 +135,7 @@ const ConfigurationTab: React.FC<Props> = ({ dataset }) => {
                     <Flex vertical>
                         <StyledTitle>Seed Instructions</StyledTitle>
                         <TagsContainer>
-                            <Space size={[0, 'small']} wrap>
+                            <Space size={[0, 'middle']} wrap>
                                 {topics.map((tag: string) => (
                                     <Tag key={tag}>
                                         <div className="tag-title" title={tag}>
