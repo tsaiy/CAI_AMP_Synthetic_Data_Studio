@@ -95,7 +95,7 @@ class Export_synth(BaseModel):
 
 class ModelParameters(BaseModel):
     """Low-level model parameters"""
-    temperature: float = Field(default=0.0, ge=0.0, le=1.0, description="Controls randomness (0.0 to 1.0)")
+    temperature: float = Field(default=0.0, ge=0.0, le=2.0, description="Controls randomness (0.0 to 1.0)")
     top_p: float = Field(default=1.0, ge=0.0, le=1.0, description="Nucleus sampling threshold")
     min_p: float = Field(default=0.0, ge=0.0, le=1.0, description="Minimum probability threshold")
     top_k: int = Field(default=250, ge=0, description="Top K sampling parameter")
