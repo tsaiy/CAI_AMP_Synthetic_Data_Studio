@@ -152,8 +152,8 @@ class SynthesisService:
                                     "solution": pair["solution"]
                                 })
                                 omit_questions.append(pair["question"])
-                            else:
-                                invalid_count += 1
+                            #else:
+                        invalid_count = batch_size - len(valid_pairs)
                         
                         if valid_pairs:
                             topic_results.extend(valid_pairs)
@@ -161,79 +161,80 @@ class SynthesisService:
                             questions_remaining -= len(valid_pairs)
                             omit_questions = omit_questions[-100:]  # Keep last 100 questions
                             self.logger.info(f"Successfully generated {len(valid_pairs)} questions in batch for topic {topic}")
-                            
-                            # If all pairs were valid, skip fallback
-                            if invalid_count == 0:
-                                continue
-                    
-                    # Fall back to single processing for remaining or failed questions
-                    self.logger.info(f"Falling back to single processing for remaining questions in topic {topic}")
-                    remaining_batch = batch_size if not batch_qa_pairs else invalid_count
-                    
-                    for _ in range(remaining_batch):
-                        if questions_remaining <= 0:
-                            break
-                            
-                        try:
-                            # Single question processing
-                            prompt = PromptBuilder.build_prompt(
-                                model_id=request.model_id,
-                                use_case=request.use_case,
-                                topic=topic,
-                                num_questions=1,
-                                omit_questions=omit_questions,
-                                examples=request.examples or [],
-                                technique=request.technique,
-                                schema=request.schema,
-                                custom_prompt=request.custom_prompt,
-                            )
-                            
-                            try:
-                                single_qa_pairs = model_handler.generate_response(prompt)
-                            except ModelHandlerError as e:
-                                error_msg = f"Single processing failed for topic {topic}: {str(e)}"
-                                self.logger.error(error_msg)
-                                # Propagate ModelHandlerError with context
-                                raise ModelHandlerError(error_msg) from e
-                            
-                            if single_qa_pairs and len(single_qa_pairs) > 0:
-                                pair = single_qa_pairs[0]
-                                if self._validate_qa_pair(pair):
-                                    validated_pair = {
-                                        "question": pair["question"],
-                                        "solution": pair["solution"]
-                                    }
-                                    validated_output = {
-                                        "Topic": topic,
-                                        "question": pair["question"],
-                                        "solution": pair["solution"]
-                                    }
-                                    
-                                    topic_results.append(validated_pair)
-                                    topic_output.append(validated_output)
-                                    omit_questions.append(pair["question"])
-                                    omit_questions = omit_questions[-100:]
-                                    questions_remaining -= 1
-                                    
-                                    self.logger.info(f"Successfully generated single question for topic {topic}")
-                                else:
-                                    error_msg = f"Invalid QA pair structure in single processing for topic {topic}"
-                                    self.logger.warning(error_msg)
-                                    topic_errors.append(error_msg)
-                            else:
-                                error_msg = f"No QA pair generated in single processing for topic {topic}"
-                                self.logger.warning(error_msg)
-                                topic_errors.append(error_msg)
-                                
-                        except ModelHandlerError:
-                            # Re-raise ModelHandlerError to propagate up
-                            raise
-                        except Exception as e:
-                            error_msg = f"Error in single processing for topic {topic}: {str(e)}"
-                            self.logger.error(error_msg)
-                            topic_errors.append(error_msg)
+                        
+                        # If all pairs were valid, skip fallback
+                        if invalid_count == 0:
                             continue
-                            
+                    
+                        else:
+                            # Fall back to single processing for remaining or failed questions
+                            self.logger.info(f"Falling back to single processing for remaining questions in topic {topic}")
+                            remaining_batch = invalid_count
+                            print("remaining_batch:", remaining_batch)
+                            for _ in range(remaining_batch):
+                                if questions_remaining <= 0:
+                                    break
+                                    
+                                try:
+                                    # Single question processing
+                                    prompt = PromptBuilder.build_prompt(
+                                        model_id=request.model_id,
+                                        use_case=request.use_case,
+                                        topic=topic,
+                                        num_questions=1,
+                                        omit_questions=omit_questions,
+                                        examples=request.examples or [],
+                                        technique=request.technique,
+                                        schema=request.schema,
+                                        custom_prompt=request.custom_prompt,
+                                    )
+                                    
+                                    try:
+                                        single_qa_pairs = model_handler.generate_response(prompt)
+                                    except ModelHandlerError as e:
+                                        error_msg = f"Single processing failed for topic {topic}: {str(e)}"
+                                        self.logger.error(error_msg)
+                                        # Propagate ModelHandlerError with context
+                                        raise ModelHandlerError(error_msg) from e
+                                    
+                                    if single_qa_pairs and len(single_qa_pairs) > 0:
+                                        pair = single_qa_pairs[0]
+                                        if self._validate_qa_pair(pair):
+                                            validated_pair = {
+                                                "question": pair["question"],
+                                                "solution": pair["solution"]
+                                            }
+                                            validated_output = {
+                                                "Topic": topic,
+                                                "question": pair["question"],
+                                                "solution": pair["solution"]
+                                            }
+                                            
+                                            topic_results.append(validated_pair)
+                                            topic_output.append(validated_output)
+                                            omit_questions.append(pair["question"])
+                                            omit_questions = omit_questions[-100:]
+                                            questions_remaining -= 1
+                                            
+                                            self.logger.info(f"Successfully generated single question for topic {topic}")
+                                        else:
+                                            error_msg = f"Invalid QA pair structure in single processing for topic {topic}"
+                                            self.logger.warning(error_msg)
+                                            topic_errors.append(error_msg)
+                                    else:
+                                        error_msg = f"No QA pair generated in single processing for topic {topic}"
+                                        self.logger.warning(error_msg)
+                                        topic_errors.append(error_msg)
+                                        
+                                except ModelHandlerError:
+                                    # Re-raise ModelHandlerError to propagate up
+                                    raise
+                                except Exception as e:
+                                    error_msg = f"Error in single processing for topic {topic}: {str(e)}"
+                                    self.logger.error(error_msg)
+                                    topic_errors.append(error_msg)
+                                    continue
+                                    
                 except ModelHandlerError:
                     # Re-raise ModelHandlerError to propagate up
                     raise
@@ -415,7 +416,7 @@ class SynthesisService:
                 'output_value':request.output_value
                 }
             
-            print("metadata: ",metadata)
+            #print("metadata: ",metadata)
             if is_demo:
                 
                 self.db.save_generation_metadata(metadata)
