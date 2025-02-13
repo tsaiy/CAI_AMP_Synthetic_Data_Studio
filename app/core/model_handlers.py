@@ -169,11 +169,11 @@ class UnifiedModelHandler:
                 }]
                 
                 inference_config = {
-                    "maxTokens": self.model_params.max_tokens or self.config.get('max_tokens', 8192),
-                    "temperature": self.model_params.temperature,
-                    "topP": self.model_params.top_p,
-                    "stopSequences": ["\n\nHuman:"]
-                }
+                                "maxTokens": self.model_params.max_tokens or self.config.get('max_tokens', 8192),
+                                "temperature": min(self.model_params.temperature, 1.0),
+                                "topP": self.model_params.top_p,
+                                "stopSequences": ["\n\nHuman:"]
+                             }
 
                 response = self.bedrock_client.converse(
                     modelId=self.model_id,
