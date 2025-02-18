@@ -470,9 +470,11 @@ async def get_model_id():
     all_models = response['modelSummaries']
 
     mod_list = [m['modelId']
-          for m in all_models 
-          if 'ON_DEMAND' in m['inferenceTypesSupported'] 
-          and 'TEXT' in m['inputModalities']]
+        for m in all_models 
+        if 'ON_DEMAND' in m['inferenceTypesSupported'] 
+        and 'TEXT' in m['inputModalities'] 
+        and 'TEXT' in m['outputModalities']
+        and m['providerName'] in ['Anthropic', 'Meta', 'Mistral AI']]
     
     inference_models = client_s.list_inference_profiles()
     inference_mod_list = [m['inferenceProfileId'] for m in inference_models['inferenceProfileSummaries'] 
