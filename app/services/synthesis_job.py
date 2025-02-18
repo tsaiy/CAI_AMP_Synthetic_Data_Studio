@@ -57,7 +57,7 @@ class SynthesisJob:
         
         display_name = params.get('display_name', '')
         job_name = f"{display_name}_{random_id}" if display_name else f"{job_prefix}_{random_id}"
-        
+        params['job_name'] = job_name
         file_name = f"{job_prefix}_args_{random_id}.json"
         
         # Write parameters to file
@@ -197,11 +197,11 @@ class SynthesisJob:
         
         job_name, job_run, file_name = self._create_and_run_job(
             "run_export_job.py",
-            "hf",
+            f"hf_{request.hf_config.hf_repo_name}",
             params,
             cpu=cpu,
-            memory=memory,
-            job_prefix=f"hf_{request.hf_config.hf_repo_name}"
+            memory=memory
+           
         )
 
         repo_id = f"{request.hf_config.hf_username}/{request.hf_config.hf_repo_name}"
