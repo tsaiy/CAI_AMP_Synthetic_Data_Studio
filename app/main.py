@@ -69,8 +69,23 @@ alembic_manager = AlembicMigrationManager("metadata.db")
 #*************Comment this when running locally********************************************
 import cmlapi
 from app.services.synthesis_job import SynthesisJob
+import os
+
+# Initialize required components
 client_cml = cmlapi.default_client()
 project_id = os.getenv("CDSW_PROJECT_ID")
+path_manager = PathManager()  # Make sure this is imported
+db_manager = DatabaseManager()  # Make sure this is imported
+
+# Get runtime_identifier
+base_job_name = 'Synthetic_data_base_job'
+base_job_id = client_cml.list_jobs(project_id,
+                                   search_filter='{"name":"%s"}' % base_job_name).jobs[0].id
+template_job = client_cml.get_job(
+    project_id=project_id,
+    job_id=base_job_id
+)
+runtime_identifier = template_job.runtime_identifier
 
 
 def get_total_size(file_paths):
@@ -108,7 +123,15 @@ def restart_application():
         print(f"Error restarting application: {e}")
         raise
 #*************************Initialize JOB******************************
-synthesis_job = SynthesisJob()
+# Initialize SynthesisJob with required parameters
+synthesis_job = SynthesisJob(
+    project_id=project_id,
+    client_cml=client_cml,
+    path_manager=path_manager,
+    db_manager=db_manager,
+    runtime_identifier=runtime_identifier
+)
+
 #*************Comment this when running locally********************************************
 
 # Add these models

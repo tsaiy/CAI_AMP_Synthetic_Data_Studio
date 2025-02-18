@@ -19,23 +19,6 @@ from app.core.config import responses, caii_check
 from app.core.path_manager import PathManager
 import cmlapi
 
-
-client_cml = cmlapi.default_client()
-project_id = os.getenv("CDSW_PROJECT_ID")
-base_job_name = 'Synthetic_data_base_job'
-base_job_id = client_cml.list_jobs(project_id,
-                                   search_filter='{"name":"%s"}' % base_job_name).jobs[0].id
-template_job = client_cml.get_job(
-    project_id=project_id,
-    job_id=base_job_id
-)
-runtime_identifier = template_job.runtime_identifier
-
-def get_job_status(job_id):
-    response = client_cml.list_job_runs(project_id, job_id, sort="-created_at", page_size=1)
-    return response.job_runs[0].status
-
-
 # Initialize services
 synthesis_service = SynthesisService()
 evaluator_service = EvaluatorService()
@@ -200,7 +183,7 @@ class SynthesisJob:
             'examples': evaluator_service.safe_json_dumps(self._get_eval_examples(request)),
             'job_name': job_name,
             'job_id': job_run.job_id,
-            'job_status': get_job_status(job_run.job_id),
+            'job_status': self.get_job_status(job_run.job_id),
             'job_creator_name': self._get_job_creator_name(job_run.job_id),
             
         }
@@ -232,7 +215,7 @@ class SynthesisJob:
             "hf_export_path": export_path,
             "job_id": job_run.job_id,
             "job_name": job_name,
-            "job_status": get_job_status(job_run.job_id),
+            "job_status": self.get_job_status(job_run.job_id),
             "job_creator_name": self._get_job_creator_name(job_run.job_id),
             "cpu": cpu,
             "memory": memory
@@ -292,3 +275,20 @@ class SynthesisJob:
             if hasattr(request, 'schema')
             else None
         )
+    def get_job_status(self, job_id: str) -> str:
+        """
+        Get the status of a job run
+        
+        Args:
+            job_id (str): The ID of the job to check
+            
+        Returns:
+            str: The status of the most recent job run
+        """
+        response = self.client_cml.list_job_runs(
+            self.project_id, 
+            job_id, 
+            sort="-created_at", 
+            page_size=1
+        )
+        return response.job_runs[0].status
