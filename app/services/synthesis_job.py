@@ -140,7 +140,7 @@ class SynthesisJob:
             'input_path': synthesis_service.safe_json_dumps(getattr(request, 'input_path', None)),
             'job_name': job_name,
             'job_id': job_run.job_id,
-            'job_status': get_job_status(job_run.job_id),
+            'job_status': self.get_job_status(job_run.job_id),
             'input_key': request.input_key,
             'output_key': request.output_key,
             'output_value': request.output_value,

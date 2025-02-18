@@ -87,6 +87,23 @@ template_job = client_cml.get_job(
 )
 runtime_identifier = template_job.runtime_identifier
 
+def get_job_status( job_id: str) -> str:
+    """
+    Get the status of a job run
+    
+    Args:
+        job_id (str): The ID of the job to check
+        
+    Returns:
+        str: The status of the most recent job run
+    """
+    response = client_cml.list_job_runs(
+        project_id, 
+        job_id, 
+        sort="-created_at", 
+        page_size=1
+    )
+    return response.job_runs[0].status
 
 def get_total_size(file_paths):
   
