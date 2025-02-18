@@ -9,7 +9,7 @@ import re
 from app.core.config import get_model_family, MODEL_CONFIGS
 from app.models.request_models import ModelParameters
 from openai import OpenAI
-from app.core.exceptions import APIError, InvalidModelError, ModelHandlerError
+from app.core.exceptions import APIError, InvalidModelError, ModelHandlerError, JSONParsingError
 
 
 
@@ -45,110 +45,62 @@ class UnifiedModelHandler:
 
     def _extract_json_from_text(self, text: str) -> List[Dict[str, Any]]:
         """
-        Extract JSON array from text response with robust parsing.
-        Handles both QA pairs and evaluation responses.
-        
-        Args:
-            text: The text to parse
-            
-        Returns:
-            List of dictionaries containing parsed JSON data
+        Extract JSON array from text response with robust parsing and better error handling.
         """
-        try:
-            # If text is not a string, try to work with it as is
-            if not isinstance(text, str):
-                try:
-                    if isinstance(text, (list, dict)):
-                        return text if isinstance(text, list) else [text]
-                    return []
-                except:
-                    return []
-
-            # First attempt: Try direct JSON parsing of the entire text
+        if not isinstance(text, str):
             try:
-                parsed = json.loads(text)
+                if isinstance(text, (list, dict)):
+                    return text if isinstance(text, list) else [text]
+                raise JSONParsingError("Input is neither string nor JSON-compatible", str(text))
+            except Exception as e:
+                raise JSONParsingError(str(e), str(text))
+
+        # If the input is already in Python literal format (using single quotes)
+        try:
+            parsed = ast.literal_eval(text)
+            if isinstance(parsed, list):
+                return parsed
+            elif isinstance(parsed, dict):
+                return [parsed]
+        except (SyntaxError, ValueError):
+            pass
+
+        # Try direct JSON parsing
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, list):
+                return parsed
+            elif isinstance(parsed, dict):
+                return [parsed]
+        except json.JSONDecodeError:
+            pass
+
+        # Find JSON array boundaries and clean the text
+        start_idx = text.find('[')
+        end_idx = text.rfind(']') + 1
+
+        if start_idx != -1 and end_idx != -1:
+            json_text = text[start_idx:end_idx]
+            
+            # Convert Python-style string literals to JSON format
+            cleaned_text = (
+                json_text.replace("'", '"')  # Replace single quotes with double quotes
+                .replace('\n', '\\n')        # Escape newlines
+                .replace('\t', '\\t')        # Escape tabs
+            )
+            
+            try:
+                parsed = json.loads(cleaned_text)
                 if isinstance(parsed, list):
                     return parsed
                 elif isinstance(parsed, dict):
                     return [parsed]
+            except json.JSONDecodeError as e:
+                #raise JSONParsingError(f"Failed to parse cleaned JSON: {str(e)}", cleaned_text)
                 return []
-            except json.JSONDecodeError:
-                # Continue with other parsing methods if direct parsing fails
-                pass
 
-            # Find JSON array boundaries
-            start_idx = text.find('[')
-            end_idx = text.rfind(']') + 1
+        #raise JSONParsingError("No valid JSON structure found", text)
 
-            if start_idx != -1 and end_idx != -1:
-                json_text = text[start_idx:end_idx]
-                
-                # Multiple parsing attempts
-                try:
-                    # Try parsing the extracted JSON
-                    parsed = json.loads(json_text)
-                    if isinstance(parsed, list):
-                        return parsed
-                    elif isinstance(parsed, dict):
-                        return [parsed]
-                except json.JSONDecodeError:
-                    try:
-                        # Try using ast.literal_eval
-                        parsed = ast.literal_eval(json_text)
-                        if isinstance(parsed, list):
-                            return parsed
-                        elif isinstance(parsed, dict):
-                            return [parsed]
-                    except (SyntaxError, ValueError):
-                        # Try cleaning the text
-                        cleaned = (json_text
-                                .replace('\n', ' ')
-                                .replace('\\n', ' ')
-                                .replace("'", '"')
-                                .replace('\t', ' ')
-                                .strip())
-                        try:
-                            parsed = json.loads(cleaned)
-                            if isinstance(parsed, list):
-                                return parsed
-                            elif isinstance(parsed, dict):
-                                return [parsed]
-                        except json.JSONDecodeError:
-                            pass
-
-            # If JSON parsing fails, try regex patterns for both formats
-            results = []
-            
-            # Try to extract score and justification pattern
-            score_pattern = r'"score":\s*(\d+\.?\d*),\s*"justification":\s*"([^"]*)"'
-            score_matches = re.findall(score_pattern, text, re.DOTALL)
-            if score_matches:
-                for score, justification in score_matches:
-                    results.append({
-                        "score": float(score),
-                        "justification": justification.strip()
-                    })
-                    
-            # Try to extract question and solution pattern
-            qa_pattern = r'"question":\s*"([^"]*)",\s*"solution":\s*"([^"]*)"'
-            qa_matches = re.findall(qa_pattern, text, re.DOTALL)
-            if qa_matches:
-                for question, solution in qa_matches:
-                    results.append({
-                        "question": question.strip(),
-                        "solution": solution.strip()
-                    })
-
-            if results:
-                return results
-
-            # If all parsing attempts fail, return the original text wrapped in a list
-            return [{"text": text}]
-
-        except Exception as e:
-            print(f"ERROR: JSON extraction failed: {str(e)}")
-            print(f"Raw text: {text}")
-            return []
 
     def generate_response(self, prompt: str, retry_with_reduced_tokens: bool = True) -> List[Dict[str, str]]:
         if self.inference_type == "aws_bedrock":
@@ -160,29 +112,46 @@ class UnifiedModelHandler:
         """Handle Bedrock requests with retry logic"""
         retries = 0
         last_exception = None
-
+        new_max_tokens = 8192
         while retries <= self.MAX_RETRIES:  # Changed to <= to match AWS behavior
             try:
                 conversation = [{
                     "role": "user",
                     "content": [{"text": prompt}]
                 }]
+                additional_model_fields = {"top_k": self.model_params.top_k}
                 
-                inference_config = {
-                                "maxTokens": self.model_params.max_tokens or self.config.get('max_tokens', 8192),
+                if "claude" in self.model_id:
+                    inference_config = {
+                                "maxTokens": min(self.model_params.max_tokens, new_max_tokens),
                                 "temperature": min(self.model_params.temperature, 1.0),
                                 "topP": self.model_params.top_p,
-                                "stopSequences": ["\n\nHuman:"]
+                                "stopSequences": ["\n\nHuman:"],
+                              
                              }
-
-                response = self.bedrock_client.converse(
-                    modelId=self.model_id,
-                    messages=conversation,
-                    inferenceConfig=inference_config
-                )
+                    response = self.bedrock_client.converse(
+                        modelId=self.model_id,
+                        messages=conversation,
+                        inferenceConfig=inference_config,
+                        additionalModelRequestFields=additional_model_fields
+                    )
+                else:
+                    inference_config = {
+                                "maxTokens": min(self.model_params.max_tokens, new_max_tokens),
+                                "temperature": min(self.model_params.temperature, 1.0),
+                                "topP": self.model_params.top_p,
+                               "stopSequences": []
+                             }
+                    print(inference_config)
+                    response = self.bedrock_client.converse(
+                        modelId=self.model_id,
+                        messages=conversation,
+                        inferenceConfig=inference_config
+                       )
                 
                 try:
                     response_text = response["output"]["message"]["content"][0]["text"]
+                    #print(response)
                     return self._extract_json_from_text(response_text) if not self.custom_p else response_text
                 except KeyError as e:
                     print(f"Unexpected response format: {str(e)}")
@@ -215,11 +184,20 @@ class UnifiedModelHandler:
                             
                             if error_code == 'ValidationException':
                                 if 'model identifier is invalid' in error_message:
-                                    raise InvalidModelError(self.model_id)
+                                    raise InvalidModelError(self.model_id,error_message )
+                                elif "on-demand throughput isn’t supported" in error_message:
+                                    print("Hi")
+                                    raise InvalidModelError(self.model_id, error_message)
                                 
-                                if retry_with_reduced_tokens and retries < self.MAX_RETRIES:
-                                    inference_config["maxTokens"] = 4096
+                                if retry_with_reduced_tokens and retries<1:
+                                    new_max_tokens = 4096
                                     self._exponential_backoff(retries)
+                                    retries += 1
+                                    continue
+                                if retry_with_reduced_tokens and retries==1 :
+                                    new_max_tokens = 2048
+                                    self._exponential_backoff(retries)
+                                    print("trying with 2040 tokens")
                                     retries += 1
                                     continue
                                     

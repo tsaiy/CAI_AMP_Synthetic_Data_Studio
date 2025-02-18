@@ -98,8 +98,8 @@ class ModelParameters(BaseModel):
     temperature: float = Field(default=0.0, ge=0.0, le=2.0, description="Controls randomness (0.0 to 1.0)")
     top_p: float = Field(default=1.0, ge=0.0, le=1.0, description="Nucleus sampling threshold")
     min_p: float = Field(default=0.0, ge=0.0, le=1.0, description="Minimum probability threshold")
-    top_k: int = Field(default=250, ge=0, description="Top K sampling parameter")
-    max_tokens: int = Field(default=4096, ge=1, description="Maximum tokens to generate")
+    top_k: int = Field(default=150, ge=0, description="Top K sampling parameter")
+    max_tokens: int = Field(default=8192, ge=1, description="Maximum tokens to generate")
 
 class JsonDataSize(BaseModel):
     input_path: List[str]

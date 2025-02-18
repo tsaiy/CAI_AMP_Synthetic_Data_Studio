@@ -1,6 +1,10 @@
 from enum import Enum
 from typing import Dict, List, Optional
 from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Request, status
+import requests
+import json
+from fastapi.responses import JSONResponse
 
 class UseCase(str, Enum):
     CODE_GENERATION = "code_generation"
@@ -58,7 +62,11 @@ CREATE TABLE departments (
     budget DECIMAL(15,2)
 );
 """
-
+bedrock_list = ['us.anthropic.claude-3-5-haiku-20241022-v1:0', 'us.anthropic.claude-3-5-sonnet-20241022-v2:0',
+                              'us.anthropic.claude-3-opus-20240229-v1:0','anthropic.claude-instant-v1', 
+                              'us.meta.llama3-2-11b-instruct-v1:0','us.meta.llama3-2-90b-instruct-v1:0', 'us.meta.llama3-1-70b-instruct-v1:0', 
+                                'mistral.mixtral-8x7b-instruct-v0:1', 'mistral.mistral-large-2402-v1:0',
+                                   'mistral.mistral-small-2402-v1:0'  ]
 
 # Detailed use case configurations with examples
 USE_CASE_CONFIGS = {
@@ -199,3 +207,91 @@ def get_examples_for_topic(use_case: UseCase, topic: str) -> List[Dict[str, str]
         return use_case_config.default_examples
     
     return topic_metadata.example_questions
+
+
+responses = {
+    # 4XX Client Errors
+    status.HTTP_400_BAD_REQUEST: {
+        "description": "Bad Request - Invalid input parameters",
+        "content": {
+            "application/json": {
+                "example": {
+                    "status": "failed",
+                    "error": "Invalid input: No topics provided"
+                }
+            }
+        }
+    },
+    status.HTTP_404_NOT_FOUND: {
+        "description": "Resource not found",
+        "content": {
+            "application/json": {
+                "example": {
+                    "status": "failed",
+                    "error": "Requested resource not found"
+                }
+            }
+        }
+    },
+    status.HTTP_422_UNPROCESSABLE_ENTITY: {
+        "description": "Validation Error",
+        "content": {
+            "application/json": {
+                "example": {
+                    "status": "failed",
+                    "error": "Invalid request parameters"
+                }
+            }
+        }
+    },
+
+    # 5XX Server Errors
+    status.HTTP_500_INTERNAL_SERVER_ERROR: {
+        "description": "Internal server error",
+        "content": {
+            "application/json": {
+                "example": {
+                    "status": "failed",
+                    "error": "Internal server error occurred"
+                }
+            }
+        }
+    },
+    status.HTTP_503_SERVICE_UNAVAILABLE: {
+        "description": "Service temporarily unavailable",
+        "content": {
+            "application/json": {
+                "example": {
+                    "status": "failed",
+                    "error": "The CAII endpoint is downscaled, please try after >15 minutes"
+                }
+            }
+        }
+    },
+    status.HTTP_504_GATEWAY_TIMEOUT: {
+        "description": "Request timed out",
+        "content": {
+            "application/json": {
+                "example": {
+                    "status": "failed",
+                    "error": "Operation timed out after specified seconds"
+                }
+            }
+        }
+    }
+}
+
+
+def caii_check(caii_endpoint):
+    API_KEY = json.load(open("/tmp/jwt"))["access_token"]
+    headers = {
+        "Authorization": f"Bearer {API_KEY}"
+    }
+    
+    
+    if caii_endpoint:
+        caii_endpoint = caii_endpoint.removesuffix('/chat/completions') 
+        caii_endpoint = caii_endpoint + "/models"
+        response = requests.get(caii_endpoint, headers=headers, timeout=3)  # Will raise RequestException if fails
+        
+    return response

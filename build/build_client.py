@@ -16,8 +16,4 @@ else:
 # Execute the script using the selected path
 print(subprocess.run([f"bash {script_path}"], shell=True, check=True))
 
-
-
-
-
 print("Client application built successfully")

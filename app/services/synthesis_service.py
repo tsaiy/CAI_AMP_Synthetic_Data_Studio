@@ -12,7 +12,7 @@ from functools import partial
 import math
 import asyncio
 from fastapi import FastAPI, BackgroundTasks, HTTPException
-from app.core.exceptions import APIError, InvalidModelError, ModelHandlerError
+from app.core.exceptions import APIError, InvalidModelError, ModelHandlerError, JSONParsingError
 
 from app.models.request_models import SynthesisRequest, Example, ModelParameters
 from app.core.model_handlers import create_handler
@@ -131,8 +131,14 @@ class SynthesisService:
                     try:
                         batch_qa_pairs = model_handler.generate_response(prompt)
                     except ModelHandlerError as e:
-                        self.logger.warning(f"Batch processing failed for topic {topic}, batch {batch_idx+1}: {str(e)}")
-                        # Don't raise here - we'll fall back to single processing
+                        self.logger.warning(f"Batch processing failed: {str(e)}")
+                        if isinstance(e, JSONParsingError):
+                            # For JSON parsing errors, fall back to single processing
+                            self.logger.info("JSON parsing failed, falling back to single processing")
+                            continue
+                        else:
+                            # For other model errors, propagate up
+                            raise
                     
                     if batch_qa_pairs:
                         # Process batch results
@@ -192,10 +198,14 @@ class SynthesisService:
                                     try:
                                         single_qa_pairs = model_handler.generate_response(prompt)
                                     except ModelHandlerError as e:
-                                        error_msg = f"Single processing failed for topic {topic}: {str(e)}"
-                                        self.logger.error(error_msg)
-                                        # Propagate ModelHandlerError with context
-                                        raise ModelHandlerError(error_msg) from e
+                                        self.logger.warning(f"Batch processing failed: {str(e)}")
+                                        if isinstance(e, JSONParsingError):
+                                            # For JSON parsing errors, fall back to single processing
+                                            self.logger.info("JSON parsing failed, falling back to single processing")
+                                            continue
+                                        else:
+                                            # For other model errors, propagate up
+                                            raise
                                     
                                     if single_qa_pairs and len(single_qa_pairs) > 0:
                                         pair = single_qa_pairs[0]

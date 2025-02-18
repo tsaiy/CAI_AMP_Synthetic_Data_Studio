@@ -115,11 +115,14 @@ class EvaluatorService:
                 return error_response
 
             try:
-                score = response[0].get('score', 0)
-                # if score== 0:
-                #     print("response", response)
+                score = response[0].get('score', "no score key")
                 justification = response[0].get('justification', 'No justification provided')
-                self.logger.info(f"Successfully evaluated QA pair with score: {score}")
+                if score== "no score key":
+                    self.logger.info(f"Unsuccessful QA pair evaluation with score: {score}")
+                    justification = "The evaluated pair did not generate valid score and justification"
+                    score = 0
+                else:
+                    self.logger.info(f"Successfully evaluated QA pair with score: {score}")
                 
                 return {
                     "question": qa_pair[request.output_key],

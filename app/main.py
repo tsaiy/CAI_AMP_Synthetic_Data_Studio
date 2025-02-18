@@ -37,6 +37,7 @@ from app.services.evaluator_service import EvaluatorService
 from app.models.request_models import SynthesisRequest, EvaluationRequest, Export_synth, ModelParameters, CustomPromptRequest, JsonDataSize, RelativePath
 from app.services.synthesis_service import SynthesisService
 from app.services.export_results import Export_Service
+
 from app.core.prompt_templates import PromptBuilder, PromptHandler
 from app.core.config import UseCase, USE_CASE_CONFIGS
 from app.core.database import DatabaseManager
@@ -45,31 +46,40 @@ from app.services.model_alignment import ModelAlignment
 from app.core.model_handlers import create_handler
 from app.services.aws_bedrock import get_bedrock_client
 from app.migrations.alembic_manager import AlembicMigrationManager
+from app.core.config import responses, caii_check
+from app.core.path_manager import PathManager
+
+
+#****************************************Initialize************************************************
+
+# Initialize services
+synthesis_service = SynthesisService()
+evaluator_service = EvaluatorService()
+export_service = Export_Service()
+db_manager = DatabaseManager()
+
+
+#Initialize path manager
+path_manager = PathManager()
+
+# Initialize the migration manager
+alembic_manager = AlembicMigrationManager("metadata.db")
+
 
 #*************Comment this when running locally********************************************
 import cmlapi
+from app.services.synthesis_job import SynthesisJob
 client_cml = cmlapi.default_client()
 project_id = os.getenv("CDSW_PROJECT_ID")
-base_job_name = 'Synthetic_data_base_job'
-base_job_id = client_cml.list_jobs(project_id,
-                                   search_filter='{"name":"%s"}' % base_job_name).jobs[0].id
-template_job = client_cml.get_job(
-    project_id=project_id,
-    job_id=base_job_id
-)
-runtime_identifier = template_job.runtime_identifier
 
-def get_job_status(job_id):
-    response = client_cml.list_job_runs(project_id, job_id, sort="-created_at", page_size=1)
-    return response.job_runs[0].status
 
 def get_total_size(file_paths):
   
     file_sizes = []
     for file_path in file_paths:
-        if os.getenv("IS_COMPOSABLE"):
-            file_path = os.path.join('synthetic-data-studio', file_path)
-        file_sizes.append(client_cml.list_project_files(project_id, file_path).files[0].file_size)
+        
+        final_path =  path_manager.get_str_path(file_path)
+        file_sizes.append(client_cml.list_project_files(project_id, final_path).files[0].file_size)
         
     total_bytes = sum(int(float(size)) for size in file_sizes) 
     total_gb = math.ceil(total_bytes / (1024 ** 3))
@@ -97,7 +107,8 @@ def restart_application():
     except Exception as e:
         print(f"Error restarting application: {e}")
         raise
-
+#*************************Initialize JOB******************************
+synthesis_job = SynthesisJob()
 #*************Comment this when running locally********************************************
 
 # Add these models
@@ -115,15 +126,15 @@ class StudioUpgradeResponse(BaseModel):
 
 
 
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for the FastAPI application"""
     # Create document upload directory on startup
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    path_manager.make_dirs(path_manager.upload_dir)
     print(f"Document upload directory created at: {UPLOAD_DIR}")
     yield
-
-
 
 app = FastAPI(
     title="LLM Data Synthesis API",
@@ -131,78 +142,6 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
-
-responses = {
-    # 4XX Client Errors
-    status.HTTP_400_BAD_REQUEST: {
-        "description": "Bad Request - Invalid input parameters",
-        "content": {
-            "application/json": {
-                "example": {
-                    "status": "failed",
-                    "error": "Invalid input: No topics provided"
-                }
-            }
-        }
-    },
-    status.HTTP_404_NOT_FOUND: {
-        "description": "Resource not found",
-        "content": {
-            "application/json": {
-                "example": {
-                    "status": "failed",
-                    "error": "Requested resource not found"
-                }
-            }
-        }
-    },
-    status.HTTP_422_UNPROCESSABLE_ENTITY: {
-        "description": "Validation Error",
-        "content": {
-            "application/json": {
-                "example": {
-                    "status": "failed",
-                    "error": "Invalid request parameters"
-                }
-            }
-        }
-    },
-
-    # 5XX Server Errors
-    status.HTTP_500_INTERNAL_SERVER_ERROR: {
-        "description": "Internal server error",
-        "content": {
-            "application/json": {
-                "example": {
-                    "status": "failed",
-                    "error": "Internal server error occurred"
-                }
-            }
-        }
-    },
-    status.HTTP_503_SERVICE_UNAVAILABLE: {
-        "description": "Service temporarily unavailable",
-        "content": {
-            "application/json": {
-                "example": {
-                    "status": "failed",
-                    "error": "The CAII endpoint is downscaled, please try after >15 minutes"
-                }
-            }
-        }
-    },
-    status.HTTP_504_GATEWAY_TIMEOUT: {
-        "description": "Request timed out",
-        "content": {
-            "application/json": {
-                "example": {
-                    "status": "failed",
-                    "error": "Operation timed out after specified seconds"
-                }
-            }
-        }
-    }
-}
 
 
 
@@ -277,14 +216,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize services
-synthesis_service = SynthesisService()
-evaluator_service = EvaluatorService()
-export_service = Export_Service()
-db_manager = DatabaseManager()
-# Initialize the migration manager
-alembic_manager = AlembicMigrationManager()
-alembic_manager = AlembicMigrationManager("metadata.db")
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -295,14 +227,9 @@ async def startup_event():
 
 @app.post("/get_project_files", include_in_schema=True, responses = responses, 
            description = "get project file details")
-async def get_project_files(request:RelativePath):
-    if os.getenv("IS_COMPOSABLE"):
-        root_path = "synthetic-data-studio"
-    else:
-        root_path = ""
-    final_path = os.path.join(root_path, request.path)
-
-    return client_cml.list_project_files(project_id, final_path)
+async def get_project_files(request: RelativePath):
+    file_path = path_manager.get_str_path(request.path)
+    return client_cml.list_project_files(project_id, file_path)
     
     
 
@@ -362,30 +289,16 @@ async def generate_examples(request: SynthesisRequest):
     """Generate question-answer pairs"""
     
     if request.inference_type== "CAII":
-        print("I am here")
-        API_KEY = json.load(open("/tmp/jwt"))["access_token"]
-        headers = {
-            "Authorization": f"Bearer {API_KEY}"
-        }
-        message = "The CAII endpoint you are tring to reach is downscaled, please try after >15 minutes while it autoscales, meanwhile please try another model"
         caii_endpoint = request.caii_endpoint
-        if caii_endpoint:
-            caii_endpoint = caii_endpoint.removesuffix('/chat/completions') 
-            caii_endpoint = caii_endpoint + "/models"
-            response = requests.get(caii_endpoint, headers=headers, timeout=3)  # Will raise RequestException if fails
-
-            try:
-                    response = requests.get(caii_endpoint, headers = headers, timeout=3)
-                    if response.status_code != 200:
-                        return JSONResponse(
-                            status_code=503,  # Service Unavailable
-                            content={"status": "failed", "error": message}
-                        )
-            except:
-                return JSONResponse(
+        response = caii_check(caii_endpoint)
+        message = "The CAII endpoint you are tring to reach is downscaled, please try after >15 minutes while it autoscales, meanwhile please try another model"
+        if response.status_code != 200:
+                    return JSONResponse(
                         status_code=503,  # Service Unavailable
                         content={"status": "failed", "error": message}
                     )
+       
+    
     is_demo = request.is_demo
     mem = 4
     core = 2
@@ -405,151 +318,19 @@ async def generate_examples(request: SynthesisRequest):
                         "error": f"Total dataset size ({data_size:} GB) exceeds limit of 10 GB. Please select smaller datasets."
                     }
                 )
-                            
-            
         else:
             is_demo = request.is_demo
             mem = 4
             core = 2
   
     
-    
-
     if is_demo== True:
         if request.input_path:
             return await synthesis_service.generate_result(request,is_demo)
         else:
             return await synthesis_service.generate_examples(request,is_demo)
-   
-        
     else:
-        # Convert to JSON for job arguments
-        json_str = request.model_dump_json()  # This gives us a JSON string directly
-        #compact_json = json_str.replace(" ", "")
-        if os.getenv("IS_COMPOSABLE"):
-            script_path = "synthetic-data-studio/app/run_job.py"
-        else:
-            script_path = "app/run_job.py"
-        
-        
-        random_id = uuid.uuid4().hex[:4]  # Generate a random 8-character ID
-        
-        if request.display_name:
-            job_name = f"{request.display_name}_{random_id}"
-        else:
-            job_name = f"synth_job_{random_id}"
-        
-
-        params = json.loads(json_str)
-        params['job_name'] = job_name  # Add job_name to the parameters
-
-        # Create unique filename with UUID
-        file_name = f"job_args_{random_id}.json"
-        
-        # Write to local file
-        with open(file_name, 'w') as f:
-            json.dump(params, f)
-
-        
-        job_instance = cmlapi.CreateJobRequest(
-            project_id=project_id,
-            name=job_name,
-            script=script_path,
-            runtime_identifier=runtime_identifier,
-            cpu=core,
-            memory=mem,
-            environment = {'file_name':file_name}
-        )
-
-        created_job = client_cml.create_job(project_id=project_id,
-                body=job_instance,
-        )
-        job_run = client_cml.create_job_run(cmlapi.CreateJobRunRequest(), project_id=project_id, job_id=created_job.id)
-
-        
-            
-        inputs = []   
-        if request.input_path:
-            file_paths = request.input_path
-            for path in file_paths:
-                try:
-                    with open(path) as f:
-                        data = json.load(f)
-                        inputs.extend(item.get(request.input_key, '') for item in data)
-                except Exception as e:
-                    print(f"Error processing {path}: {str(e)}")
-            total_count = len(inputs)
-            
-            topics = None
-           
-        elif request.doc_paths:
-            total_count = request.num_questions
-        else:
-            total_count = request.num_questions*len(request.topics)
-            topics = request.topics
-            
-            
-        
-        
-        model_params = request.model_params or ModelParameters()
-        print(job_run.job_id, job_name)
-        # Handle custom prompt, examples and schema
-        custom_prompt_str = PromptHandler.get_default_custom_prompt(request.use_case, request.custom_prompt)
-        # For examples
-        examples_value = (
-            PromptHandler.get_default_example(request.use_case, request.examples) 
-            if hasattr(request, 'examples') 
-            else None
-        )
-        examples_str = synthesis_service.safe_json_dumps(examples_value)
-
-        # For schema
-        schema_value = (
-            PromptHandler.get_default_schema(request.use_case, request.schema)
-            if hasattr(request, 'schema') 
-            else None
-        )
-        
-        schema_str = synthesis_service.safe_json_dumps(schema_value)
-
-        # For topics
-        topics_value = topics if not getattr(request, 'doc_paths', None) else None
-        topic_str = synthesis_service.safe_json_dumps(topics_value)
-
-        # For doc_paths and input_path
-        doc_paths_str = synthesis_service.safe_json_dumps(getattr(request, 'doc_paths', None))
-        input_path_str = synthesis_service.safe_json_dumps(getattr(request, 'input_path', None))
-           
-        
-        metadata = {
-                'technique': request.technique,
-                'model_id': request.model_id,
-                'inference_type': request.inference_type,
-                'caii_endpoint':request.caii_endpoint,
-                'use_case': request.use_case,
-                'final_prompt': custom_prompt_str,
-                'model_parameters': json.dumps(model_params.model_dump()) if model_params else None,
-                'display_name': request.display_name,
-                'num_questions':request.num_questions,
-                'topics': topic_str,
-                'examples': examples_str,
-                "total_count":total_count,
-                'schema': schema_str,
-                'doc_paths': doc_paths_str,
-                'input_path':input_path_str,
-                'job_name':job_name,
-                'job_id': job_run.job_id,
-                'job_status': get_job_status(job_run.job_id),
-                'input_key': request.input_key,
-                 'output_key':request.output_key,
-                'output_value':request.output_value,
-               'job_creator_name' : client_cml.list_job_runs(project_id, job_run.job_id,sort="-created_at", page_size=1).job_runs[0].creator.name
-                }
-        
-        db_manager.save_generation_metadata(metadata)
-
-        return {"job_name": job_name, "job_id": job_run.job_id}
-
+       return synthesis_job.generate_job(request, core, mem)
 
 @app.post("/synthesis/evaluate", 
     include_in_schema=True,
@@ -557,118 +338,22 @@ async def generate_examples(request: SynthesisRequest):
     description="Evaluate generated QA pairs")
 async def evaluate_examples(request: EvaluationRequest):
     """Evaluate generated QA pairs"""
-
-
-    
     if request.inference_type== "CAII":
-        print("I am here")
-        API_KEY = json.load(open("/tmp/jwt"))["access_token"]
-        headers = {
-            "Authorization": f"Bearer {API_KEY}"
-        }
-        
         caii_endpoint = request.caii_endpoint
+        response = caii_check(caii_endpoint)
         message = "The CAII endpoint you are tring to reach is downscaled, please try after >15 minutes while it autoscales, meanwhile please try another model"
-        if caii_endpoint:
-             
-            caii_endpoint = caii_endpoint.removesuffix('/chat/completions') 
-            caii_endpoint = caii_endpoint + "/models"
-            try:
-                    response = requests.get(caii_endpoint, headers = headers, timeout=3)
-                    if response.status_code != 200:
-                        return JSONResponse(
-                            status_code=503,  # Service Unavailable
-                            content={"status": "failed", "error": message}
-                        )
-            except:
-                return JSONResponse(
+        if response.status_code != 200:
+                    return JSONResponse(
                         status_code=503,  # Service Unavailable
                         content={"status": "failed", "error": message}
                     )
    
-    
     is_demo = request.is_demo
     if is_demo:
        return evaluator_service.evaluate_results(request)
     
     else:
-
-        json_str = request.model_dump_json()  # This gives us a JSON string directly
-        #compact_json = json_str.replace(" ", "")
-        
-        
-        if os.getenv("IS_COMPOSABLE"):
-            script_path = "synthetic-data-studio/app/run_eval_job.py"
-        else:
-            script_path = "app/run_eval_job.py"
-        
-        
-        random_id = uuid.uuid4().hex[:4]  # Generate a random 8-character ID
-        
-        if request.display_name:
-            job_name = f"{request.display_name}_{random_id}"
-        else:
-            job_name = f"eval_job_{random_id}"
-        
-
-        params = json.loads(json_str)
-        params['job_name'] = job_name  # Add job_name to the parameters
-
-        # Create unique filename with UUID
-        file_name = f"eval_job_args_{random_id}.json"
-        
-        # Write to local file
-        with open(file_name, 'w') as f:
-            json.dump(params, f)
-
-        job_instance = cmlapi.CreateJobRequest(
-            project_id=project_id,
-            name=job_name,
-            script=script_path,
-            runtime_identifier=runtime_identifier,
-            cpu=2,
-            memory=4,
-            environment = {'file_name':file_name}
-        )
-
-        created_job = client_cml.create_job(project_id=project_id,
-                body=job_instance,
-        )
-        job_run = client_cml.create_job_run(cmlapi.CreateJobRunRequest(), project_id=project_id, job_id=created_job.id)
-
-        custom_prompt_str = PromptHandler.get_default_custom_eval_prompt(
-                request.use_case, 
-                request.custom_prompt
-            )
-        examples_value = (
-            PromptHandler.get_default_eval_example(request.use_case, request.examples) 
-            if hasattr(request, 'examples') 
-            else None
-        )
-        examples_str = evaluator_service.safe_json_dumps(examples_value)
-        model_params = request.model_params or ModelParameters()
-        
-        metadata = {
-            'model_id': request.model_id,
-        'inference_type': request.inference_type,
-        'caii_endpoint':request.caii_endpoint,
-        'use_case': request.use_case,
-            'custom_prompt': custom_prompt_str,
-            'model_parameters': json.dumps(model_params.model_dump()) if model_params else None,
-            'generate_file_name': os.path.basename(request.import_path),
-            'display_name': request.display_name,
-            'examples': examples_str,
-            'job_name':job_name,
-            'job_id': job_run.job_id,
-            'job_status': get_job_status(job_run.job_id),
-             'job_creator_name' : client_cml.list_job_runs(project_id, job_run.job_id,sort="-created_at", page_size=1).job_runs[0].creator.name
-            
-        }
-
-        db_manager.save_evaluation_metadata(metadata)
-        
-
-        return {"job_name": job_name, "job_id": job_run.job_id}
+        return synthesis_job.evaluate_job(request)
 
 
 @app.post("/model/alignment",
@@ -719,64 +404,7 @@ async def generate_alignment_data(
 @app.post("/export_results", include_in_schema=True)
 async def export_results(request:Export_synth):
     try: 
-        params = request.model_dump()   
-       
-    
-        if os.getenv("IS_COMPOSABLE"):
-            script_path = "synthetic-data-studio/app/run_export_job.py"
-        else:
-            script_path = "app/run_export_job.py"
-        
-       
-        random_id = uuid.uuid4().hex[:4]  # Generate a random 8-character ID
-
-
-        
-        job_name = f"hf_{request.hf_config.hf_repo_name}_{random_id}"
-        # Create unique filename with UUID
-        file_name = f"hf_export_args_{random_id}.json"
-        
-        # Write to local file
-        with open(file_name, 'w') as f:
-            json.dump(params, f)   
-
-    
-
-        
-
-        job_instance = cmlapi.CreateJobRequest(
-                project_id=project_id,
-                name=job_name,
-                script=script_path,
-                runtime_identifier=runtime_identifier,
-                cpu=2,
-                memory=4,
-                environment = {'file_name':file_name}
-            )
-
-        created_job = client_cml.create_job(project_id=project_id,
-                body=job_instance,
-        )
-        job_run = client_cml.create_job_run(cmlapi.CreateJobRunRequest(), project_id=project_id, job_id=created_job.id)
-        repo_id = f"{request.hf_config.hf_username}/{request.hf_config.hf_repo_name}"
-        export_path = f"https://huggingface.co/datasets/{repo_id}"
-
-        job_status = get_job_status(job_run.job_id)
-
-        metadata = {"timestamp": datetime.now(timezone.utc).isoformat(),
-                    "display_export_name": request.hf_config.hf_repo_name, 
-                    "display_name": request.display_name,
-                    "local_export_path":request.file_path,
-                    "hf_export_path": export_path,
-                    "job_id":job_run.job_id,
-                    "job_name": job_name,
-                    "job_status": job_status,
-                     "job_creator_name" : client_cml.list_job_runs(project_id, job_run.job_id,sort="-created_at", page_size=1).job_runs[0].creator.name
-                   }
-        
-        db_manager.save_export_metadata(metadata)
-
-        return  {"job_name": job_name, "job_id": job_run.job_id, "hf_link":export_path}   
+        return synthesis_job.export_job(request)
     
     except Exception as e:
 
@@ -823,20 +451,21 @@ async def get_model_id():
           if 'ON_DEMAND' in m['inferenceTypesSupported'] 
           and 'TEXT' in m['inputModalities']]
     
-    mod_list_wp = {}
-    for m in all_models:
-        if ('ON_DEMAND' in m['inferenceTypesSupported'] 
-                and 'TEXT' in m['inputModalities'] and 'TEXT' in m['outputModalities']):
-            provider = m['providerName']
-            if provider not in mod_list_wp:
-                mod_list_wp[provider] = []
-            mod_list_wp[provider].append(m['modelId'])
+    inference_models = client_s.list_inference_profiles()
+    inference_mod_list = [m['inferenceProfileId'] for m in inference_models['inferenceProfileSummaries'] 
+    if ("meta" in m['inferenceProfileId']) or ("anthropic" in m['inferenceProfileId']) or ("mistral" in m['inferenceProfileId']) ]
+    bedrock_list = inference_mod_list + mod_list
+    
+    # mod_list_wp = {}
+    # for m in all_models:
+    #     if ('ON_DEMAND' in m['inferenceTypesSupported'] 
+    #             and 'TEXT' in m['inputModalities'] and 'TEXT' in m['outputModalities']):
+    #         provider = m['providerName']
+    #         if provider not in mod_list_wp:
+    #             mod_list_wp[provider] = []
+    #         mod_list_wp[provider].append(m['modelId'])
 
-    models = {"aws_bedrock": ['us.anthropic.claude-3-5-haiku-20241022-v1:0', 'us.anthropic.claude-3-5-sonnet-20241022-v2:0',
-                              'us.anthropic.claude-3-opus-20240229-v1:0','anthropic.claude-instant-v1', 
-                              'us.meta.llama3-2-11b-instruct-v1:0','us.meta.llama3-2-90b-instruct-v1:0', 'us.meta.llama3-1-70b-instruct-v1:0', 
-                                'mistral.mixtral-8x7b-instruct-v0:1', 'mistral.mistral-large-2402-v1:0',
-                                   'mistral.mistral-small-2402-v1:0'  ],
+    models = {"aws_bedrock":bedrock_list ,
              "CAII": ['meta/llama-3_1-8b-instruct', 'mistralai/mistral-7b-instruct-v0.3']
              }
 
@@ -1240,39 +869,40 @@ async def get_example_payloads(use_case:UseCase):
 async def check_upgrade_status():
     """Check if any upgrades are available"""
     try:
-        # Fetch latest changes
-        subprocess.run(["git", "fetch"], check=True, capture_output=True)
-        
-        # Get current branch
-        branch = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            check=True, 
-            capture_output=True, 
-            text=True
-        ).stdout.strip()
-        
-        # Get local and remote commits
-        local_commit = subprocess.run(
-            ["git", "rev-parse", branch],
-            check=True,
-            capture_output=True,
-            text=True
-        ).stdout.strip()
-        
-        remote_commit = subprocess.run(
-            ["git", "rev-parse", f"origin/{branch}"],
-            check=True,
-            capture_output=True,
-            text=True
-        ).stdout.strip()
-        
-        updates_available = local_commit != remote_commit
-        
-        return StudioUpgradeStatus(
-            git_local_commit=local_commit,
-            git_remote_commit=remote_commit,
-            updates_available=updates_available
-        )
+        with path_manager.in_project_directory():
+            # Fetch latest changes
+            subprocess.run(["git", "fetch"], check=True, capture_output=True)
+            
+            # Get current branch
+            branch = subprocess.run(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                check=True, 
+                capture_output=True, 
+                text=True
+            ).stdout.strip()
+            
+            # Get local and remote commits
+            local_commit = subprocess.run(
+                ["git", "rev-parse", branch],
+                check=True,
+                capture_output=True,
+                text=True
+            ).stdout.strip()
+            
+            remote_commit = subprocess.run(
+                ["git", "rev-parse", f"origin/{branch}"],
+                check=True,
+                capture_output=True,
+                text=True
+            ).stdout.strip()
+            
+            updates_available = local_commit != remote_commit
+            
+            return StudioUpgradeStatus(
+                git_local_commit=local_commit,
+                git_remote_commit=remote_commit,
+                updates_available=updates_available
+            )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1294,20 +924,21 @@ async def perform_upgrade():
         
         # 1. Git operations
         try:
-            # Stash any changes
-            subprocess.run(["git", "stash"], check=True, capture_output=True)
-            
-            # Pull updates
-            subprocess.run(["git", "pull"], check=True, capture_output=True)
-            
-            # Try to pop stash
-            try:
-                subprocess.run(["git", "stash", "pop"], check=True, capture_output=True)
-            except subprocess.CalledProcessError:
-                messages.append("Warning: Could not restore local changes")
-            
-            git_updated = True
-            messages.append("Git repository updated")
+            with path_manager.in_project_directory():
+                # Stash any changes
+                subprocess.run(["git", "stash"], check=True, capture_output=True)
+                
+                # Pull updates
+                subprocess.run(["git", "pull"], check=True, capture_output=True)
+                
+                # Try to pop stash
+                try:
+                    subprocess.run(["git", "stash", "pop"], check=True, capture_output=True)
+                except subprocess.CalledProcessError:
+                    messages.append("Warning: Could not restore local changes")
+                
+                git_updated = True
+                messages.append("Git repository updated")
             
         except subprocess.CalledProcessError as e:
             messages.append(f"Git update failed: {e}")
@@ -1329,8 +960,7 @@ async def perform_upgrade():
         # 3. Run build_client.sh
         try:
             script_path = "build/build_client.py"
-            if os.getenv("IS_COMPOSABLE"):
-                script_path = os.path.join('synthetic-data-studio', script_path)
+            script_path = path_manager.get_str_path(script_path)
             subprocess.run(["python", script_path], check=True)
             frontend_rebuilt = True
             messages.append("Frontend rebuilt successfully")
@@ -1338,15 +968,7 @@ async def perform_upgrade():
             messages.append(f"Frontend build failed: {e}")
             raise HTTPException(status_code=500, detail=str(e))
         
-        # # 4. Run start_application.py
-        # try:
-        #     subprocess.run(["python", "build/start_application.py"], check=True)
-        #     messages.append("Application start script completed")
-        # except subprocess.CalledProcessError as e:
-        #     messages.append(f"Application start script failed: {e}")
-        #     raise HTTPException(status_code=500, detail=str(e))
-        
-        # 4. Restart CML application
+       
         if git_updated or frontend_rebuilt or db_upgraded:
             try:
                 # Small delay to ensure logs are captured
