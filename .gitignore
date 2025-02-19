@@ -68,4 +68,5 @@ coverage.xml
 .nox/
 .pytest_cache
 #old code
-app/frontend
+app/frontend/
+app/launch_streamlit.py

@@ -149,7 +149,7 @@ synthesis_job = SynthesisJob(
     runtime_identifier=runtime_identifier
 )
 
-#*************Comment this when running locally********************************************
+# #*************Comment this when running locally********************************************
 
 # Add these models
 class StudioUpgradeStatus(BaseModel):
@@ -472,6 +472,40 @@ async def create_custom_prompt(request: CustomPromptRequest):
         return {"generated_prompt":prompt_gen}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+def sort_unique_models(model_list):
+    def get_sort_key(model_name):
+        # Strip any provider prefix
+        name = model_name.split('.')[-1] if '.' in model_name else model_name
+        parts = name.split('-')
+        
+        # Extract version
+        version = '0'
+        for part in parts:
+            if part.startswith('v') and any(c.isdigit() for c in part):
+                version = part[1:]
+                if ':' in version:
+                    version = version.split(':')[0]
+        
+        # Extract date
+        date = '00000000'
+        for part in parts:
+            if len(part) == 8 and part.isdigit():
+                date = part
+        
+        return (float(version), date)
+    
+    # Remove duplicates while preserving original names
+    unique_models = set()
+    filtered_models = []
+    for model in model_list:
+        base_name = model.split('.')[-1] if '.' in model else model
+        if base_name not in unique_models:
+            unique_models.add(base_name)
+            filtered_models.append(model)
+    
+    return sorted(filtered_models, key=get_sort_key, reverse=True)
 
 @app.get("/model/model_ID", include_in_schema=True)
 async def get_model_id():
@@ -483,37 +517,75 @@ async def get_model_id():
             "max_attempts": 2,
             "mode": "standard",
         },
-    ) 
-    client_s = boto3.client(service_name="bedrock", region_name=region, config=retry_config)
-    response = client_s.list_foundation_models()
-    all_models = response['modelSummaries']
+    )
 
-    mod_list = [m['modelId']
-        for m in all_models 
-        if 'ON_DEMAND' in m['inferenceTypesSupported'] 
-        and 'TEXT' in m['inputModalities'] 
-        and 'TEXT' in m['outputModalities']
-        and m['providerName'] in ['Anthropic', 'Meta', 'Mistral AI']]
     
-    inference_models = client_s.list_inference_profiles()
-    inference_mod_list = [m['inferenceProfileId'] for m in inference_models['inferenceProfileSummaries'] 
-    if ("meta" in m['inferenceProfileId']) or ("anthropic" in m['inferenceProfileId']) or ("mistral" in m['inferenceProfileId']) ]
-    bedrock_list = inference_mod_list + mod_list
+
+    try:
+        client_s = boto3.client(service_name="bedrock", region_name=region, config=retry_config)
+        
+        # Get foundation models
+        response = client_s.list_foundation_models()
+        all_models = response['modelSummaries']
+
+        mod_list = [m['modelId']
+            for m in all_models 
+            if 'ON_DEMAND' in m['inferenceTypesSupported'] 
+            and 'TEXT' in m['inputModalities'] 
+            and 'TEXT' in m['outputModalities']
+            and m['providerName'] in ['Anthropic', 'Meta', 'Mistral AI']]
+        
+        # Get inference profiles with comprehensive error handling
+        try:
+            inference_models = client_s.list_inference_profiles()
+            inference_mod_list = []
+            if 'inferenceProfileSummaries' in inference_models:
+                inference_mod_list = [
+                    m['inferenceProfileId'] 
+                    for m in inference_models['inferenceProfileSummaries']
+                    if any(provider in m['inferenceProfileId'].lower() 
+                        for provider in ['meta', 'anthropic', 'mistral'])
+                ]
+        except client_s.exceptions.ResourceNotFoundException:
+            inference_mod_list = []
+        except client_s.exceptions.ValidationException as e:
+            print(f"Validation error: {str(e)}")
+            inference_mod_list = []
+        except client_s.exceptions.AccessDeniedException as e:
+            print(f"Access denied: {str(e)}")
+            inference_mod_list = []
+        except client_s.exceptions.ThrottlingException as e:
+            print(f"Request throttled: {str(e)}")
+            inference_mod_list = []
+        except client_s.exceptions.InternalServerException as e:
+            print(f"Bedrock internal error: {str(e)}")
+            inference_mod_list = []
+        
+        # Combine and sort the lists
+        bedrock_list = sort_unique_models(inference_mod_list + mod_list)
+        
+        models = {
+            "aws_bedrock": bedrock_list,
+            "CAII": ['meta/llama-3_1-8b-instruct', 'mistralai/mistral-7b-instruct-v0.3']
+        }
+
+        return {"models": models}
     
-    # mod_list_wp = {}
-    # for m in all_models:
-    #     if ('ON_DEMAND' in m['inferenceTypesSupported'] 
-    #             and 'TEXT' in m['inputModalities'] and 'TEXT' in m['outputModalities']):
-    #         provider = m['providerName']
-    #         if provider not in mod_list_wp:
-    #             mod_list_wp[provider] = []
-    #         mod_list_wp[provider].append(m['modelId'])
-
-    models = {"aws_bedrock":bedrock_list ,
-             "CAII": ['meta/llama-3_1-8b-instruct', 'mistralai/mistral-7b-instruct-v0.3']
-             }
-
-    return {"models":models}
+    except client_s.exceptions.ValidationException as e:
+        print(f"Validation error: {str(e)}")
+        raise
+    except client_s.exceptions.AccessDeniedException as e:
+        print(f"Access denied: {str(e)}")
+        raise
+    except client_s.exceptions.ThrottlingException as e:
+        print(f"Request throttled: {str(e)}")
+        raise
+    except client_s.exceptions.InternalServerException as e:
+        print(f"Bedrock internal error: {str(e)}")
+        raise
+    except Exception as e:
+        print(f"Unexpected error occurred: {str(e)}")
+        raise
 
 @app.get("/use-cases", include_in_schema=True)
 async def get_use_cases():
