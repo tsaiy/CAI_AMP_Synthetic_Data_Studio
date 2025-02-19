@@ -243,6 +243,8 @@ def get_timeout_for_request(request: Request) -> float:
         return 200.0  # 2 minutes for export
     elif "health" in path:
         return 5.0    # Quick timeout for health checks
+    elif path.endswith("/upgrade"):
+        return 1200    
     else:
         return 60.0   # Default timeout
 
