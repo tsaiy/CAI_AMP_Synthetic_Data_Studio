@@ -86,3 +86,7 @@ export enum ViewType {
   REEVALUATE_F0RM = 'REEVALUATE_F0RM',
   SUCCESS_VIEW = 'SUCCESS_VIEW'
 }
+
+export interface EvaluationDetails { 
+  evaluation: EvaluateResult;
+}
