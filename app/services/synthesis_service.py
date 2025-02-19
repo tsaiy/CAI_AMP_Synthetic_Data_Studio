@@ -126,7 +126,7 @@ class SynthesisService:
                         schema=request.schema,
                         custom_prompt=request.custom_prompt,
                     )
-                    
+                    #print("prompt :", prompt)
                     batch_qa_pairs = None
                     try:
                         batch_qa_pairs = model_handler.generate_response(prompt)
@@ -167,16 +167,16 @@ class SynthesisService:
                             questions_remaining -= len(valid_pairs)
                             omit_questions = omit_questions[-100:]  # Keep last 100 questions
                             self.logger.info(f"Successfully generated {len(valid_pairs)} questions in batch for topic {topic}")
-                        
+                        print("invalid_count:", invalid_count, '\n', "batch_size: ", batch_size, '\n', "valid_pairs: ", len(valid_pairs))
                         # If all pairs were valid, skip fallback
-                        if invalid_count == 0:
+                        if invalid_count <= 0:
                             continue
                     
                         else:
                             # Fall back to single processing for remaining or failed questions
                             self.logger.info(f"Falling back to single processing for remaining questions in topic {topic}")
                             remaining_batch = invalid_count
-                            print("remaining_batch:", remaining_batch)
+                            print("remaining_batch:", remaining_batch, '\n', "batch_size: ", batch_size, '\n', "valid_pairs: ", len(valid_pairs))
                             for _ in range(remaining_batch):
                                 if questions_remaining <= 0:
                                     break
@@ -289,12 +289,14 @@ class SynthesisService:
                     chunks = processor.process_document(path)
                     topics.extend(chunks)
                 #topics = topics[0:5]
+                print("total chunks: ", len(topics))
                 if request.num_questions<=len(topics):
                     topics = topics[0:request.num_questions]
                     num_questions = 1
+                    print("num_questions :", num_questions)
                 else:
                     num_questions = math.ceil(request.num_questions/len(topics))
-                    print(num_questions)
+                    #print(num_questions)
                 total_count = request.num_questions
             else:
                 if request.topics:

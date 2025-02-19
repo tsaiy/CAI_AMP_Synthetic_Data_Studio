@@ -295,3 +295,4 @@ def caii_check(caii_endpoint):
         response = requests.get(caii_endpoint, headers=headers, timeout=3)  # Will raise RequestException if fails
         
     return response
+
