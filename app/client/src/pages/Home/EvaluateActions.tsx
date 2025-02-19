@@ -69,10 +69,11 @@ const EvaluationActions: React.FC<Props> = ({ evaluation, refetch }) => {
         {
             key: '1',
             label: (
-              <Link to={`/evaluation/${evaluation.evaluate_file_name}`}>
+              <Text>
                 View Evaluation Details
-              </Link>
+              </Text>
             ),
+            onClick: () => setShowModal(true),
             icon: <FindInPageIcon />
           },
           {

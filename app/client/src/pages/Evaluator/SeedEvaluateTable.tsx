@@ -54,7 +54,7 @@ const SeedEvaluateTable: React.FC<Props> = ({ results }) => {
             title: 'Score',
             key: 'score',
             dataIndex: 'score',
-            width: 100,
+            width: 20,
             render: (score: number) => {
                 return <><Badge count={score} color={getColorCode(score)} showZero /></>
             }

@@ -14,7 +14,6 @@ import { Usecases, WorkflowType } from './types';
 import { useWizardCtx } from './utils';
 import { useDatasetSize, useGetPromptByUseCase } from './hooks';
 import CustomPromptButton from './CustomPromptButton';
-import get from 'lodash/get';
 
 const { Title } = Typography;
 
@@ -82,23 +81,13 @@ const Prompt = () => {
     // Page Bootstrap requests and useEffect
     const { data: defaultTopics, loading: topicsLoading } = usefetchTopics(useCase);
     const { data: defaultSchema, loading: schemaLoading } = useFetchDefaultSchema();
-    const { data: dataset_size, isLoading: datasetSizeLoadin, isError, error } = useDatasetSize(
+    const { data: dataset_size, isLoading: datasetSizeLoading } = useDatasetSize(
         workflow_type,
         doc_paths,
         input_key,
         input_value,
         output_key
     );
-
-    useEffect(() => {  
-        if (isError) {
-            notification.error({
-                message: 'Error fetching the dataset size',
-                description: get(error, 'error'),
-            });
-        } 
-
-    }, [error, isError]);
 
     useEffect(() => {
         if (defaultTopics) {
