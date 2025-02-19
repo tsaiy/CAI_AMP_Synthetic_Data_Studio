@@ -1076,7 +1076,7 @@ async def perform_upgrade():
         # 3. Run build_client.sh
         try:
             script_path = "build/build_client.py"
-            script_path = path_manager.get_str_path(script_path)
+            #script_path = path_manager.get_str_path(script_path)
             subprocess.run(["python", script_path], check=True)
             frontend_rebuilt = True
             messages.append("Frontend rebuilt successfully")
