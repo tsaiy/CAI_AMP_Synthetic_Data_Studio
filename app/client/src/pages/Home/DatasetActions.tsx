@@ -76,16 +76,12 @@ const DatasetActions: React.FC<DatasetActionsProps> = ({ dataset, refetch, setTo
     const menuActions: MenuProps['items'] = [
         {
           key: '1',
-          // label: (
-          //   <Text>
-          //     View Dataset Details
-          //   </Text>
-          // ),
-          label: 
-            <Link disabled={isEmpty(dataset?.generate_file_name)} to={`/dataset/${dataset?.generate_file_name}`}>
+          label: (
+            <Text>
               View Dataset Details
-            </Link>,
-          // onClick: () => setShowModal(true),
+            </Text>
+          ),
+          onClick: () => setShowModal(true),
           icon: <FindInPageIcon />
         },
         {

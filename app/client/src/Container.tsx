@@ -10,8 +10,6 @@ import { Pages } from './types';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import React, { useMemo } from 'react';
 import { GithubOutlined, MailOutlined } from '@ant-design/icons';
-import { Upgrade } from '@mui/icons-material';
-import UpgradeButton from './pages/Home/UpgradeButton';
 
 const { Text } = Typography;
 const { Header, Content } = Layout;
@@ -40,7 +38,7 @@ const BrandingTitle = styled(Typography)`
     line-height: 0.75;
     letter-spacing: normal;
     text-align: left;
-    color: rgba(255, 255, 255, 0.65);
+    color: #fff;
 `
 const BrandingTextContainer = styled(Flex)`
   padding-top: 5px;
@@ -88,12 +86,7 @@ const pages: MenuItem[] = [
           <Button type="link" icon={<MailOutlined />}>
           <Text copyable={{ text: 'ai_feedback@cloudera.com' }} style={{ color: '#1677ff' }}>ai_feedback@cloudera.com</Text>         
           </Button>
-          <div style={{ margin: 'auto' }}>
-            <a type="link" target="_blank" rel="noopener noreferrer" href="https://github.com/cloudera/CAI_AMP_Synthetic_Data_Studio/discussions">
-              <GithubOutlined />
-              <span style={{ marginLeft: '4px' }}>Join the discussion on GitHub</span>
-            </a>
-          </div>
+          <Button type="link" icon={<GithubOutlined target = "_blank" />} href="https://github.com/cloudera/CAI_AMP_Synthetic_Data_Studio/discussions">Join the discussion on GitHub</Button>
           </Flex>
           <br/>
         </div>
@@ -103,16 +96,9 @@ const pages: MenuItem[] = [
           <span style={{ color: 'rgba(255, 255, 255, 0.65)'}}>{LABELS[Pages.FEEDBACK]}</span>
         </Button>
       </Popover>
-    )
-  }, 
-  {
-    key: Pages.UPGRADE,
-    label: (
-      <UpgradeButton />
-    )
+    ),
   }
 ]
-
 
 const NotificationContext = React.createContext({messagePlacement: 'topRight'});
 
@@ -142,6 +128,7 @@ const Container = () => {
                   disabledOverflow={true}
                   items={pages}
                   mode="horizontal"
+                  // onClick={handleMenuClick}
                   selectable={false}
                   selectedKeys={[location.pathname]}
                   theme="dark"

@@ -103,11 +103,11 @@ const EvaluateTopicTable: React.FC<Props> = ({ data, topic, topicResult }) => {
 
     return (
         <>
-          <Row style={{ marginBottom: '12px' }}>
+          <Row style={{ marginBottom: '16px' }}>
             <Col sm={24}>
               <StyledFlex>
                 <div className="label">Average Score</div>
-                <div className="value"><Badge count={average_score} color={getColorCode(average_score)} size="default" showZero /></div>
+                <div className="value">{average_score}</div>
               </StyledFlex>
             </Col>
           </Row>

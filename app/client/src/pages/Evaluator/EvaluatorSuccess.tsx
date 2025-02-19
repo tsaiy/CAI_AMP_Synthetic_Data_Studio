@@ -117,7 +117,7 @@ const EvaluatorSuccess: React.FC<Props> = ({ result, dataset, demo }) => {
            
            <Flex style={{ marginTop: '24px' }}>
               <Button icon={<FormatListBulletedIcon/>}>
-                <Link to={`/home`}>{'View Evaluation List'}</Link>
+                <Link to={`/history`}>{'View Evaluation List'}</Link>
               </Button> 
            </Flex>   
       </StyleContent>
