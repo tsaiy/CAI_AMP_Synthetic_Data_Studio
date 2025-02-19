@@ -166,6 +166,10 @@ export const useGetProjectFiles = (paths: string[]) => {
         },
         body: JSON.stringify(params),
     });
+    if (resp.status !== 200) {
+        const body_error = await resp.json();
+        throw new Error('Error fetching dataset size' + get(body_error, 'error'));
+    }
     const body = await resp.json();
     return get(body, 'dataset_size');
 }
@@ -197,6 +201,7 @@ export const useDatasetSize = (
         },
     );
 
+    console.log('--------------error', error);
     if (isError) {
         console.log('data', error);
         notification.error({
