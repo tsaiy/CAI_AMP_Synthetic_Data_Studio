@@ -77,7 +77,6 @@ const EvaluationDetailsPage: React.FC = () => {
     const { evaluate_file_name } = useParams();
     const [tabViewType, setTabViewType] = useState<ViewType>(ViewType.GENERATION);
     const { data, error, isLoading } = useGetEvaluationDetails(evaluate_file_name as string);
-    console.log('----------------------------data:', data,  error, isLoading);
     const evaluation = get(data, 'evaluation');
     const evaluationDetails = get(data, 'evaluationDetails');
     const dataset = get(data, 'dataset');
@@ -103,7 +102,6 @@ const EvaluationDetailsPage: React.FC = () => {
             children: <EvaluationConfigurationTab evaluation={evaluation} evaluationDetails={evaluationDetails} />,
         },
     ];
-    console.log('tabViewType', tabViewType);
 
 
     const onTabChange = (key: string) =>

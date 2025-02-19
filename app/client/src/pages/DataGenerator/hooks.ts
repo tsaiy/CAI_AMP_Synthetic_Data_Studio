@@ -201,9 +201,7 @@ export const useDatasetSize = (
         },
     );
 
-    console.log('--------------error', error);
     if (isError) {
-        console.log('data', error);
         notification.error({
           message: 'Error',
           description: `An error occurred while validating the dataset.\n ${error?.error}`

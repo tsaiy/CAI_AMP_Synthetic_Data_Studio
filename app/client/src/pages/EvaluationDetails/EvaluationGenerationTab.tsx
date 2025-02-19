@@ -18,16 +18,11 @@ const Container = styled.div`
    background-color: #ffffff;
 `;
 
-const EvaluationGenerationTab: React.FC<Props> = ({ dataset, evaluation, evaluationDetails }) => { 
-    console.log('--------EvaluationGenerationTab', evaluation, evaluationDetails);  
+const EvaluationGenerationTab: React.FC<Props> = ({ dataset, evaluation, evaluationDetails }) => {  
     const result = get(evaluationDetails, 'evaluation');
-    console.log('result', result);
-
 
     let topicTabs: any[] = [];
     const { topics, topicMap } = getTopicMap({ result });
-    console.log('topicMap',  topicMap);
-    console.log('topics',  topics);
     if (dataset.topics !== null && !isEmpty(dataset.topics)) {
         topicTabs = topics.map((topicName: string, index: number) => ({
             key: `${topicName}-${index}`,
@@ -36,8 +31,7 @@ const EvaluationGenerationTab: React.FC<Props> = ({ dataset, evaluation, evaluat
             children: <EvaluateTopicTable data={get(topicMap, `${topicName}.evaluated_pairs`, [])} topicResult={get(topicMap, `${topicName}`)} topic={topicName} />
         }));
     }
-   
-    console.log('topicTabs', topicTabs);
+    
     if (isEmpty(topicTabs)) {
         const values = Object.values(topicMap);
         return (

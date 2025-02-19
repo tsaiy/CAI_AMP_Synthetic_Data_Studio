@@ -29,19 +29,22 @@ const EvaluatorPage: React.FC = () => {
 
   useEffect(() => {
       if (!isEmpty(dataset)) {
+        setTimeout(() => {
         const parameters: ModelParameters = get(dataset, 'model_parameters');
         const values = form.getFieldsValue();
         form.setFieldsValue({
           ...values,
-          custom_prompt: '',
+          custom_prompt: '' || prompt,
           top_p: get(parameters, 'top_p'),
           top_k: get(parameters, 'top_k'),
           min_p: get(parameters, 'min_p'),
           max_tokens: get(parameters, 'max_tokens'),
           temperature: get(parameters, 'temperature'),
           model_id: get(dataset, 'model_id'),
-          inference_type: get(dataset, 'inference_type')
+          inference_type: get(dataset, 'inference_type'),
+          model_parameters: parameters
         })
+      }, 500);
       }
     }, [dataset]);
 
@@ -86,7 +89,6 @@ const onSubmit = async () => {
       try {
         setLoading(true);
         const resp = await evaluateDataset(formData);
-        console.log('resp', resp);
         if (!isEmpty(resp.status) && resp.status === 'failed') {
           setErrorMessage(resp.error || resp.message);
         }
