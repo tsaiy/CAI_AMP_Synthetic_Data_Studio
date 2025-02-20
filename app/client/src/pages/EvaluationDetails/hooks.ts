@@ -37,11 +37,7 @@ const fetchEvaluationDetails = async (evaluate_file_name: string) => {
           {
             keepPreviousData: true,
           },
-      );
-  
-      // const dataset = get(data, 'dataset');
-      console.log('data:', data);  
-      console.log('error:', error);  
+      ); 
   
       if (error) {
         notification.error({

@@ -14,7 +14,7 @@ const StyledContent = styled(Content)`
 
 const ErrorPage: React.FC = () => {
     const error = useRouteError();
-    console.log('error', error);
+    console.error('error', error);
     const message = get(error, 'message');
 
     return (

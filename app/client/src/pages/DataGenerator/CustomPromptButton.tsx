@@ -29,7 +29,6 @@ const CustomPromptButton: React.FC<Props> = ({ model_id, inference_type, caii_en
 
   useEffect(() => {
       if (mutation.isError) {
-          console.log('data', mutation.error);
           notification.error({
             message: 'Error',
             description: `An error occurred while fetching the prompt.\n ${mutation.error}`
