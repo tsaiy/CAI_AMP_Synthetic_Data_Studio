@@ -1,4 +1,4 @@
-import { Col, Flex, Input, Row, Table, TableProps, Tooltip, Typography } from 'antd';
+import { Button, Col, Flex, Input, Row, Table, TableProps, Tooltip, Typography } from 'antd';
 import React, { useEffect } from 'react';
 import DateTime from '../../components/DateTime/DateTime';
 import { useGetExportJobs } from '../../api/Export/export';
@@ -89,7 +89,7 @@ const columns: TableProps<ExportResponse>['columns'] = [
         title: 'Export Location',
         dataIndex: 'hf_export_path',
         sorter: sortItemsByKey('hf_export_path'),
-        render: (exportPath) => <Link href={exportPath} target="_blank">{exportPath}</Link>
+        render: (exportPath) => <Button onClick={() => { window.open(exportPath, '_blank', "noopener noreferer"); }}></Button>
     },
     {
         key: 'job_name',

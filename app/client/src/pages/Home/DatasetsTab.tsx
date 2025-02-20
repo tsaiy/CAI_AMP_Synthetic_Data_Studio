@@ -62,7 +62,6 @@ const DatasetsTab: React.FC = () => {
     const [toggleDatasetExportModal, setToggleDatasetExportModal] = React.useState(false);
     const [datasetDetails, setDatasetDetails] = React.useState<Dataset>({} as Dataset);
 
-
     useEffect(() => {
         if (isError) {
             notification.error({
@@ -107,7 +106,7 @@ const DatasetsTab: React.FC = () => {
             title: 'Dataset Name',
             dataIndex: 'generate_file_name',
             sorter: sortItemsByKey('generate_file_name'),
-            render: (generate_file_name) => <Link to={`/${Pages.DATASET_DETAIL}/${generate_file_name}`}><StyledParagraph style={{ width: 200, marginBottom: 0 }} ellipsis={{ rows: 1 }}>{generate_file_name}</StyledParagraph></Link>
+            render: (generate_file_name) => <Link to={`/${Pages.DATASET_DETAIL}/${generate_file_name}`}>{generate_file_name}</Link>
         }, {
             key: 'model_id',
             title: 'Model',

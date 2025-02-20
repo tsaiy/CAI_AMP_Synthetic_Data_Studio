@@ -1,11 +1,20 @@
 import isEmpty from 'lodash/isEmpty';
 import { useState } from 'react';
 import { useQuery } from 'react-query';
+import { useSearchParams } from 'react-router-dom';
+import { datasetTestData } from '../../testing/dataset/testData';
 
 
 const BASE_API_URL = import.meta.env.VITE_AMP_URL;
 
-const fetchDatasets = async () => {
+const fetchDatasets = async (searchParams: URLSearchParams) => {
+
+  if(searchParams.has("test")) {
+    return {
+      datasets: datasetTestData
+    }
+  }
+
   const dataset_resp = await fetch(`${BASE_API_URL}/generations/history`, {
     method: 'GET',
   });
@@ -29,19 +38,20 @@ const fetchEvaluations = async () => {
 
 export const useDatasets = () => {
     const [searchQuery, setSearchQuery] = useState<string | null>(null);
+    const [searchParams] = useSearchParams();
     const { data, isLoading, isError, refetch } = useQuery(
         ["fetchDatasets", fetchDatasets],
-        () => fetchDatasets(),
+        () => fetchDatasets(searchParams),
         {
           keepPreviousData: false,
           refetchInterval: 15000
         },
     );
     if (searchQuery !== null && !isEmpty(searchQuery))  {
-        const filteredData = data?.datasets.filter((dataset: any) => {
-            return dataset.display_name.toLowerCase().includes(searchQuery.toLowerCase());
-        });
-        
+      const filteredData = data?.datasets.filter((dataset: any) => {
+        return dataset.display_name.toLowerCase().includes(searchQuery.toLowerCase());
+    });
+
         return {
             data: { datasets: filteredData },
             isLoading,

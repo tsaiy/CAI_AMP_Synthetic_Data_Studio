@@ -34,6 +34,7 @@ export interface Dataset {
   input_path: string[] | null;
   workflow_type: string;
   technique: string;
+  timestamp: Date;
 }
 
 export interface TopicEvaluationResult {
