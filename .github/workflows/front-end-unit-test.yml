@@ -27,6 +27,10 @@ jobs:
 
         - name: Install dependencies
           run: npm install
+        
+        # Rollup is needed for CI build since its ubuntu and we are developing mostly on mac
+        - name: Install Rollup 
+          run: npm i --save-dev @rollup/rollup-linux-x64-gnu
 
         - name: Run unit tests
           run: npm run test
