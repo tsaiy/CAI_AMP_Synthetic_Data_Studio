@@ -10,7 +10,6 @@ import { Pages } from './types';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import React, { useMemo } from 'react';
 import { GithubOutlined, MailOutlined } from '@ant-design/icons';
-import { Upgrade } from '@mui/icons-material';
 import UpgradeButton from './pages/Home/UpgradeButton';
 
 const { Text } = Typography;
