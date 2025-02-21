@@ -1,4 +1,4 @@
-name: Front-end Unit Test
+name: Client Build
 
 on:
     push:
