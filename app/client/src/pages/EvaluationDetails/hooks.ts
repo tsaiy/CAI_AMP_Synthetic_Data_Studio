@@ -1,11 +1,7 @@
-import get from 'lodash/get';
+import { useQuery } from '@tanstack/react-query';
 import { notification } from 'antd';
-import { useQuery } from 'react-query';
-
 
 const BASE_API_URL = import.meta.env.VITE_AMP_URL;
-
-
 
 const fetchEvaluationDetails = async (evaluate_file_name: string) => {
     const evaluation__resp = await fetch(`${BASE_API_URL}/evaluations/${evaluate_file_name}`, {
