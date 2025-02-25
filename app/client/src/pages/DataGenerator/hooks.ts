@@ -4,7 +4,7 @@ import toNumber from 'lodash/toNumber';
 import isEmpty from 'lodash/isEmpty';
 import isString from 'lodash/isString';
 import { useState } from 'react';
-import { useMutation, useQuery } from 'react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { WorkflowType } from './types';
 
 const BASE_API_URL = import.meta.env.VITE_AMP_URL;

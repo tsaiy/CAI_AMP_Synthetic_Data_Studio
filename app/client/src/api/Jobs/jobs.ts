@@ -1,4 +1,4 @@
-import { useQuery } from "react-query";
+import { useQuery } from "@tanstack/react-query";
 import { JobResponse } from "./response";
 
 const CML_API_URL = import.meta.env.VITE_CDSW_API_URL.replace("v1","v2");

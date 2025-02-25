@@ -1,0 +1,34 @@
+name: Client Build
+
+on:
+    pull_request:
+        branches:
+            - main
+            - dev
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        defaults:
+            run:
+                working-directory: ./app/client
+
+        steps:
+        - name: Checkout code
+          uses: actions/checkout@v2
+
+        - name: Set up Node.js
+          uses: actions/setup-node@v2
+          with:
+            node-version: 22.14.0
+
+        - name: Install dependencies
+          run: npm install --verbose
+
+         # Rollup is needed for CI build since its ubuntu and we are developing mostly on mac
+        - name: Install Rollup 
+          run: npm i --save-dev @rollup/rollup-linux-x64-gnu
+
+        - name: Build Front End
+          run: npm run build
