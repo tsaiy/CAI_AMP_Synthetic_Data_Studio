@@ -20,5 +20,9 @@ export default defineConfig(({ mode }) => {
   return {
     define: (mode === 'production' ? prodEnvVar : {}),
     plugins: [react()],
+    test: {
+      environment: 'jsdom',
+      globals: true
+    }
   };
 });

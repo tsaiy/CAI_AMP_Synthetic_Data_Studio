@@ -206,6 +206,7 @@ export const EVALUATION_RESULT = {
 
 
 export const getTopicMap = (evaluateResult: EvaluateResult) => {
+    console.log('---evaluateResult', evaluateResult);
     const result = get(evaluateResult, 'result');
     let topicMap = {};
     const topics = [];

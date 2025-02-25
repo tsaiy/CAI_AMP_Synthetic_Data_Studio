@@ -126,11 +126,12 @@ export const useGetEvaluate = (evaluate_file_name: string) => {
           keepPreviousData: true,
         },
     );
+    console.log('------data', data);
 
     const evaluate = get(data, 'evaluate');
     const dataset = get(data, 'dataset');
-    const prompt = get(data, 'prompt');
-    const examples = get(data, 'examples');  
+    const prompt = get(evaluate, 'prompt') || get(evaluate, 'custom_prompt');
+    const examples = get(evaluate, 'examples');  
 
     return {
       data,

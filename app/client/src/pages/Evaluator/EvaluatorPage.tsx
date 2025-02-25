@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { ModelParameters } from '../../types';
-import { Form, FormInstance } from 'antd';
+import { Button, Form, FormInstance, Result } from 'antd';
 import { useGetDataset, useModels } from './hooks';
 import EvaluateDataset from './EvaluateDataset';
 import EvaluatorSuccess from './EvaluatorSuccess';
@@ -18,7 +18,7 @@ const EvaluatorPage: React.FC = () => {
   const [form] = Form.useForm<FormInstance>();
   const { generate_file_name } = useParams();
   const [viewType, setViewType] = useState<ViewType>(ViewType.EVALUATE_F0RM)
-  const [ ,setErrorMessage] = useState<string | null>(null);
+  const [ errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false); 
   const [evaluateResult, setEvaluateResult] = useState(null);
   const { dataset, prompt, examples } = useGetDataset(generate_file_name as string);
@@ -88,7 +88,7 @@ const onSubmit = async () => {
         const resp = await evaluateDataset(formData);
         console.log('resp', resp);
         if (!isEmpty(resp.status) && resp.status === 'failed') {
-          setErrorMessage(resp.error);
+          setErrorMessage(resp.error || resp.message);
         }
         setLoading(false);
         if (resp.output_path || resp.job_name) {
@@ -100,6 +100,23 @@ const onSubmit = async () => {
         console.error(e);
         setLoading(false);
       }
+    }
+
+    if (errorMessage) {
+      return (
+          <>
+              <Result
+                  status="error"
+                  title="Dataet Evaluation Failed"
+                  subTitle={errorMessage}
+                  extra={
+                      <Button type="primary" href={`/evaluator/create/${generate_file_name}`}>
+                          {'Start Over'}
+                      </Button>
+                  }
+              />
+          </>
+      )
     }
     
     return (
