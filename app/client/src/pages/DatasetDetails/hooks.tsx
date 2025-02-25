@@ -35,11 +35,11 @@ const fetchDatasetDetails = async (generate_file_name: string) => {
 
 export const useGetDatasetDetails = (generate_file_name: string) => {
     const { data, isLoading, isError, error } = useQuery(
-        ["data", fetchDatasetDetails],
-        () => fetchDatasetDetails(generate_file_name),
         {
-          keepPreviousData: true,
-        },
+          queryKey: ['data', fetchDatasetDetails],
+          queryFn: () => fetchDatasetDetails(generate_file_name),
+          placeholderData: (previousData) => previousData
+        }
     );
 
     const dataset = get(data, 'dataset');
