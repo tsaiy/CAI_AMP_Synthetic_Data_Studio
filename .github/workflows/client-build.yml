@@ -26,7 +26,7 @@ jobs:
             node-version: 22.14.0
 
         - name: Install dependencies
-          run: npm install
+          run: npm install --verbose
 
          # Rollup is needed for CI build since its ubuntu and we are developing mostly on mac
         - name: Install Rollup 
