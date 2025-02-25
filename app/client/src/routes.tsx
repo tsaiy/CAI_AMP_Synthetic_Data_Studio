@@ -46,10 +46,9 @@ const router = createBrowserRouter([
         errorElement: <ErrorPage />,
       },
       {
-        path: `evaluation/:evaluate_file_name`,
+        path: `${Pages.EVALUATION}/:evaluate_file_name`,
         element: <EvaluationDetailsPage />,
-        errorElement: <ErrorPage />,
-        loader: async () => null
+        errorElement: <ErrorPage />
       },
       {
         path: `welcome`,
