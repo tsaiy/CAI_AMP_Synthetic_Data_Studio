@@ -1,5 +1,5 @@
 
-name: Synthetic Data Generation
+name: Synthetic Data Studio
 description: |
   This AMP demonstrates how we can generate synthetic data for finetuning, ground truth for LLM use case evaluation, embedding finetuning etc.
 

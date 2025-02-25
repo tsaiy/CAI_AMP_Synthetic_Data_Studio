@@ -8,6 +8,7 @@ import ReevaluatorPage from "./pages/Evaluator/ReevaluatorPage";
 import DatasetDetailsPage from "./pages/DatasetDetails/DatasetDetailsPage";
 import WelcomePage from "./pages/Home/WelcomePage";
 import ErrorPage from "./pages/ErrorPage";
+import EvaluationDetailsPage from "./pages/EvaluationDetails/EvaluationDetailsPage";
 
 
 const router = createBrowserRouter([
@@ -45,7 +46,13 @@ const router = createBrowserRouter([
         errorElement: <ErrorPage />,
       },
       {
-        path: `${Pages.WELCOME}`,
+        path: `evaluation/:evaluate_file_name`,
+        element: <EvaluationDetailsPage />,
+        errorElement: <ErrorPage />,
+        loader: async () => null
+      },
+      {
+        path: `welcome`,
         element: <WelcomePage />,
         errorElement: <ErrorPage />,
       }

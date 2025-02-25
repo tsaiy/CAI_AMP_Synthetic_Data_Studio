@@ -6,7 +6,8 @@ export enum Pages {
     DATASETS = 'datasets',
     DATASET_DETAIL = 'dataset',
     WELCOME = 'welcome',
-    FEEDBACK = 'feedback'
+    FEEDBACK = 'feedback',
+    UPGRADE = 'upgrade'
 }
 
 export enum ModelParameters {

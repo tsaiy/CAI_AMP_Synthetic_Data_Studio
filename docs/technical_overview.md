@@ -165,7 +165,7 @@ df = pd.read_csv('data.csv')\n
 """}]
 </examples>
 
-Write a programming question-pair for the following topic:
+Write a programming question-answer pair for the following topic:
 Requirements:
 - Each solution must include working code examples
 - Include explanations with the code
