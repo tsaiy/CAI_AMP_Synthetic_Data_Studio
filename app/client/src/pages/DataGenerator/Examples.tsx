@@ -1,16 +1,10 @@
-import isEmpty from 'lodash/isEmpty';
-import { useEffect, useRef } from 'react';
-import { Button, Form, Modal, Space, Skeleton, Table, Tooltip, Typography, Flex } from 'antd';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import { Button, Form, Modal, Space, Table, Tooltip, Typography, Flex } from 'antd';
+import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import styled from 'styled-components';
-
 import { useFetchExamples } from '../../api/api';
 import TooltipIcon from '../../components/TooltipIcon';
 import PCModalContent from './PCModalContent';
-import { QuestionSolution, WorkflowType } from './types';
-import { useWizardCtx } from './utils';
-import { isEqual } from 'lodash';
+import { QuestionSolution } from './types';
 
 const { Title } = Typography;
 const Container = styled.div`
@@ -77,10 +71,10 @@ const Examples = () => {
                     form.setFieldValue('examples', updatedExamples);
                 }
                 return (
-                    <Space>
+                    <Flex>
                         <Button
-                            icon={<EditIcon/>}
-                            type='text'
+                            icon={<EditOutlined />}
+                            type='link'
                             onClick={(e) => {
                                 e.stopPropagation();
                                 return  Modal.info({ 
@@ -102,8 +96,8 @@ const Examples = () => {
                             }}
                         />
                         <Button
-                            icon={<DeleteIcon/>}
-                            type='text'
+                            icon={<DeleteOutlined />}
+                            type='link'
                             onClick={(e) => {
                                 e.stopPropagation();
                                 return  Modal.warning({ 
@@ -137,7 +131,7 @@ const Examples = () => {
                                 })
                             }}
                         />
-                    </Space>
+                    </Flex>
             )
         }},
     ];

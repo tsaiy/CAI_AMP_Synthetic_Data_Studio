@@ -127,7 +127,6 @@ const upgradeSynthesisStudio = async () => {
     method: 'POST',
   });
   const body = await upgrade_resp.json();
-  console.log('upgradeSynthesisStudio', body);
   return body;
 };
 

@@ -69,8 +69,7 @@ export const useGetDataset = (generate_file_name: string) => {
 
     const dataset = get(data, 'dataset');
     const prompt = get(data, 'prompt') || get(data, 'custom_prompt');
-    const examples = get(data, 'examples');
-    console.log('error:', error);  
+    const examples = get(data, 'examples'); 
 
     if (error) {
       notification.error({
@@ -126,7 +125,6 @@ export const useGetEvaluate = (evaluate_file_name: string) => {
           keepPreviousData: true,
         },
     );
-    console.log('------data', data);
 
     const evaluate = get(data, 'evaluate');
     const dataset = get(data, 'dataset');

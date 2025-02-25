@@ -6,13 +6,6 @@ import { useQuery } from '@tanstack/react-query';
 const BASE_API_URL = import.meta.env.VITE_AMP_URL;
 
 
-const {
-    VITE_WORKBENCH_URL,
-    VITE_PROJECT_OWNER,
-    VITE_CDSW_PROJECT
-} = import.meta.env
-
-
 
 const fetchDatasetDetails = async (generate_file_name: string) => {
   const dataset_details__resp = await fetch(`${BASE_API_URL}/dataset_details/${generate_file_name}`, {
@@ -42,9 +35,7 @@ export const useGetDatasetDetails = (generate_file_name: string) => {
         }
     );
 
-    const dataset = get(data, 'dataset');
-    console.log('data:', data);  
-    console.log('error:', error);  
+    const dataset = get(data, 'dataset'); 
 
     if (error) {
       notification.error({
