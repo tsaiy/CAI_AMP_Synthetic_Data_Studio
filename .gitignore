@@ -66,3 +66,7 @@ htmlcov/
 coverage.xml
 .tox/
 .nox/
+.pytest_cache
+#old code
+app/frontend/
+app/launch_streamlit.py

@@ -174,7 +174,6 @@ const Finish = () => {
         }
 
         const args = {...formValues, is_demo: isDemo, model_params: formValues.model_parameters }
-        console.log('generate values', args);
         triggerPost(args)
     }, []);
     
@@ -201,7 +200,6 @@ const Finish = () => {
             children: <TopicsTable formData={genDatasetResp} topic={topic} />
         }));
     }
-    console.log('topicTabs', topicTabs);
     
     const nextStepsListPreview = [
         {

@@ -1,6 +1,6 @@
 import get from 'lodash/get';
 import isEmpty from 'lodash/isEmpty';
-import { Form, FormInstance } from "antd";
+import { Button, Form, FormInstance, Result } from "antd";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useGetEvaluate, useModels } from "./hooks";
@@ -15,7 +15,7 @@ const ReevaluatorPage: React.FC = () => {
   const { evaluate_file_name } = useParams();
   const [viewType, setViewType] = useState<ViewType>(ViewType.REEVALUATE_F0RM);
   const [loading, setLoading] = useState(false); 
-  const [ ,setErrorMessage] = useState<string | null>(null);
+  const [ errorMessage, setErrorMessage] = useState<string | null>(null);
   const [evaluateResult, setEvaluateResult] = useState(null);
   const {
     evaluate,
@@ -24,7 +24,7 @@ const ReevaluatorPage: React.FC = () => {
     examples,
     isLoading
   } = useGetEvaluate(evaluate_file_name as string);
-  console.log('evaluate', evaluate);
+  
   const modelsReq = useModels();
   const modelsMap = get(modelsReq, 'modelsMap', {});
   const model_inference_type = get(evaluate, 'inference_type');
@@ -85,7 +85,7 @@ const ReevaluatorPage: React.FC = () => {
         setLoading(true);
         const resp = await evaluateDataset(formData);
         if (!isEmpty(resp.status) && resp.status === 'failed') {
-          setErrorMessage(resp.error);
+          setErrorMessage(resp.error || resp.message);
         }
         setLoading(false);
         if (resp.output_path) {
@@ -97,6 +97,23 @@ const ReevaluatorPage: React.FC = () => {
         console.error(e);
         setLoading(false);
       }
+  }
+
+  if (errorMessage) {
+    return (
+        <>
+            <Result
+                status="error"
+                title="Dataet Re-evaluation Failed"
+                subTitle={errorMessage}
+                extra={
+                    <Button type="primary" href={`/evaluator/reevaluate/${evaluate_file_name}`}>
+                        {'Start Over'}
+                    </Button>
+                }
+            />
+        </>
+    )
   }
 
   return (

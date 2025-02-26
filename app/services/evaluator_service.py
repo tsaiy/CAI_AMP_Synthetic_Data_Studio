@@ -90,6 +90,7 @@ class EvaluatorService:
                     request.examples,
                     request.custom_prompt
                 )
+                #print(prompt)
             except Exception as e:
                 error_msg = f"Error building evaluation prompt: {str(e)}"
                 self.logger.error(error_msg)
@@ -114,9 +115,14 @@ class EvaluatorService:
                 return error_response
 
             try:
-                score = response[0].get('score', 0)
+                score = response[0].get('score', "no score key")
                 justification = response[0].get('justification', 'No justification provided')
-                self.logger.info(f"Successfully evaluated QA pair with score: {score}")
+                if score== "no score key":
+                    self.logger.info(f"Unsuccessful QA pair evaluation with score: {score}")
+                    justification = "The evaluated pair did not generate valid score and justification"
+                    score = 0
+                else:
+                    self.logger.info(f"Successfully evaluated QA pair with score: {score}")
                 
                 return {
                     "question": qa_pair[request.output_key],
@@ -332,7 +338,7 @@ class EvaluatorService:
             else None
         )
             examples_str = self.safe_json_dumps(examples_value)
-            print(examples_value, '\n',examples_str)
+            #print(examples_value, '\n',examples_str)
             
             metadata = {
                 'timestamp': timestamp,

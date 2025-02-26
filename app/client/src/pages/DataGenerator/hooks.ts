@@ -4,7 +4,7 @@ import toNumber from 'lodash/toNumber';
 import isEmpty from 'lodash/isEmpty';
 import isString from 'lodash/isString';
 import { useState } from 'react';
-import { useMutation, useQuery } from 'react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { WorkflowType } from './types';
 
 const BASE_API_URL = import.meta.env.VITE_AMP_URL;
@@ -166,6 +166,10 @@ export const useGetProjectFiles = (paths: string[]) => {
         },
         body: JSON.stringify(params),
     });
+    if (resp.status !== 200) {
+        const body_error = await resp.json();
+        throw new Error('Error fetching dataset size' + get(body_error, 'error'));
+    }
     const body = await resp.json();
     return get(body, 'dataset_size');
 }
@@ -198,7 +202,6 @@ export const useDatasetSize = (
     );
 
     if (isError) {
-        console.log('data', error);
         notification.error({
           message: 'Error',
           description: `An error occurred while validating the dataset.\n ${error?.error}`

@@ -51,7 +51,6 @@ const StyledTable = styled(Table)`
 
 
 const EvaluateTopicTable: React.FC<Props> = ({ data, topic, topicResult }) => {
-    console.log('EvaluateTopicTable > ', data, topic, topicResult);
     const [displayRecord, setDisplayRecord] = useState<EvaluatedPair | null>(null);
     const [showModal, setShowModal] = useState(false);
     const average_score = get(topicResult, 'average_score', 0);
@@ -72,7 +71,6 @@ const EvaluateTopicTable: React.FC<Props> = ({ data, topic, topicResult }) => {
             title: 'Justification',
             ellipsis: true,
             render: (pair: EvaluatedPair) => {
-              console.log('pair', pair);
               const justification = get(pair, 'evaluation.justification', 0);
               if (isString(justification)) {
                 return <>{justification}</>;
@@ -103,11 +101,11 @@ const EvaluateTopicTable: React.FC<Props> = ({ data, topic, topicResult }) => {
 
     return (
         <>
-          <Row style={{ marginBottom: '16px' }}>
+          <Row style={{ marginBottom: '12px' }}>
             <Col sm={24}>
               <StyledFlex>
                 <div className="label">Average Score</div>
-                <div className="value">{average_score}</div>
+                <div className="value"><Badge count={average_score} color={getColorCode(average_score)} size="default" showZero /></div>
               </StyledFlex>
             </Col>
           </Row>

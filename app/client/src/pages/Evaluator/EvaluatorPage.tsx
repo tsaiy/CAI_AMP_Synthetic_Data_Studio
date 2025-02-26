@@ -2,10 +2,10 @@ import get from 'lodash/get';
 import set from 'lodash/set';
 import isEmpty from 'lodash/isEmpty';
 import React, { useEffect, useState } from 'react';
-import { useMutation } from 'react-query';
+import { useMutation } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { ModelParameters } from '../../types';
-import { Form, FormInstance } from 'antd';
+import { Button, Form, FormInstance, Result } from 'antd';
 import { useGetDataset, useModels } from './hooks';
 import EvaluateDataset from './EvaluateDataset';
 import EvaluatorSuccess from './EvaluatorSuccess';
@@ -18,7 +18,7 @@ const EvaluatorPage: React.FC = () => {
   const [form] = Form.useForm<FormInstance>();
   const { generate_file_name } = useParams();
   const [viewType, setViewType] = useState<ViewType>(ViewType.EVALUATE_F0RM)
-  const [ ,setErrorMessage] = useState<string | null>(null);
+  const [ errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false); 
   const [evaluateResult, setEvaluateResult] = useState(null);
   const { dataset, prompt, examples } = useGetDataset(generate_file_name as string);
@@ -29,19 +29,22 @@ const EvaluatorPage: React.FC = () => {
 
   useEffect(() => {
       if (!isEmpty(dataset)) {
+        setTimeout(() => {
         const parameters: ModelParameters = get(dataset, 'model_parameters');
         const values = form.getFieldsValue();
         form.setFieldsValue({
           ...values,
-          custom_prompt: '',
+          custom_prompt: '' || prompt,
           top_p: get(parameters, 'top_p'),
           top_k: get(parameters, 'top_k'),
           min_p: get(parameters, 'min_p'),
           max_tokens: get(parameters, 'max_tokens'),
           temperature: get(parameters, 'temperature'),
           model_id: get(dataset, 'model_id'),
-          inference_type: get(dataset, 'inference_type')
+          inference_type: get(dataset, 'inference_type'),
+          model_parameters: parameters
         })
+      }, 500);
       }
     }, [dataset]);
 
@@ -86,9 +89,8 @@ const onSubmit = async () => {
       try {
         setLoading(true);
         const resp = await evaluateDataset(formData);
-        console.log('resp', resp);
         if (!isEmpty(resp.status) && resp.status === 'failed') {
-          setErrorMessage(resp.error);
+          setErrorMessage(resp.error || resp.message);
         }
         setLoading(false);
         if (resp.output_path || resp.job_name) {
@@ -100,6 +102,23 @@ const onSubmit = async () => {
         console.error(e);
         setLoading(false);
       }
+    }
+
+    if (errorMessage) {
+      return (
+          <>
+              <Result
+                  status="error"
+                  title="Dataet Evaluation Failed"
+                  subTitle={errorMessage}
+                  extra={
+                      <Button type="primary" href={`/evaluator/create/${generate_file_name}`}>
+                          {'Start Over'}
+                      </Button>
+                  }
+              />
+          </>
+      )
     }
     
     return (

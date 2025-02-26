@@ -19,7 +19,6 @@ const SeedEvaluateTable: React.FC<Props> = ({ results }) => {
     const data = [];
     forEach(seeds, (seed: any) => {
         const pairs = get(seed, `evaluated_pairs`);
-        console.log('pairs', pairs);
         if (Array.isArray(pairs)) {
             forEach(pairs, (pair: any) => {
                 data.push({
@@ -54,7 +53,7 @@ const SeedEvaluateTable: React.FC<Props> = ({ results }) => {
             title: 'Score',
             key: 'score',
             dataIndex: 'score',
-            width: 20,
+            width: 100,
             render: (score: number) => {
                 return <><Badge count={score} color={getColorCode(score)} showZero /></>
             }

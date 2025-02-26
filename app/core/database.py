@@ -113,6 +113,15 @@ class DatabaseManager:
                         job_creator_name TEXT
                     )
                 """)
+
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS test_metadata (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        timestamp TEXT,
+                        display_name TEXT
+                        
+                    )
+                """)
                 
                
                 

@@ -1,6 +1,6 @@
 import { notification } from 'antd';
 import get from 'lodash/get';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 
 const BASE_API_URL = import.meta.env.VITE_AMP_URL;
 
@@ -69,8 +69,7 @@ export const useGetDataset = (generate_file_name: string) => {
 
     const dataset = get(data, 'dataset');
     const prompt = get(data, 'prompt') || get(data, 'custom_prompt');
-    const examples = get(data, 'examples');
-    console.log('error:', error);  
+    const examples = get(data, 'examples'); 
 
     if (error) {
       notification.error({
@@ -129,8 +128,8 @@ export const useGetEvaluate = (evaluate_file_name: string) => {
 
     const evaluate = get(data, 'evaluate');
     const dataset = get(data, 'dataset');
-    const prompt = get(data, 'prompt');
-    const examples = get(data, 'examples');  
+    const prompt = get(evaluate, 'prompt') || get(evaluate, 'custom_prompt');
+    const examples = get(evaluate, 'examples');  
 
     return {
       data,

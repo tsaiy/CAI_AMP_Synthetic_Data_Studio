@@ -83,6 +83,14 @@ Built using:
    python build/start_application.py
    ```
 
+## [Technical Overview](docs/technical_overview.md):  
+
+The given document gives overall capabilities, tech stack, and general idea to get started on this application.
+
+## Technical Guides:
+### [Generation Workflow](docs/guides/sft_workflow.md)
+### [Evaluation Workflow](docs/guides/evaluation_workflow.md)
+
 
 
 ## Legal Notice

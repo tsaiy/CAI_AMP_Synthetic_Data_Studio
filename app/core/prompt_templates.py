@@ -164,10 +164,20 @@ class PromptHandler:
             return custom_prompt
     @staticmethod
     def get_default_example(use_case: UseCase, examples) -> str:
-        """Get default schema for SQL use case"""
+       
         
         if examples == [] or examples == None:
                 if use_case == UseCase.CUSTOM:
+                    examples = [
+                                    {
+                                        "question": "What is the capital of France?",
+                                        "solution": "The capital of France is Paris."
+                                    },
+                                    {
+                                        "question": "Calculate the area of a rectangle with length 5 and width 3.",
+                                        "solution": "Area = length x width = 5 x 3 = 15 square units"
+                                    }
+                                ]
                     return examples
                 else:
                     return USE_CASE_CONFIGS[use_case].default_examples
@@ -176,7 +186,7 @@ class PromptHandler:
     
     @staticmethod
     def get_default_eval_example(use_case: UseCase, examples) -> str:
-        """Get default schema for SQL use case"""
+        
         
         if examples == [] or examples == None:
                 
@@ -226,8 +236,30 @@ class PromptHandler:
                     ]
                     return examples
                 elif use_case == UseCase.CUSTOM:
+                    examples = [
+                            {
+                                "score": 1,
+                                "justification": "The response demonstrates basic understanding but lacks depth and detail. While it provides minimal relevant information, significant improvement is needed in comprehensiveness, accuracy, and overall quality."
+                            },
+                            {
+                                "score": 2,
+                                "justification": "The response shows moderate understanding with some relevant details. While key points are addressed, there are gaps in thoroughness and depth that could be improved for better quality and comprehensiveness."
+                            },
+                            {
+                                "score": 3, 
+                                "justification": "The response demonstrates good understanding (1), provides accurate information (2), and shows solid comprehension of the subject matter (3). While it effectively addresses the main points, it could benefit from more detailed analysis and supporting examples."
+                            },
+                            {
+                                "score": 4,
+                                "justification": "The response excels by showing thorough understanding (1), providing comprehensive details (2), demonstrating clear analysis (3), and offering well-supported insights with relevant examples (4). It effectively addresses all key aspects while maintaining clarity and depth throughout."
+                            },
+                            {
+                                "score": 5,
+                                "justification": "The response achieves excellence through exceptional understanding (1), comprehensive coverage (2), insightful analysis (3), well-supported arguments (4), and outstanding presentation with compelling examples and thorough explanations (5). It represents a complete and authoritative treatment of the subject."
+                            }
+                            ]
                     
-                    return None
+                    return examples
         
         return PromptHandler.format_examples_eval(examples)
     
@@ -311,12 +343,12 @@ class ModelPrompts:
         schema_str = PromptHandler.get_default_schema(use_case, schema)
         custom_prompt_str = PromptHandler.get_default_custom_prompt(use_case, custom_prompt)
 
-        base_prompt = f"""<examples>
-                {examples_str}
-                </examples>
+        # base_prompt = f"""<examples>
+        #         {examples_str}
+        #         </examples>
 
-                """
-        base_prompt += '\n' + "You are a very helpful assistant which creates a valid json array based on instructions given"
+        #         """
+        base_prompt = '\n' + "You are a very helpful assistant which creates a valid json array based on instructions given"
 
         # handling duplicates for each topics
         if len(omit_questions)==0:
@@ -326,8 +358,25 @@ class ModelPrompts:
             formatted_questions = " | ".join(omit_questions)
             omit_prompt =  "Make it absolutely sure that you don't include questions mentioned in below list as we already have question pair solutions for them. \n\n"+ formatted_questions
         
+        json_instruction = f"""Output MUST be a JSON array with objects in this exact format:
+                
+              Requirements:
+                1. MUST be a valid, parseable JSON array
+                2. Each object MUST have exactly these two fields:
+                - "question"
+                - "solution"
+                3. Examples for reference:
+                <examples>
+                {examples_str}
+                </examples>
+                4. Format rules:
+                - Use ONLY double quotes (")
+                - Properly escape all special characters
+                - No trailing commas
+                - No text or comments outside the JSON array
 
-        json_prompt = omit_prompt +  '\n' +  "Format the output as a valid JSON array with 'question' and 'solution' as keys for each pair."
+                Return ONLY the JSON array."""
+        json_prompt = omit_prompt +  '\n' +  json_instruction
 
         if use_case == UseCase.CODE_GENERATION:
             base_prompt += f"""Create {num_questions} programming question-solution pairs about the following topic:
@@ -392,7 +441,17 @@ class ModelPrompts:
             Solution: {solution}
 
             After examining the solution:
-            Always Provide your evaluation as a valid JSON array format with 'score' and 'justification' fields. Example format:
+            Provide your evaluation in a JSON array format following these requirements:. 
+            1. The response MUST be a valid JSON array containing objects
+            2. Each object MUST have exactly two fields:
+            - "score": a number based on the requirements explained above.
+            - "justification": a string explaining the score
+            
+            3. Ensure all quotes are double quotes (")
+            4. No comments or additional text outside the JSON array
+            5. All strings must be properly escaped
+            6. Follow this exact structure as given below.
+            Example format:
             {examples_str}"""
         model_family = get_model_family(model_id)
         
@@ -439,6 +498,7 @@ class ModelPrompts:
         for example the prompt for code generation is below 
         {DEFAULT_CODE_GENERATION_PROMPT}
     Make sure you just give the prompt in your response which can be directly used by large language model.
+    No need to give any explanation but just the prompt in same format as the example given above.
             """
         model_family = get_model_family(model_id)
         
