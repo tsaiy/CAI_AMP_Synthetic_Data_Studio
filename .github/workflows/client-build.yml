@@ -9,7 +9,7 @@ on:
             - main
 
 jobs:
-    test:
+    client-build:
         runs-on: ubuntu-latest
 
         defaults:
