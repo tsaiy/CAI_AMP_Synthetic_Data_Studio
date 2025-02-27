@@ -15,7 +15,6 @@ interface Props {
 
 
 const CustomGenerationTable: React.FC<Props> = ({ results }) => {
-    console.log('CustomGenerationTable > results', results);
     const [searchQuery, setSearchQuery] = React.useState<string | null>(null);
     const [filteredResults, setFilteredResults] = React.useState<DatasetGeneration[]>(results || []);
 

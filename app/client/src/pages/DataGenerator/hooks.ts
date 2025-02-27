@@ -4,7 +4,7 @@ import toNumber from 'lodash/toNumber';
 import isEmpty from 'lodash/isEmpty';
 import isString from 'lodash/isString';
 import { useState } from 'react';
-import { useMutation, useQuery } from 'react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { WorkflowType } from './types';
 
 const BASE_API_URL = import.meta.env.VITE_AMP_URL;
@@ -201,9 +201,7 @@ export const useDatasetSize = (
         },
     );
 
-    console.log('--------------error', error);
     if (isError) {
-        console.log('data', error);
         notification.error({
           message: 'Error',
           description: `An error occurred while validating the dataset.\n ${error?.error}`

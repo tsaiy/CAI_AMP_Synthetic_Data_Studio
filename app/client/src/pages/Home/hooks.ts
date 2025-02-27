@@ -1,7 +1,7 @@
 import { notification } from 'antd';
 import isEmpty from 'lodash/isEmpty';
 import { useState } from 'react';
-import { useMutation, useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 
 
 const BASE_API_URL = import.meta.env.VITE_AMP_URL;
@@ -127,7 +127,6 @@ const upgradeSynthesisStudio = async () => {
     method: 'POST',
   });
   const body = await upgrade_resp.json();
-  console.log('upgradeSynthesisStudio', body);
   return body;
 };
 

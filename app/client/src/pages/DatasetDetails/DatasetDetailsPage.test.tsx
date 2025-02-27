@@ -1,7 +1,7 @@
 import { beforeEach, describe, test } from 'vitest';
 import { render } from '@testing-library/react';
 import DatasetDetailsPage from './DatasetDetailsPage';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 describe('DatasetDetailsPage', () => {
     let queryClient: QueryClient;

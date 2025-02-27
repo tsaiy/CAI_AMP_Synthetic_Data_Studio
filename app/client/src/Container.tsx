@@ -7,7 +7,7 @@ import styled from 'styled-components';
 import './App.css'
 import { LABELS } from './constants';
 import { Pages } from './types';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React, { useMemo } from 'react';
 import { GithubOutlined, MailOutlined } from '@ant-design/icons';
 import UpgradeButton from './pages/Home/UpgradeButton';
