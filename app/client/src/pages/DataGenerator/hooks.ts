@@ -47,13 +47,13 @@ export const useGetPromptByUseCase = (use_case: string, { model_id, inference_ty
     if (inference_type === 'CAII') {
         params.caii_endpoint = caii_endpoint;
     }
+
     const { data, isLoading, isError, error, isFetching } = useQuery(
-        ['fetchPrompt', fetchPrompt],
-        () => fetchPrompt(use_case, params),
         {
-          keepPreviousData: false,
-          refetchOnWindowFocus: false
-        },
+            queryKey: ['fetchPrompt', fetchPrompt],
+            queryFn: () => fetchPrompt(use_case, params),
+            refetchOnWindowFocus: false,
+        }
     );
     return {
       data,
@@ -192,13 +192,13 @@ export const useDatasetSize = (
         input_value,
         output_key
     };
+
     const { data, isLoading, isError, error, isFetching } = useQuery(
-        ['fetchDatasetSize', fetchPrompt],
-        () => fetchDatasetSize(params),
         {
-          keepPreviousData: false,
-          refetchOnWindowFocus: false
-        },
+            queryKey: ['fetchDatasetSize', fetchPrompt],
+            queryFn: () => fetchDatasetSize(params),
+            refetchOnWindowFocus: false,
+        }
     );
 
     if (isError) {
