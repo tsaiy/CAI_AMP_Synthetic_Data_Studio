@@ -244,7 +244,7 @@ def get_timeout_for_request(request: Request) -> float:
     elif "health" in path:
         return 5.0    # Quick timeout for health checks
     elif path.endswith("/upgrade"):
-        return 1200  # timeout increase for upgrade  
+        return 1200    
     else:
         return 60.0   # Default timeout
 
@@ -607,8 +607,8 @@ async def get_model_parameters() -> Dict:
             "temperature": {"min": 0.0, "max": 2.0, "default": 0.0},
             "top_p": {"min": 0.0, "max": 1.0, "default": 1.0},
             #"min_p": {"min": 0.0, "max": 1.0, "default": 0.0},
-            "top_k": {"min": 0, "max": 300, "default": 50},
-            "max_tokens": {"min": 1, "max": 8192, "default": 8192}
+            "top_k": {"min": 0, "max": 100, "default": 50},
+            "max_tokens": {"min": 1, "max": 8192, "default": 4096}
         }
     }
 

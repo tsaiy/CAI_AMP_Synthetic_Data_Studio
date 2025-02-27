@@ -51,6 +51,7 @@ const StyledTable = styled(Table)`
 
 
 const EvaluateTopicTable: React.FC<Props> = ({ data, topic, topicResult }) => {
+    console.log('EvaluateTopicTable > ', data, topic, topicResult);
     const [displayRecord, setDisplayRecord] = useState<EvaluatedPair | null>(null);
     const [showModal, setShowModal] = useState(false);
     const average_score = get(topicResult, 'average_score', 0);
@@ -71,6 +72,7 @@ const EvaluateTopicTable: React.FC<Props> = ({ data, topic, topicResult }) => {
             title: 'Justification',
             ellipsis: true,
             render: (pair: EvaluatedPair) => {
+              console.log('pair', pair);
               const justification = get(pair, 'evaluation.justification', 0);
               if (isString(justification)) {
                 return <>{justification}</>;

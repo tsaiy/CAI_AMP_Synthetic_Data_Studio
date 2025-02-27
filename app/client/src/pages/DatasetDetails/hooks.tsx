@@ -1,9 +1,16 @@
 import get from 'lodash/get';
 import { notification } from 'antd';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from 'react-query';
 
 
 const BASE_API_URL = import.meta.env.VITE_AMP_URL;
+
+
+const {
+    VITE_WORKBENCH_URL,
+    VITE_PROJECT_OWNER,
+    VITE_CDSW_PROJECT
+} = import.meta.env
 
 
 
@@ -28,14 +35,16 @@ const fetchDatasetDetails = async (generate_file_name: string) => {
 
 export const useGetDatasetDetails = (generate_file_name: string) => {
     const { data, isLoading, isError, error } = useQuery(
+        ["data", fetchDatasetDetails],
+        () => fetchDatasetDetails(generate_file_name),
         {
-          queryKey: ['data', fetchDatasetDetails],
-          queryFn: () => fetchDatasetDetails(generate_file_name),
-          placeholderData: (previousData) => previousData
-        }
+          keepPreviousData: true,
+        },
     );
 
-    const dataset = get(data, 'dataset'); 
+    const dataset = get(data, 'dataset');
+    console.log('data:', data);  
+    console.log('error:', error);  
 
     if (error) {
       notification.error({

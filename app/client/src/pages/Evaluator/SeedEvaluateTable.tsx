@@ -19,6 +19,7 @@ const SeedEvaluateTable: React.FC<Props> = ({ results }) => {
     const data = [];
     forEach(seeds, (seed: any) => {
         const pairs = get(seed, `evaluated_pairs`);
+        console.log('pairs', pairs);
         if (Array.isArray(pairs)) {
             forEach(pairs, (pair: any) => {
                 data.push({
