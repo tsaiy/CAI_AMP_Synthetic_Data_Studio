@@ -1,9 +1,9 @@
 import throttle from "lodash/throttle";
 import { SyntheticEvent, useEffect } from "react";
-import { Badge, Col, Input, notification, Row, Table, TableProps } from "antd";
+import { Badge, Col, Flex, Input, notification, Row, Table, TableProps } from "antd";
 import styled from "styled-components";
 import Paragraph from 'antd/es/typography/Paragraph';
-import { TRANSLATIONS } from '../../constants';
+import { JOB_EXECUTION_TOTAL_COUNT_THRESHOLD, TRANSLATIONS } from '../../constants';
 import { useEvaluations } from "./hooks";
 import { Evaluation } from "./types";
 import { sortItemsByKey } from "../../utils/sortutils";
@@ -12,6 +12,8 @@ import Loading from "../Evaluator/Loading";
 import { SearchProps } from "antd/es/input";
 import DateTime from "../../components/DateTime/DateTime";
 import EvaluateActions from "./EvaluateActions";
+import { JobStatus } from "../../types";
+import JobStatusIcon from "../../components/JobStatus/jobStatusIcon";
 import { getColorCode } from "../Evaluator/util";
 
 const { Search } = Input;
@@ -73,6 +75,16 @@ const EvaluationsTab: React.FC = () => {
     }
 
     const columns: TableProps<Evaluation>['columns'] = [
+        {
+            key: 'job_status',
+            title: 'Status',
+            dataIndex: 'job_status',
+            width: 80,
+            sorter: sortItemsByKey('job_status'),
+            render: (status: JobStatus) => <Flex justify='center' align='center'>
+                <JobStatusIcon status={status} customTooltipTitles={{"null": `Job wasn't executed because evaluated dataset total count is less than ${JOB_EXECUTION_TOTAL_COUNT_THRESHOLD}!`}}></JobStatusIcon>
+            </Flex>
+        },
         {
               key: 'display_name',
               title: 'Display Name',
