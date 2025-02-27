@@ -81,6 +81,7 @@ const EvaluateDataset: React.FC<Props> = ({ form, loading, modelsMap, dataset, e
   if(evaluate && evaluate?.model_parameters) {
     initialValues.model_parameters = evaluate?.model_parameters;
   }
+  console.log('--------------initialValues', initialValues);
 
   const promptLabel = (
     <Space>

@@ -110,6 +110,9 @@ const ConfigurationTab: React.FC<Props> = ({ dataset }) => {
         },
 
     ];
+    console.log('topics:', topics);
+    console.log('dataset:', dataset);
+    console.log('examples:', dataset.examples);
     
     return (
         <Container>

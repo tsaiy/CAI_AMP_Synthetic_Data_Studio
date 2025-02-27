@@ -40,7 +40,10 @@ const SeedResultTable: React.FC<Props> = ({ results }) => {
             key: 'question',
             dataIndex: 'question',
             ellipsis: true,
-            render: (question: string) => <>{question}</>
+            render: (question: string) => {
+                console.log('question', question);
+                return <>{question}</>
+            }
         },
         {
             title: 'Solution',

@@ -1,6 +1,6 @@
 import { Button, Flex, Form, Input, Modal, notification, Spin } from "antd";
 import { useEffect, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation } from "react-query";
 import styled from "styled-components";
 import { LoadingOutlined } from '@ant-design/icons';
 import { fetchCustomPrompt, fetchPrompt } from "./hooks";
@@ -29,6 +29,7 @@ const CustomPromptButton: React.FC<Props> = ({ model_id, inference_type, caii_en
 
   useEffect(() => {
       if (mutation.isError) {
+          console.log('data', mutation.error);
           notification.error({
             message: 'Error',
             description: `An error occurred while fetching the prompt.\n ${mutation.error}`
