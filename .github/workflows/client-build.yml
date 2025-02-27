@@ -7,7 +7,7 @@ on:
             - dev
 
 jobs:
-    build:
+  client-build:
         runs-on: ubuntu-latest
 
         defaults:
