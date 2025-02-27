@@ -4,9 +4,11 @@ on:
     push:
         branches:
             - main
+
     pull_request:
         branches:
             - main
+            - dev
 
 jobs:
     client-build:
@@ -26,7 +28,7 @@ jobs:
             node-version: 22
 
         - name: Install dependencies
-          run: npm install
+          run: npm install --verbose
 
          # Rollup is needed for CI build since its ubuntu and we are developing mostly on mac
         - name: Install Rollup 
