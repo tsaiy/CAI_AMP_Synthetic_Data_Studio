@@ -11,7 +11,7 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@cloudera-internal/cuix-core": "^1.1.13",
+    "@cloudera-internal/cuix-core": "file:offline_packages/cloudera-internal-cuix-core-1.1.13.tgz",
     "@emotion/react": "11.13.3",
     "@emotion/styled": "11.13.0",
     "@mui/icons-material": "6.1.7",
