@@ -1,6 +1,6 @@
 import { notification } from 'antd';
 import get from 'lodash/get';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 
 const BASE_API_URL = import.meta.env.VITE_AMP_URL;
 
@@ -41,13 +41,10 @@ const fetchModels = async () => {
 }
 
 export const useModels = () => {
-  const { data, isLoading, isError } = useQuery(
-    ['models_data', fetchModels],
-    () => fetchModels(),
-      {
-        keepPreviousData: true,
-      },
-    );
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['models_data', fetchModels],
+    queryFn: () => fetchModels()
+});
     const modelsMap = get(data, 'models');
      
     return {
@@ -59,18 +56,14 @@ export const useModels = () => {
 }
 
 export const useGetDataset = (generate_file_name: string) => {
-    const { data, isLoading, isError, error } = useQuery(
-        ["data", fetchDatasets],
-        () => fetchDatasets(generate_file_name),
-        {
-          keepPreviousData: true,
-        },
-    );
+    const { data, isLoading, isError, error } = useQuery({
+        queryKey: ["data", fetchDatasets],
+        queryFn: () => fetchDatasets(generate_file_name)
+});
 
     const dataset = get(data, 'dataset');
     const prompt = get(data, 'prompt') || get(data, 'custom_prompt');
-    const examples = get(data, 'examples');
-    console.log('error:', error);  
+    const examples = get(data, 'examples'); 
 
     if (error) {
       notification.error({
@@ -120,13 +113,11 @@ const fetchEvaluate = async (evaluate_file_name: string) => {
 
 export const useGetEvaluate = (evaluate_file_name: string) => {
     const { data, isLoading, isError } = useQuery(
-        ["data", fetchEvaluate],
-        () => fetchEvaluate(evaluate_file_name),
         {
-          keepPreviousData: true,
-        },
+          queryKey: ["data", fetchEvaluate],
+          queryFn: () => fetchEvaluate(evaluate_file_name),
+        }
     );
-    console.log('------data', data);
 
     const evaluate = get(data, 'evaluate');
     const dataset = get(data, 'dataset');

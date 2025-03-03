@@ -1,3 +1,4 @@
+import isEmpty from 'lodash/isEmpty';
 import { useEffect, useRef, useState } from 'react';
 import { Col, Divider, Form, InputNumber, Row, Slider, Spin, Typography } from 'antd';
 import { merge } from 'lodash';
@@ -6,7 +7,6 @@ import styled from 'styled-components';
 import { useFetchDefaultModelParams } from '../../api/api';
 import { LABELS } from '../../constants';
 import { ModelParameters } from '../../types';
-import StyledTitle from '../Evaluator/StyledTitle';
 
 const StyledSlider = styled(Slider)`
     .ant-slider-rail, .ant-slider-track {
@@ -43,7 +43,7 @@ const Parameters = () => {
         },
         top_k: {
             min: 0,
-            max: 250,
+            max: 300,
             default: 250,
             step: 1
         },
@@ -56,10 +56,15 @@ const Parameters = () => {
     });
 
     const formData = form.getFieldsValue(true);
-    console.log('formData', formData);
-    const [values, setValues] = useState(formData?.model_parameters || null);
+    const [values, setValues] = useState(formData?.model_parameters);
 
     const { data: defaultParams, loading: loadingDefaultParams } = useFetchDefaultModelParams();
+
+    useEffect(() => {
+        if (!isEmpty(formData?.model_parameters)) {
+            setValues(formData?.model_parameters);
+        }     
+    }, [formData?.model_parameters]);
 
     useEffect(() => {
         if (defaultParams && !formData.model_parameters) {

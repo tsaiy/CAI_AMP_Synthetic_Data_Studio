@@ -24,7 +24,7 @@ const ReevaluatorPage: React.FC = () => {
     examples,
     isLoading
   } = useGetEvaluate(evaluate_file_name as string);
-  console.log('evaluate', evaluate);
+  
   const modelsReq = useModels();
   const modelsMap = get(modelsReq, 'modelsMap', {});
   const model_inference_type = get(evaluate, 'inference_type');

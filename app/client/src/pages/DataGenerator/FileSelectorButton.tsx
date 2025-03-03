@@ -12,7 +12,6 @@ interface Props {
 }
 
 const FileSelectorButton: React.FC<Props> = ({ onAddFiles, workflowType }) => {
-  console.log('FileSelectorButton --> workflowType:', workflowType);
   const [showModal, setShowModal] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
 

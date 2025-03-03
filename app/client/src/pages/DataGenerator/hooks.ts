@@ -4,7 +4,7 @@ import toNumber from 'lodash/toNumber';
 import isEmpty from 'lodash/isEmpty';
 import isString from 'lodash/isString';
 import { useState } from 'react';
-import { useMutation, useQuery } from 'react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { WorkflowType } from './types';
 
 const BASE_API_URL = import.meta.env.VITE_AMP_URL;
@@ -47,13 +47,13 @@ export const useGetPromptByUseCase = (use_case: string, { model_id, inference_ty
     if (inference_type === 'CAII') {
         params.caii_endpoint = caii_endpoint;
     }
+
     const { data, isLoading, isError, error, isFetching } = useQuery(
-        ['fetchPrompt', fetchPrompt],
-        () => fetchPrompt(use_case, params),
         {
-          keepPreviousData: false,
-          refetchOnWindowFocus: false
-        },
+            queryKey: ['fetchPrompt', fetchPrompt],
+            queryFn: () => fetchPrompt(use_case, params),
+            refetchOnWindowFocus: false,
+        }
     );
     return {
       data,
@@ -192,18 +192,16 @@ export const useDatasetSize = (
         input_value,
         output_key
     };
+
     const { data, isLoading, isError, error, isFetching } = useQuery(
-        ['fetchDatasetSize', fetchPrompt],
-        () => fetchDatasetSize(params),
         {
-          keepPreviousData: false,
-          refetchOnWindowFocus: false
-        },
+            queryKey: ['fetchDatasetSize', fetchPrompt],
+            queryFn: () => fetchDatasetSize(params),
+            refetchOnWindowFocus: false,
+        }
     );
 
-    console.log('--------------error', error);
     if (isError) {
-        console.log('data', error);
         notification.error({
           message: 'Error',
           description: `An error occurred while validating the dataset.\n ${error?.error}`

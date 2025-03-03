@@ -1,7 +1,7 @@
 import { notification } from 'antd';
 import isEmpty from 'lodash/isEmpty';
 import { useState } from 'react';
-import { useMutation, useQuery } from 'react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
 
 const BASE_API_URL = import.meta.env.VITE_AMP_URL;
@@ -31,12 +31,11 @@ const fetchEvaluations = async () => {
 export const useDatasets = () => {
     const [searchQuery, setSearchQuery] = useState<string | null>(null);
     const { data, isLoading, isError, refetch } = useQuery(
-        ["fetchDatasets", fetchDatasets],
-        () => fetchDatasets(),
         {
-          keepPreviousData: false,
-          refetchInterval: 15000
-        },
+         queryKey: ["fetchDatasets", fetchDatasets],
+        queryFn: () => fetchDatasets(),
+        refetchInterval: 15000
+      }
     );
     if (searchQuery !== null && !isEmpty(searchQuery))  {
         const filteredData = data?.datasets.filter((dataset: any) => {
@@ -65,12 +64,11 @@ export const useDatasets = () => {
 export const useEvaluations = () => {
     const [searchQuery, setSearchQuery] = useState<string | null>(null);
     const { data, isLoading, isError, refetch } = useQuery(
-        ["fetchEvaluations", fetchEvaluations],
-        () => fetchEvaluations(),
         {
-          keepPreviousData: false,
+          queryKey: ["fetchEvaluations", fetchEvaluations],
+          queryFn: () => fetchEvaluations(),
           refetchInterval: 15000
-        },
+        }
     );
     if (searchQuery !== null && !isEmpty(searchQuery))  {
         const filteredData = data?.evaluations.filter((evaluation: any) => {
@@ -106,12 +104,11 @@ const fetchUpgradeStatus = async () => {
 
 export const useUpgradeStatus = () => {
   const { data, isLoading, isError, refetch } = useQuery(
-    ["fetchUpgradeStatus", fetchUpgradeStatus],
-    () => fetchUpgradeStatus(),
     {
-      keepPreviousData: false,
+      queryKey: ["fetchUpgradeStatus", fetchUpgradeStatus],
+      queryFn: () => fetchUpgradeStatus(),
       refetchInterval: 60000
-    },
+    }
   );
 
   return {
@@ -127,7 +124,6 @@ const upgradeSynthesisStudio = async () => {
     method: 'POST',
   });
   const body = await upgrade_resp.json();
-  console.log('upgradeSynthesisStudio', body);
   return body;
 };
 
