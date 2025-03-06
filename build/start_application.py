@@ -1,17 +1,18 @@
 import subprocess
 import os
+import sys
+from pathlib import Path
 
-composable_path = "/home/cdsw/synthetic-data-studio/build/shell_scripts/start_application.sh"
-default_path  = "/home/cdsw/build/shell_scripts/start_application.sh"
+# Add app directory to path so we can import the PathManager
+sys.path.append(str(Path(__file__).parent.parent))
+from app.core.path_manager import PathManager
 
-# Choose the path based on the environment variable
-if os.getenv("IS_COMPOSABLE"):
-    script_path = composable_path
-    os.chdir("/home/cdsw/synthetic-data-studio")
-else:
-    script_path = default_path
+# Initialize PathManager
+path_manager = PathManager()
 
-# Execute the script using the selected path
-print(subprocess.run([f"bash {script_path}"], shell=True, check=True))
+# Main execution
+with path_manager.in_project_directory():
+    # Execute the start application script
+    subprocess.run(["bash build/shell_scripts/start_application.sh"], shell=True, check=True)
 
-print("Application installed and should be running shortly")
+print("Application running")

@@ -1,20 +1,23 @@
 #!/bin/bash
 set -eox pipefail
 
-# Get node
-touch .bashrc
-wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-nvm install 20
-nvm use 20
-echo $(which node)
-echo $(which npm)
+# We're already in the project root directory thanks to PathManager
+CLIENT_DIR="app/client"
 
-# Install frontend dependencies and run build
+# Setup Node.js
+if ! command -v node &> /dev/null || [ "$(node -v | cut -d. -f1 | tr -d 'v')" -lt 16 ]; then
+    wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    nvm install 20
+    nvm use 20
+fi
+
+# Activate virtual environment - using relative path
+source .venv/bin/activate
+
+# Build frontend
+cd "$CLIENT_DIR"
 rm -rf node_modules/
-
-cd app/client
-
 npm install
-npm run build --verbose
+npm run build
