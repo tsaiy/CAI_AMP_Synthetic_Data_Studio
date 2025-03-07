@@ -1083,9 +1083,10 @@ async def perform_upgrade():
         
         # 3. Run build_client.sh
         try:
-            script_path = "build/build_client.py"
-            #script_path = path_manager.get_str_path(script_path)
-            subprocess.run(["python", script_path], check=True)
+            # script_path = "build/build_client.py"
+            # #script_path = path_manager.get_str_path(script_path)
+            # subprocess.run(["python", script_path], check=True)
+            subprocess.run(["bash build/shell_scripts/build_client.sh"], shell=True, check=True)
             frontend_rebuilt = True
             messages.append("Frontend rebuilt successfully")
         except subprocess.CalledProcessError as e:
