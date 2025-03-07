@@ -3,11 +3,13 @@ import os
 import sys
 from pathlib import Path
 
-# Add app directory to path so we can import the PathManager
-sys.path.append(str(Path(__file__).parent.parent))
-from app.core.path_manager import PathManager
+PROJECT_ROOT = Path.cwd()
 
-# Initialize PathManager
+# Add project root to Python path
+sys.path.insert(0, str(PROJECT_ROOT))
+
+# Import PathManager
+from app.core.path_manager import PathManager
 path_manager = PathManager()
 
 # Ensure uv is installed
