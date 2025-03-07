@@ -351,26 +351,27 @@ async def generate_examples(request: SynthesisRequest):
     is_demo = request.is_demo
     mem = 4
     core = 2
-    if request.doc_paths:
-        paths = request.doc_paths
-        data_size = get_total_size(paths)
-        if data_size > 1 and data_size <=10:
-            is_demo = False
-            mem = data_size +2
-            core = max(2,data_size//2)
-            
-        elif data_size >10:
-            return JSONResponse(
-                    status_code=413,  # Payload Too Large
-                    content={
-                        "status": "failed",
-                        "error": f"Total dataset size ({data_size:} GB) exceeds limit of 10 GB. Please select smaller datasets."
-                    }
-                )
-        else:
-            is_demo = request.is_demo
-            mem = 4
-            core = 2
+    if project_id != "local":
+        if request.doc_paths:
+            paths = request.doc_paths
+            data_size = get_total_size(paths)
+            if data_size > 1 and data_size <=10:
+                is_demo = False
+                mem = data_size +2
+                core = max(2,data_size//2)
+                
+            elif data_size >10:
+                return JSONResponse(
+                        status_code=413,  # Payload Too Large
+                        content={
+                            "status": "failed",
+                            "error": f"Total dataset size ({data_size:} GB) exceeds limit of 10 GB. Please select smaller datasets."
+                        }
+                    )
+            else:
+                is_demo = request.is_demo
+                mem = 4
+                core = 2
   
     
     if is_demo== True:
