@@ -70,3 +70,6 @@ coverage.xml
 #old code
 app/frontend/
 app/launch_streamlit.py
+
+# Virtual environment
+.venv/

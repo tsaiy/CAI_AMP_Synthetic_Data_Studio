@@ -1,5 +1,7 @@
-#!/usr/bin/bash
+#!/bin/bash
 set -eox pipefail
 
-python -m pip install -r requirements.txt
+# We're already in the project root directory thanks to PathManager
+# Activate virtual environment
+source .venv/bin/activate
 python app/run.py
