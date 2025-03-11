@@ -1,4 +1,4 @@
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any, Union
 import json
 from app.models.request_models import Example, Example_eval
 from app.core.config import UseCase, Technique, ModelFamily, get_model_family,USE_CASE_CONFIGS
@@ -604,6 +604,107 @@ class ModelPrompts:
         return final_prompt
 
 
+    @staticmethod
+    def get_freeform_prompt(model_id: str,
+        topic: str,
+        num_questions: int,
+        omit_questions: List,
+        example_custom: List[Dict[str, Any]],
+       custom_prompt = Optional[str]
+    ) -> str:
+        
+        if example_custom:
+            examples_str = json.dumps(example_custom, indent=2)
+        else:
+            examples_str = None        
+        
+        custom_prompt_str = f"""<instructions>{custom_prompt}</instructions>"""
+
+        # base_prompt = f"""<examples>
+        #         {examples_str}
+        #         </examples>
+
+        #         """
+        base_prompt = '\n' + "You are a very helpful assistant which creates a valid json array of data based on instructions given"
+
+        # handling duplicates for each topics
+        if len(omit_questions)==0:
+           omit_prompt =  " "
+        else:
+            # Join the questions list with newlines and bullet points
+            formatted_questions = " | ".join(omit_questions)
+            omit_prompt =  "Make it absolutely sure that you don't include questions mentioned in below list as we already have question pair solutions for them. \n\n"+ formatted_questions
+        if examples_str:
+            json_instruction = f"""Output MUST be a JSON array with objects in this exact format as described in instructions:
+                    
+                Requirements:
+                    1. MUST be a valid, parseable JSON array
+                    2. Each object MUST have exactly same fields as other obejcts based on instructions given by the user.
+                    
+                    3. Examples for reference:
+                    <examples>
+                    {examples_str}
+                    </examples>
+                    4. Format rules:
+                    - Use ONLY double quotes (")
+                    - Properly escape all special characters
+                    - No trailing commas
+                    - No text or comments outside the JSON array
+
+                    Return ONLY the JSON array."""
+        else:
+            json_instruction = f"""Output MUST be a JSON array with objects in this exact format as described in instructions:
+                    
+                Requirements:
+                    1. MUST be a valid, parseable JSON array
+                    2. Each object MUST have exactly same fields as other obejcts based on instructions given by the user.
+                    3. Format rules:
+                    - Use ONLY double quotes (")
+                    - Properly escape all special characters
+                    - No trailing commas
+                    - No text or comments outside the JSON array
+
+                    Return ONLY the JSON array."""
+
+        json_prompt = omit_prompt +  '\n' +  json_instruction
+
+       
+        base_prompt += f"""Create {num_questions} set of data about the following topic:
+                        <topic>{topic}</topic>
+                        based on the instructions provided below """
+
+        
+            
+        model_family = get_model_family(model_id)
+        
+        if model_family== ModelFamily.LLAMA:
+            
+            final_prompt = "<|begin_of_text|><|start_header_id|>user<|end_header_id|>" + '\n'  + base_prompt + '\n' + custom_prompt_str + '\n' + json_prompt + '\n' + "<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
+
+        elif model_family== ModelFamily.MISTRAL:
+            system_prompt = "[INST]"
+            final_prompt = system_prompt +  "\n" + base_prompt + '\n' + custom_prompt_str +  '\n'  + json_prompt + '\n'+ '[/INST]'
+
+        elif model_family == ModelFamily.CLAUDE:
+            final_prompt = base_prompt + '\n' + custom_prompt_str + "\n" + json_prompt 
+        elif model_family== ModelFamily.QWEN:
+            system_prompt = "You are Qwen, created by Alibaba Cloud. You are a helpful assistant."
+            
+            final_prompt = f'''<|im_start|>system
+                                {system_prompt}<|im_end|>
+                                <|im_start|>user
+                                {base_prompt}
+                                {custom_prompt_str}
+                                {json_prompt}<|im_end|>
+                                <|im_start|>assistant
+                                '''
+            
+        else:
+            final_prompt = base_prompt + '\n' + custom_prompt_str + "\n" + json_prompt 
+        
+        return final_prompt
+
+
 
 class PromptBuilder:
     """Builds prompts based on model family, use case, and technique"""
@@ -652,3 +753,14 @@ class PromptBuilder:
     ) -> str:
         
         return ModelPrompts.create_custom_prompt(model_id, custom_prompt)
+    
+    @staticmethod
+    def build_freeform_prompt(model_id: str,
+        topic: str,
+        num_questions: int,
+        omit_questions: List,
+        example_custom: List[Dict[str, Any]],
+        custom_prompt = Optional[str]
+    ) -> str:
+        
+        return ModelPrompts.get_freeform_prompt(model_id, topic, num_questions, omit_questions, example_custom, custom_prompt)

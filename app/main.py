@@ -381,6 +381,57 @@ async def generate_examples(request: SynthesisRequest):
             return await synthesis_service.generate_examples(request,is_demo)
     else:
        return synthesis_job.generate_job(request, core, mem)
+    
+
+@app.post("/synthesis/freeform", include_in_schema=True,
+    responses=responses,
+    description="Generate freeform structured data")
+async def generate_freeform_data(request: SynthesisRequest):
+    """Generate freeform structured data based on provided examples and custom instructions"""
+    
+    if request.inference_type == "CAII":
+        caii_endpoint = request.caii_endpoint
+        response = caii_check(caii_endpoint)
+        message = "The CAII endpoint you are trying to reach is downscaled, please try after >15 minutes while it autoscales, meanwhile please try another model"
+        if response.status_code != 200:
+            return JSONResponse(
+                status_code=503,  # Service Unavailable
+                content={"status": "failed", "error": message}
+            )
+    
+    is_demo = request.is_demo
+    mem = 4
+    core = 2
+    if project_id != "local":
+        if request.doc_paths:
+            paths = request.doc_paths
+            data_size = get_total_size(paths)
+            if data_size > 1 and data_size <= 10:
+                is_demo = False
+                mem = data_size + 2
+                core = max(2, data_size // 2)
+            elif data_size > 10:
+                return JSONResponse(
+                    status_code=413,  # Payload Too Large
+                    content={
+                        "status": "failed",
+                        "error": f"Total dataset size ({data_size:} GB) exceeds limit of 10 GB. Please select smaller datasets."
+                    }
+                )
+            else:
+                is_demo = request.is_demo
+                mem = 4
+                core = 2
+    
+    if is_demo:
+        return await synthesis_service.generate_freeform(request, is_demo=is_demo)
+    else:
+        # Pass additional parameter to indicate this is a freeform request
+        request_dict = request.model_dump()
+        request_dict['generation_type'] = 'freeform'
+        # Convert back to SynthesisRequest object
+        freeform_request = SynthesisRequest(**request_dict)
+        return synthesis_job.generate_job(freeform_request, core, mem)
 
 @app.post("/synthesis/evaluate", 
     include_in_schema=True,

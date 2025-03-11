@@ -1,4 +1,4 @@
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any, Union
 import os
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from enum import Enum
@@ -115,29 +115,31 @@ class SynthesisRequest(BaseModel):
     model_id: str
     num_questions: int | None = Field(default=1, gt=0)  # Optional with default=1
     technique: Technique | None = Field(default=Technique.SFT)  # Optional with default=SFT
-    is_demo:bool = True
+    is_demo: bool = True
     
     # Optional fields that can override defaults
-    inference_type :Optional[str] = "aws_bedrock"
+    inference_type: Optional[str] = "aws_bedrock"
     caii_endpoint: Optional[str] = None
-    topics: Optional[List[str]] = None  # If None, 
+    topics: Optional[List[str]] = None
     doc_paths: Optional[List[str]] = None
     input_path: Optional[List[str]] = None
     input_key: Optional[str] = 'Prompt'
     output_key: Optional[str] = 'Prompt'
     output_value: Optional[str] = 'Completion'
     examples: Optional[List[Example]] = Field(default=None)  # If None, will use default examples
-    example_custom: Optional[List[str]] = None
+    example_custom: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        description="JSON array where each object has the same structure (consistent columns), but the structure itself can be defined flexibly per use case"
+    )
     schema: Optional[str] = None  # Added schema field
     custom_prompt: Optional[str] = None 
     display_name: Optional[str] = None 
     
-        # Optional model parameters with defaults
+    # Optional model parameters with defaults
     model_params: Optional[ModelParameters] = Field(
         default=None,
         description="Low-level model generation parameters"
     )
-
 
 
 
