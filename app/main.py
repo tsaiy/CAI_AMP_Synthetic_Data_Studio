@@ -244,6 +244,8 @@ def get_timeout_for_request(request: Request) -> float:
     # Longer timeouts for job creation endpoints
     if path.endswith("/generate"):
         return 200.0  # 2 minutes for generation
+    elif path.endswith("/freeform"):
+        return 200.0  # 2 minutes for generation
     elif path.endswith("/evaluate"):
         return 200.0  # 2 minutes for evaluation
     elif path.endswith("/export_results"):

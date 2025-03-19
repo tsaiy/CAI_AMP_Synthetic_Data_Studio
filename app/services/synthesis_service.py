@@ -702,13 +702,14 @@ class SynthesisService:
                     # Attempt batch processing
                     prompt = PromptBuilder.build_freeform_prompt(
                         model_id=request.model_id,
+                        use_case=request.use_case,
                         topic=topic,
                         num_questions=batch_size,
                         omit_questions=omit_questions,
                         example_custom=request.example_custom or [],
                         custom_prompt=request.custom_prompt,
                     )
-                    
+                    #print(prompt)
                     batch_items = None
                     try:
                         batch_items = model_handler.generate_response(prompt)
@@ -739,18 +740,18 @@ class SynthesisService:
                                 
                                 # Create a fingerprint of the item to track duplicates
                                 # Choose the first field that might serve as an identifier, or use the whole item
-                                item_fingerprint = None
-                                for potential_key in ["id", "name", "title", "question", "prompt", "key"]:
-                                    if potential_key in item and isinstance(item[potential_key], str):
-                                        item_fingerprint = item[potential_key]
-                                        break
+                                # item_fingerprint = None
+                                # for potential_key in ["id", "name", "title", "question", "prompt", "key"]:
+                                #     if potential_key in item and isinstance(item[potential_key], str):
+                                #         item_fingerprint = item[potential_key]
+                                #         break
                                 
-                                # If no suitable identifier field found, use a hash of the sorted item string representation
-                                if not item_fingerprint:
-                                    item_str = str(sorted([(k, v) for k, v in item.items() if isinstance(v, (str, int, float, bool))]))
-                                    item_fingerprint = str(hash(item_str))
+                                # # If no suitable identifier field found, use a hash of the sorted item string representation
+                                # if not item_fingerprint:
+                                #     item_str = str(sorted([(k, v) for k, v in item.items() if isinstance(v, (str, int, float, bool))]))
+                                #     item_fingerprint = str(hash(item_str))
                                     
-                                omit_questions.append(item_fingerprint)
+                                # omit_questions.append(item_fingerprint)
                             
                         invalid_count = batch_size - len(valid_items)
                         
@@ -758,7 +759,7 @@ class SynthesisService:
                             topic_results.extend(valid_items)
                             topic_output.extend(valid_outputs)
                             questions_remaining -= len(valid_items)
-                            omit_questions = omit_questions[-100:]  # Keep last 100 items
+                            #omit_questions = omit_questions[-100:]  # Keep last 100 items
                             self.logger.info(f"Successfully generated {len(valid_items)} items in batch for topic {topic}")
                         
                         print("invalid_count:", invalid_count, '\n', "batch_size: ", batch_size, '\n', "valid_items: ", len(valid_items))
@@ -779,11 +780,13 @@ class SynthesisService:
                                 # Single item processing
                                 prompt = PromptBuilder.build_freeform_prompt(
                                     model_id=request.model_id,
+                                    use_case=request.use_case,
                                     topic=topic,
                                     num_questions=1,
                                     omit_questions=omit_questions,
                                     example_custom=request.example_custom or [],
                                     custom_prompt=request.custom_prompt,
+                                    schema=request.schema,
                                 )
                                 
                                 try:
@@ -809,19 +812,19 @@ class SynthesisService:
                                         
                                         # Create a fingerprint of the item to track duplicates
                                         # Choose the first field that might serve as an identifier, or use the whole item
-                                        item_fingerprint = None
-                                        for potential_key in ["id", "name", "title", "question", "prompt", "key"]:
-                                            if potential_key in item and isinstance(item[potential_key], str):
-                                                item_fingerprint = item[potential_key]
-                                                break
+                                        # item_fingerprint = None
+                                        # for potential_key in ["id", "name", "title", "question", "prompt", "key"]:
+                                        #     if potential_key in item and isinstance(item[potential_key], str):
+                                        #         item_fingerprint = item[potential_key]
+                                        #         break
                                         
-                                        # If no suitable identifier field found, use a hash of the sorted item string representation
-                                        if not item_fingerprint:
-                                            item_str = str(sorted([(k, v) for k, v in item.items() if isinstance(v, (str, int, float, bool))]))
-                                            item_fingerprint = str(hash(item_str))
+                                        # # If no suitable identifier field found, use a hash of the sorted item string representation
+                                        # if not item_fingerprint:
+                                        #     item_str = str(sorted([(k, v) for k, v in item.items() if isinstance(v, (str, int, float, bool))]))
+                                        #     item_fingerprint = str(hash(item_str))
                                             
-                                        omit_questions.append(item_fingerprint)
-                                        omit_questions = omit_questions[-100:]
+                                        # omit_questions.append(item_fingerprint)
+                                        # omit_questions = omit_questions[-100:]
                                         
                                         questions_remaining -= 1
                                         self.logger.info(f"Successfully generated single item for topic {topic}")
@@ -983,8 +986,9 @@ class SynthesisService:
                 
             output_path['local'] = file_path
             
-            # Prepare metadata
-            custom_prompt_str =  request.custom_prompt
+            
+            # Handle custom prompt, examples and schema
+            custom_prompt_str = PromptHandler.get_default_custom_prompt(request.use_case, request.custom_prompt)
             
             # For examples
             examples_value = request.example_custom if hasattr(request, 'example_custom') else None
@@ -997,6 +1001,14 @@ class SynthesisService:
             # For doc_paths and input_path
             doc_paths_str = self.safe_json_dumps(getattr(request, 'doc_paths', None))
             input_path_str = self.safe_json_dumps(getattr(request, 'input_path', None))
+
+             # For schema
+            schema_value = (
+                PromptHandler.get_default_schema(request.use_case, request.schema)
+                if hasattr(request, 'schema') 
+                else None
+            )
+            schema_str = self.safe_json_dumps(schema_value)
         
             metadata = {
                 'timestamp': timestamp,
@@ -1014,7 +1026,7 @@ class SynthesisService:
                 'topics': topic_str,
                 'examples': examples_str,
                 "total_count": total_count,
-                'schema': None,
+                'schema': schema_str,
                 'doc_paths': doc_paths_str,
                 'input_path': input_path_str,
                 'input_key': request.input_key,
