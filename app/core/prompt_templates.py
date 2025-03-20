@@ -649,7 +649,9 @@ class ModelPrompts:
         else:
             # Join the questions list with newlines and bullet points
             formatted_questions = " | ".join(omit_questions)
-            omit_prompt =  "Make it absolutely sure that you don't include questions mentioned in below list as we already have question pair solutions for them. \n\n"+ formatted_questions
+            omit_prompt =  """Following is the list of corresponding values for given fields you have already created, 
+            For each item you generate, verify it's distinct from others in the current list by comparing key field.Create NEW items that are substantially different.
+            """+  "\n"+ formatted_questions
         if examples_str:
             json_instruction = f"""Output MUST be a JSON array with objects in this exact format as described in instructions:
                     

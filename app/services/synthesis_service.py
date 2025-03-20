@@ -738,20 +738,29 @@ class SynthesisService:
                                 output_item.update(item)
                                 valid_outputs.append(output_item)
                                 
-                                # Create a fingerprint of the item to track duplicates
-                                # Choose the first field that might serve as an identifier, or use the whole item
-                                # item_fingerprint = None
-                                # for potential_key in ["id", "name", "title", "question", "prompt", "key"]:
-                                #     if potential_key in item and isinstance(item[potential_key], str):
-                                #         item_fingerprint = item[potential_key]
-                                #         break
+                                # Initialize item_identifier variable
+                                item_identifier = None 
+                                    # First try the specific potential keys
+                                for potential_key in ["id", "name", "title", "question", "prompt", "key"]:
+                                    if potential_key in item and isinstance(item[potential_key], str):
+                                        #item_identifier = item[potential_key]
+                                        item_identifier = f"{potential_key} : {item[potential_key]} "
+                                        break
                                 
-                                # # If no suitable identifier field found, use a hash of the sorted item string representation
-                                # if not item_fingerprint:
-                                #     item_str = str(sorted([(k, v) for k, v in item.items() if isinstance(v, (str, int, float, bool))]))
-                                #     item_fingerprint = str(hash(item_str))
-                                    
-                                # omit_questions.append(item_fingerprint)
+                                # If no suitable identifier found among preferred keys, look for any string value
+                                if not item_identifier:
+                                    for key, value in item.items():
+                                        if isinstance(value, str) and value.strip():  # Check for non-empty string
+                                            #item_identifier = value
+                                            item_identifier = f"{key} : {value} "
+                                            break
+                                
+                                # If still no string value found, use a blank string
+                                if not item_identifier:
+                                    item_identifier = ""
+                                        
+                                omit_questions.append(item_identifier)
+                        #print("topic :", topic, '\n',omit_questions)        
                             
                         invalid_count = batch_size - len(valid_items)
                         
@@ -759,7 +768,7 @@ class SynthesisService:
                             topic_results.extend(valid_items)
                             topic_output.extend(valid_outputs)
                             questions_remaining -= len(valid_items)
-                            #omit_questions = omit_questions[-100:]  # Keep last 100 items
+                            omit_questions = omit_questions[-100:]  # Keep last 100 items
                             self.logger.info(f"Successfully generated {len(valid_items)} items in batch for topic {topic}")
                         
                         print("invalid_count:", invalid_count, '\n', "batch_size: ", batch_size, '\n', "valid_items: ", len(valid_items))
@@ -810,21 +819,29 @@ class SynthesisService:
                                         topic_results.append(item)
                                         topic_output.append(output_item)
                                         
-                                        # Create a fingerprint of the item to track duplicates
-                                        # Choose the first field that might serve as an identifier, or use the whole item
-                                        # item_fingerprint = None
-                                        # for potential_key in ["id", "name", "title", "question", "prompt", "key"]:
-                                        #     if potential_key in item and isinstance(item[potential_key], str):
-                                        #         item_fingerprint = item[potential_key]
-                                        #         break
+                                        # Initialize item_identifier variable
+                                        item_identifier = None 
+                                       # First try the specific potential keys
+                                        for potential_key in ["id", "name", "title", "question", "prompt", "key"]:
+                                            if potential_key in item and isinstance(item[potential_key], str):
+                                                #item_identifier = item[potential_key]
+                                                item_identifier = f"{potential_key} : {item[potential_key]} "
+                                                break
                                         
-                                        # # If no suitable identifier field found, use a hash of the sorted item string representation
-                                        # if not item_fingerprint:
-                                        #     item_str = str(sorted([(k, v) for k, v in item.items() if isinstance(v, (str, int, float, bool))]))
-                                        #     item_fingerprint = str(hash(item_str))
-                                            
-                                        # omit_questions.append(item_fingerprint)
-                                        # omit_questions = omit_questions[-100:]
+                                        # If no suitable identifier found among preferred keys, look for any string value
+                                        if not item_identifier:
+                                            for key, value in item.items():
+                                                if isinstance(value, str) and value.strip():  # Check for non-empty string
+                                                    #item_identifier = value
+                                                    item_identifier = f"{key} : {value} "
+                                                    break
+                                        
+                                        # If still no string value found, use a blank string
+                                        if not item_identifier:
+                                            item_identifier = ""
+                                                
+                                        omit_questions.append(item_identifier)
+                                        omit_questions = omit_questions[-100:]
                                         
                                         questions_remaining -= 1
                                         self.logger.info(f"Successfully generated single item for topic {topic}")
@@ -844,7 +861,7 @@ class SynthesisService:
                                 error_msg = f"Error in single processing for topic {topic}: {str(e)}"
                                 self.logger.error(error_msg)
                                 topic_errors.append(error_msg)
-                                continue
+                                raise
                                 
                 except ModelHandlerError:
                     # Re-raise ModelHandlerError to propagate up
@@ -853,7 +870,7 @@ class SynthesisService:
                     error_msg = f"Error processing batch for topic {topic}: {str(e)}"
                     self.logger.error(error_msg)
                     topic_errors.append(error_msg)
-                    continue
+                    raise
                     
         except ModelHandlerError:
             # Re-raise ModelHandlerError to propagate up
@@ -862,6 +879,7 @@ class SynthesisService:
             error_msg = f"Critical error processing topic {topic}: {str(e)}"
             self.logger.error(error_msg)
             topic_errors.append(error_msg)
+            raise
             
         return topic, topic_results, topic_errors, topic_output
 
