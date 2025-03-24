@@ -126,7 +126,7 @@ class SynthesisService:
                         schema=request.schema,
                         custom_prompt=request.custom_prompt,
                     )
-                    #print("prompt :", prompt)
+                    print("prompt :", prompt)
                     batch_qa_pairs = None
                     try:
                         batch_qa_pairs = model_handler.generate_response(prompt)
@@ -710,7 +710,7 @@ class SynthesisService:
                         example_path=request.example_path,
                         custom_prompt=request.custom_prompt,
                     )
-                    #print(prompt)
+                    print(prompt)
                     batch_items = None
                     try:
                         batch_items = model_handler.generate_response(prompt)

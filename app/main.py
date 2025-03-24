@@ -868,6 +868,14 @@ async def customise_prompt(use_case: UseCase):
         return PromptHandler.get_default_custom_prompt(use_case,custom_prompt=None)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/{use_case}/gen_freeform_prompt")
+async def customise_prompt(use_case: UseCase):
+    """Allow users to customize prompt. Only part of the prompt which can be customized"""
+    try:
+        return PromptHandler.get_freeform_default_custom_prompt(use_case, custom_prompt=None)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/{use_case}/eval_prompt")
 async def customise_prompt(use_case: UseCase):
