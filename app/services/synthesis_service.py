@@ -707,6 +707,7 @@ class SynthesisService:
                         num_questions=batch_size,
                         omit_questions=omit_questions,
                         example_custom=request.example_custom or [],
+                        example_path=request.example_path,
                         custom_prompt=request.custom_prompt,
                     )
                     #print(prompt)
@@ -1009,8 +1010,13 @@ class SynthesisService:
             custom_prompt_str = PromptHandler.get_default_custom_prompt(request.use_case, request.custom_prompt)
             
             # For examples
-            examples_value = request.example_custom if hasattr(request, 'example_custom') else None
-            examples_str = self.safe_json_dumps(examples_value)
+            if request.example_path:
+                with open(request.example_path, 'r') as f:
+                    example_upload = json.load(f)
+                    examples_str = json.dumps(example_upload, indent=2)
+            else:
+                examples_value = request.example_custom if hasattr(request, 'example_custom') else None
+                examples_str = self.safe_json_dumps(examples_value)
 
             # For topics
             topics_value = topics if not getattr(request, 'doc_paths', None) else None

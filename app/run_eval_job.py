@@ -27,11 +27,21 @@ if os.getenv("IS_COMPOSABLE"):
 
 # # Run installation check at start
 # check_and_install_requirements()
+# Get the current notebook's directory
+notebook_dir = os.getcwd()
 
-import sys
-venv_path = os.path.join(os.path.dirname(os.path.abspath('')), '.venv/lib/python3.x/site-packages')
-if venv_path not in sys.path:
+# Detect the Python version dynamically
+python_version = f"python{sys.version_info.major}.{sys.version_info.minor}"
+
+# Path for Linux virtual environment structure
+venv_path = os.path.join(notebook_dir, '.venv', 'lib', python_version, 'site-packages')
+
+# Add to path if not already there and if it exists
+if os.path.exists(venv_path) and venv_path not in sys.path:
     sys.path.insert(0, venv_path)
+    print(f"Added virtual environment path: {venv_path}")
+else:
+    print(f"Virtual environment path not found: {venv_path}")
 
 
 import sys

@@ -707,18 +707,25 @@ class ModelPrompts:
        num_questions: int,
         omit_questions: List,
         example_custom: List[Dict[str, Any]],
+        example_path: Optional[str],
        custom_prompt = Optional[str],
        schema = Optional[str]
     ) -> str:
         
-        if example_custom:
-            examples_str = json.dumps(example_custom, indent=2)
+        if example_path:
+            with open(example_path, 'r') as f:
+                example_upload = json.load(f)
+                examples_str = json.dumps(example_upload, indent=2)
         
         else:
-            if use_case == UseCase.CODE_GENERATION or use_case == UseCase.TEXT2SQL:
-                examples_str = json.dumps(USE_CASE_CONFIGS[use_case].default_examples)
+            if example_custom:
+                examples_str = json.dumps(example_custom, indent=2)
+        
             else:
-                examples_str = None        
+                if use_case == UseCase.CODE_GENERATION or use_case == UseCase.TEXT2SQL:
+                    examples_str = json.dumps(USE_CASE_CONFIGS[use_case].default_examples)
+                else:
+                    examples_str = None        
         custom_prompt_default = PromptHandler.get_freeform_default_custom_prompt(use_case, custom_prompt)
         schema_str = PromptHandler.get_default_schema(use_case, schema)
         if use_case ==UseCase.TEXT2SQL:
@@ -868,16 +875,18 @@ class PromptBuilder:
         num_questions: int,
         omit_questions: List,
         example_custom: List[Dict[str, Any]],
+        example_path: Optional[str],
         custom_prompt = Optional[str]
     ) -> str:
         
-        return ModelPrompts.get_freeform_prompt(model_id,use_case, topic, num_questions, omit_questions, example_custom, custom_prompt)
+        return ModelPrompts.get_freeform_prompt(model_id,use_case, topic, num_questions, omit_questions, example_custom, example_path,custom_prompt)
     
     @staticmethod
     def build_freeform_eval_prompt(model_id: str,
         use_case: UseCase,
         row: Dict[str, Any],
         examples: List[Example_eval],
+        example_path: Optional[str],
         custom_prompt = Optional[str]
     ) -> str:
         

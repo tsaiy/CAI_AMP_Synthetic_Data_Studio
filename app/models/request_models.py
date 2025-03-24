@@ -131,6 +131,7 @@ class SynthesisRequest(BaseModel):
         default=None,
         description="JSON array where each object has the same structure (consistent columns), but the structure itself can be defined flexibly per use case"
     )
+    example_path: Optional[str] = None
     schema: Optional[str] = None  # Added schema field
     custom_prompt: Optional[str] = None 
     display_name: Optional[str] = None 
