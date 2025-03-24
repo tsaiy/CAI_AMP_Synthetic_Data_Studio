@@ -43,7 +43,7 @@ from app.core.config import UseCase, USE_CASE_CONFIGS
 from app.core.database import DatabaseManager
 from app.core.exceptions import APIError, InvalidModelError, ModelHandlerError
 from app.services.model_alignment import ModelAlignment
-from app.core.model_handlers import create_handler
+from app.core.model_handlers import create_handler, UnifiedModelHandler
 from app.services.aws_bedrock import get_bedrock_client
 from app.migrations.alembic_manager import AlembicMigrationManager
 from app.core.config import responses, caii_check
@@ -457,6 +457,32 @@ async def evaluate_examples(request: EvaluationRequest):
     
     else:
         return synthesis_job.evaluate_job(request)
+    
+@app.post("/synthesis/evaluate_freeform", 
+    include_in_schema=True,
+    responses=responses,
+    description="Evaluate data rows")
+async def evaluate_freeform(request: EvaluationRequest):
+    """Evaluate data rows"""
+    if request.inference_type == "CAII":
+        caii_endpoint = request.caii_endpoint
+        response = caii_check(caii_endpoint)
+        message = "The CAII endpoint you are trying to reach is downscaled, please try after >15 minutes while it autoscales, meanwhile please try another model"
+        if response.status_code != 200:
+            return JSONResponse(
+                status_code=503,  # Service Unavailable
+                content={"status": "failed", "error": message}
+            )
+   
+    is_demo = getattr(request, 'is_demo', True)
+    if is_demo:
+        return evaluator_service.evaluate_row_data(request)
+    else:
+        request_dict = request.model_dump()
+        request_dict['generation_type'] = 'freeform'
+        # Convert back to SynthesisRequest object
+        freeform_request = EvaluationRequest(**request_dict)
+        return synthesis_job.evaluate_job(freeform_request)
 
 
 @app.post("/model/alignment",
@@ -632,6 +658,8 @@ async def get_model_id():
 
         return {"models": models}
     
+
+    
     except client_s.exceptions.ValidationException as e:
         print(f"Validation error: {str(e)}")
         raise
@@ -647,6 +675,163 @@ async def get_model_id():
     except Exception as e:
         print(f"Unexpected error occurred: {str(e)}")
         raise
+@app.get("/model/model_id_filter", include_in_schema=True)
+async def get_model_id_filtered():
+    """
+    Get available models with health check, with results bifurcated into enabled and disabled lists.
+    Returns filtered model IDs categorized by their health/availability status.
+    """
+    region = os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION"))
+    new_target_region = "us-west-2"
+    retry_config = Config(
+        region_name=new_target_region,
+        retries={
+            "max_attempts": 2,
+            "mode": "standard",
+        },
+    )
+
+    try:
+        # Create Bedrock clients for listing and runtime checks
+        bedrock_client = boto3.client(service_name="bedrock", region_name=region, config=retry_config)
+        bedrock_runtime = boto3.client(service_name="bedrock-runtime", region_name=region, config=retry_config)
+        
+        # Get foundation models
+        response = bedrock_client.list_foundation_models()
+        all_models = response['modelSummaries']
+
+        mod_list = [m['modelId']
+            for m in all_models 
+            if 'ON_DEMAND' in m['inferenceTypesSupported'] 
+            and 'TEXT' in m['inputModalities'] 
+            and 'TEXT' in m['outputModalities']
+            and m['providerName'] in ['Anthropic', 'Meta', 'Mistral AI']]
+        
+        # Get inference profiles with comprehensive error handling
+        try:
+            inference_models = bedrock_client.list_inference_profiles()
+            inference_mod_list = []
+            if 'inferenceProfileSummaries' in inference_models:
+                inference_mod_list = [
+                    m['inferenceProfileId'] 
+                    for m in inference_models['inferenceProfileSummaries']
+                    if any(provider in m['inferenceProfileId'].lower() 
+                        for provider in ['meta', 'anthropic', 'mistral'])
+                ]
+        except (
+            bedrock_client.exceptions.ResourceNotFoundException,
+            bedrock_client.exceptions.ValidationException,
+            bedrock_client.exceptions.AccessDeniedException,
+            bedrock_client.exceptions.ThrottlingException,
+            bedrock_client.exceptions.InternalServerException
+        ) as e:
+            print(f"Error retrieving inference profiles: {str(e)}")
+            inference_mod_list = []
+        
+        # Combine and sort the lists
+        bedrock_list = sort_unique_models(inference_mod_list + mod_list)
+        
+        # Perform health checks in parallel
+        import asyncio
+        from app.models.request_models import ModelParameters
+        
+        # Define async function for checking a single model
+        async def check_model_health(model_id):
+            try:
+                # Create minimal model parameters for health check
+                minimal_params = ModelParameters(
+                    max_tokens=10,
+                    temperature=0,
+                    top_p=1,
+                    top_k=1
+                )
+                
+                # Check model health with a simple prompt
+                test_handler = UnifiedModelHandler(
+                    model_id=model_id,
+                    bedrock_client=bedrock_runtime,
+                    model_params=minimal_params
+                )
+                
+                # Use a lightweight health check prompt
+                health_check_prompt = "Return HEALTHY if you can process this message."
+                
+                try:
+                    # Create a task with timeout to avoid hanging on slow models
+                    response = await asyncio.wait_for(
+                        asyncio.to_thread(test_handler.generate_response, health_check_prompt, False),
+                        timeout=5.0  # 5 second timeout
+                    )
+                    
+                    # If we reach here, the model is considered healthy
+                    return (model_id, True)
+                    
+                except (asyncio.TimeoutError, Exception) as e:
+                    print(f"Health check failed for {model_id}: {str(e)}")
+                    return (model_id, False)
+                
+            except Exception as e:
+                print(f"Model {model_id} health check failed: {str(e)}")
+                return (model_id, False)
+        
+        # Run all health checks in parallel with concurrency limit
+        # Using a semaphore to limit concurrent requests and avoid overwhelming the API
+        sem = asyncio.Semaphore(10)  # Allow up to 10 concurrent requests
+        
+        async def bounded_check(model_id):
+            async with sem:
+                return await check_model_health(model_id)
+        
+        # Launch all tasks and wait for them to complete
+        tasks = [bounded_check(model_id) for model_id in bedrock_list]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Process results
+        enabled_models = []
+        disabled_models = []
+        
+        for result in results:
+            if isinstance(result, tuple) and len(result) == 2:
+                model_id, is_healthy = result
+                if is_healthy:
+                    enabled_models.append(model_id)
+                else:
+                    disabled_models.append(model_id)
+            else:
+                # Handle case where the task itself raised an exception
+                print(f"Health check task failed with exception: {result}")
+                # We don't have the model_id in this case, but that's ok since
+                # all models are already in bedrock_list
+        
+        # Create the response structure with bifurcated lists
+        models = {
+            "aws_bedrock": {
+                "enabled": enabled_models,
+                "disabled": disabled_models
+            },
+            "CAII": {
+                "enabled": ['meta/llama-3_1-8b-instruct', 'mistralai/mistral-7b-instruct-v0.3'],
+                
+            }
+        }
+
+        return {"models": models}
+    
+    except Exception as e:
+        print(f"Unexpected error in model filter endpoint: {str(e)}")
+        # Return empty structure in case of failure
+        return {
+            "models": {
+                "aws_bedrock": {
+                    "enabled": [],
+                    "disabled": bedrock_list if 'bedrock_list' in locals() else []
+                },
+                "CAII": {
+                    "enabled": ['meta/llama-3_1-8b-instruct', 'mistralai/mistral-7b-instruct-v0.3']
+                    
+                }
+            }
+        }
 
 @app.get("/use-cases", include_in_schema=True)
 async def get_use_cases():

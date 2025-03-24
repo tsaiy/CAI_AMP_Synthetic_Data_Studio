@@ -8,29 +8,31 @@ import traceback
 if os.getenv("IS_COMPOSABLE"):
     os.chdir("/home/cdsw/synthetic-data-studio")
 
-def check_and_install_requirements():
-    """Check and install requirements from requirements.txt"""
-    # Get the current working directory instead of using __file__
-    current_dir = os.getcwd()
-    requirements_path = os.path.join(current_dir, 'requirements.txt')
+# def check_and_install_requirements():
+#     """Check and install requirements from requirements.txt"""
+#     # Get the current working directory instead of using __file__
+#     current_dir = os.getcwd()
+#     requirements_path = os.path.join(current_dir, 'requirements.txt')
     
-    if os.path.exists(requirements_path):
-        try:
-            print(f"Installing requirements from: {requirements_path}")
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', requirements_path])
-        except subprocess.CalledProcessError as e:
-            print(f"Error installing requirements: {e}")
-            sys.exit(1)
-    else:
-        print("No requirements.txt found, continuing with existing packages")
+#     if os.path.exists(requirements_path):
+#         try:
+#             print(f"Installing requirements from: {requirements_path}")
+#             subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', requirements_path])
+#         except subprocess.CalledProcessError as e:
+#             print(f"Error installing requirements: {e}")
+#             sys.exit(1)
+#     else:
+#         print("No requirements.txt found, continuing with existing packages")
 
-# import sys
-# venv_path = os.path.join(os.path.dirname(os.path.abspath('')), '.venv/lib/python3.x/site-packages')
-# if venv_path not in sys.path:
-#     sys.path.insert(0, venv_path)
 
-# Run installation check at start
-check_and_install_requirements()
+# # Run installation check at start
+# check_and_install_requirements()
+
+import sys
+venv_path = os.path.join(os.path.dirname(os.path.abspath('')), '.venv/lib/python3.x/site-packages')
+if venv_path not in sys.path:
+    sys.path.insert(0, venv_path)
+
 
 import json
 from app.models.request_models import SynthesisRequest
