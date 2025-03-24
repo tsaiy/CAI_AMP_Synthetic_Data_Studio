@@ -2,6 +2,7 @@ import boto3
 import json
 import uuid
 import time
+import csv
 from typing import List, Dict, Optional, Tuple
 import uuid
 from datetime import datetime, timezone
@@ -1011,9 +1012,20 @@ class SynthesisService:
             
             # For examples
             if request.example_path:
+                file_extension = os.path.splitext(request.example_path)[1].lower()
+    
                 with open(request.example_path, 'r') as f:
-                    example_upload = json.load(f)
-                    examples_str = json.dumps(example_upload, indent=2)
+                    if file_extension == '.json':
+                        # Handle JSON files
+                        example_upload = json.load(f)
+                        examples_str = json.dumps(example_upload, indent=2)
+                    elif file_extension == '.csv':
+                        # Handle CSV files
+                        csv_reader = csv.DictReader(f)
+                        example_upload = list(csv_reader)
+                        examples_str = json.dumps(example_upload, indent=2)  # Convert CSV data to JSON string format
+                    else:
+                        raise ValueError(f"Unsupported file extension: {file_extension}. Only .json and .csv are supported.")
             else:
                 examples_value = request.example_custom if hasattr(request, 'example_custom') else None
                 examples_str = self.safe_json_dumps(examples_value)

@@ -1,5 +1,7 @@
 from typing import List, Dict, Optional, Any, Union
 import json
+import csv
+import os
 from app.models.request_models import Example, Example_eval
 from app.core.config import UseCase, Technique, ModelFamily, get_model_family,USE_CASE_CONFIGS
 
@@ -713,10 +715,21 @@ class ModelPrompts:
     ) -> str:
         
         if example_path:
+            file_extension = os.path.splitext(example_path)[1].lower()
+    
             with open(example_path, 'r') as f:
-                example_upload = json.load(f)
-                examples_str = json.dumps(example_upload, indent=2)
-        
+                if file_extension == '.json':
+                    # Handle JSON files
+                    example_upload = json.load(f)
+                    examples_str = json.dumps(example_upload, indent=2)
+                elif file_extension == '.csv':
+                    # Handle CSV files
+                    csv_reader = csv.DictReader(f)
+                    example_upload = list(csv_reader)
+                    examples_str = json.dumps(example_upload, indent=2)  # Convert CSV data to JSON string format
+                else:
+                    raise ValueError(f"Unsupported file extension: {file_extension}. Only .json and .csv are supported.")
+                
         else:
             if example_custom:
                 examples_str = json.dumps(example_custom, indent=2)
