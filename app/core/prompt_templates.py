@@ -899,7 +899,7 @@ class PromptBuilder:
         use_case: UseCase,
         row: Dict[str, Any],
         examples: List[Example_eval],
-        example_path: Optional[str],
+        
         custom_prompt = Optional[str]
     ) -> str:
         
