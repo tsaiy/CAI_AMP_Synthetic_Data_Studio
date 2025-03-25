@@ -889,10 +889,11 @@ class PromptBuilder:
         omit_questions: List,
         example_custom: List[Dict[str, Any]],
         example_path: Optional[str],
-        custom_prompt = Optional[str]
+        custom_prompt = Optional[str],
+        schema = Optional[str]
     ) -> str:
         
-        return ModelPrompts.get_freeform_prompt(model_id,use_case, topic, num_questions, omit_questions, example_custom, example_path,custom_prompt)
+        return ModelPrompts.get_freeform_prompt(model_id,use_case, topic, num_questions, omit_questions, example_custom, example_path,custom_prompt, schema)
     
     @staticmethod
     def build_freeform_eval_prompt(model_id: str,

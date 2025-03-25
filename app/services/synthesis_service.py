@@ -710,6 +710,7 @@ class SynthesisService:
                         example_custom=request.example_custom or [],
                         example_path=request.example_path,
                         custom_prompt=request.custom_prompt,
+                        schema=request.schema,
                     )
                     print(prompt)
                     batch_items = None
@@ -790,14 +791,15 @@ class SynthesisService:
                             try:
                                 # Single item processing
                                 prompt = PromptBuilder.build_freeform_prompt(
-                                    model_id=request.model_id,
-                                    use_case=request.use_case,
-                                    topic=topic,
-                                    num_questions=1,
-                                    omit_questions=omit_questions,
-                                    example_custom=request.example_custom or [],
-                                    custom_prompt=request.custom_prompt,
-                                    schema=request.schema,
+                                     model_id=request.model_id,
+                                        use_case=request.use_case,
+                                        topic=topic,
+                                        num_questions=batch_size,
+                                        omit_questions=omit_questions,
+                                        example_custom=request.example_custom or [],
+                                        example_path=request.example_path,
+                                        custom_prompt=request.custom_prompt,
+                                        schema=request.schema,
                                 )
                                 
                                 try:
