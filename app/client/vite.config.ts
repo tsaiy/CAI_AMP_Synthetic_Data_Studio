@@ -24,5 +24,5 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
       globals: true
     }
-  };
+ };
 });

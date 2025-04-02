@@ -25,4 +25,4 @@ def test_invalid_model_error():
     mock_bedrock_client.converse.side_effect = ClientError(error_response, 'ConvokeModel')
     handler = UnifiedModelHandler("invalid.model", bedrock_client=mock_bedrock_client)
     with pytest.raises(InvalidModelError):
-        handler.generate_response("test")
+        handler.generate_response("test", request_id="test_id")

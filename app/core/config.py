@@ -162,13 +162,13 @@ MODEL_CONFIGS = {
 }
 
 def get_model_family(model_id: str) -> ModelFamily:
-    if model_id.startswith("anthropic.claude") or model_id.startswith("us.anthropic.claude"):
+    if "anthropic.claude" in model_id or "us.anthropic.claude" in model_id:
         return ModelFamily.CLAUDE
-    elif model_id.startswith("meta.llama") or model_id.startswith("us.meta.llama") or model_id.startswith("meta/llama"):
+    elif "meta.llama" in model_id or "us.meta.llama" in model_id or "meta/llama" in model_id:
         return ModelFamily.LLAMA
-    elif model_id.startswith("mistral") or model_id.startswith("mistralai/"):
+    elif "mistral" in model_id or "mistralai/" in model_id:
         return ModelFamily.MISTRAL
-    elif model_id.startswith('Qwen') or model_id.startswith('qwen'):
+    elif 'Qwen' in model_id or 'qwen' in model_id:
         return ModelFamily.QWEN
     else:
         model_name = model_id.split('/')[-1] if '/' in model_id else model_id

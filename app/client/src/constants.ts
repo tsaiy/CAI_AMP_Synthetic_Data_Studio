@@ -10,6 +10,7 @@ export const LABELS = {
     [Pages.DATASETS]: 'Datasets',
     [Pages.HISTORY]: 'History',
     [Pages.FEEDBACK]: 'Feedback',
+    //[Pages.TELEMETRY]: 'Telemetry',
     [ModelParameters.TEMPERATURE]: 'Temperature',
     [ModelParameters.TOP_K]: 'Top K',
     [ModelParameters.TOP_P]: 'Top P',

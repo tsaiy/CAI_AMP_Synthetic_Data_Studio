@@ -1,4 +1,4 @@
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any, Union
 import os
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from enum import Enum
@@ -31,7 +31,7 @@ class Example(BaseModel):
 
 class Example_eval(BaseModel):
     """Structure for QA examples"""
-    score: int
+    score: float
     justification: str
     
     model_config = ConfigDict(protected_namespaces=(),
@@ -115,73 +115,32 @@ class SynthesisRequest(BaseModel):
     model_id: str
     num_questions: int | None = Field(default=1, gt=0)  # Optional with default=1
     technique: Technique | None = Field(default=Technique.SFT)  # Optional with default=SFT
-    is_demo:bool = True
+    is_demo: bool = True
     
     # Optional fields that can override defaults
-    inference_type :Optional[str] = "aws_bedrock"
+    inference_type: Optional[str] = "aws_bedrock"
     caii_endpoint: Optional[str] = None
-    topics: Optional[List[str]] = None  # If None, 
+    topics: Optional[List[str]] = None
     doc_paths: Optional[List[str]] = None
     input_path: Optional[List[str]] = None
     input_key: Optional[str] = 'Prompt'
     output_key: Optional[str] = 'Prompt'
     output_value: Optional[str] = 'Completion'
     examples: Optional[List[Example]] = Field(default=None)  # If None, will use default examples
-    example_custom: Optional[List[str]] = None
+    example_custom: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        description="JSON array where each object has the same structure (consistent columns), but the structure itself can be defined flexibly per use case"
+    )
+    example_path: Optional[str] = None
     schema: Optional[str] = None  # Added schema field
     custom_prompt: Optional[str] = None 
     display_name: Optional[str] = None 
     
-        # Optional model parameters with defaults
+    # Optional model parameters with defaults
     model_params: Optional[ModelParameters] = Field(
         default=None,
         description="Low-level model generation parameters"
     )
-
-
-
-
-    # @field_validator('schema', mode='before')
-    # @classmethod
-    # def validate_schema(cls, v: Optional[str], info) -> Optional[str]:
-    #     use_case = info.data.get('use_case')
-    #     if use_case == UseCase.TEXT2SQL:
-    #         # Use provided schema or default from config
-    #         return v or USE_CASE_CONFIGS[UseCase.TEXT2SQL].schema
-    #     return None  # No schema for other use cases
-
-    # @field_validator('topics', mode='before')
-    # @classmethod
-    # def validate_topics(cls, v: Optional[List[str]], info) -> List[str]:
-    #     if v is None:
-    #         # If no topics provided, use defaults
-    #         use_case_str = info.data.get('use_case')
-    #         use_case = UseCase(use_case_str)
-    #         if use_case:
-    #             return list(USE_CASE_CONFIGS[use_case].topics.keys())
-    #         return []
-        
-    #     return v
-
-    # @field_validator('examples', mode='before')
-    # @classmethod
-    # def validate_examples(cls, v: Optional[List[Example]], info) -> List[Example]:
-    #     if v is None:
-    #         # If no examples provided, use defaults
-    #         use_case_str = info.data.get('use_case')
-    #         use_case = UseCase(use_case_str)
-    #         if use_case:
-    #             print(use_case)
-    #             print(USE_CASE_CONFIGS[use_case].default_examples)
-    #             print("say hi-2")
-    #             return [
-    #                 Example(**example)
-    #                 for example in USE_CASE_CONFIGS[use_case].default_examples
-    #             ]
-    #         print("say hi-1")
-    #         return []
-    #     print("say hi")
-    #     return v
 
     model_config = ConfigDict(protected_namespaces=(),
         json_schema_extra={

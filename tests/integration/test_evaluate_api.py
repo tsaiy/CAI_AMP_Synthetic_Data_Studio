@@ -95,14 +95,19 @@ def test_evaluate_with_invalid_model(mock_qa_file):
         "output_key": "Prompt",
         "output_value": "Completion"
     }
-    # Patch create_handler so that it raises a ModelHandlerError for an invalid model.
+    
     from app.core.exceptions import ModelHandlerError
-    def dummy_handler(prompt):
-        raise ModelHandlerError("Invalid model identifier: invalid.model")
-    with patch('app.services.evaluator_service.create_handler') as mock_handler:
-        mock_handler.return_value.generate_response.side_effect = dummy_handler
+    
+    # Patch create_handler to raise ModelHandlerError
+    with patch('app.services.evaluator_service.create_handler') as mock_create:
+        mock_create.side_effect = ModelHandlerError("Invalid model identifier: invalid.model")
         response = client.post("/synthesis/evaluate", json=request_data)
-    # Expect a 400 (or similar) error response.
+        
+    # Print for debugging
+    print(f"Response status: {response.status_code}")
+    print(f"Response content: {response.json()}")
+    
+    # Expect a 400 or 500 error response
     assert response.status_code in [400, 500]
     res_json = response.json()
     assert "error" in res_json
