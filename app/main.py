@@ -49,8 +49,8 @@ from app.migrations.alembic_manager import AlembicMigrationManager
 from app.core.config import responses, caii_check
 from app.core.path_manager import PathManager
 
-from app.core.telemetry_middleware import TelemetryMiddleware
-from app.routes.telemetry_routes import router as telemetry_router
+# from app.core.telemetry_middleware import TelemetryMiddleware
+# from app.routes.telemetry_routes import router as telemetry_router
 
 
 
