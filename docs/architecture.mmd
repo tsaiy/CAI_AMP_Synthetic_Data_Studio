@@ -1,0 +1,92 @@
+flowchart TD
+    subgraph Client["USER INTERFACE LAYER"]
+        UI["React Frontend"]
+        TelDash["Telemetry Dashboard"]
+    end
+
+    subgraph ServiceLayer["SERVICE LAYER"]
+        API["FastAPI"] --> SynthSvc["Synthesis Service"]
+        API --> EvalSvc["Evaluator Service"]
+        API --> ExportSvc["Export Service"]
+        API --> TelAPI["Telemetry API"]
+        
+        SynthSvc -- "generates" --> DataSet[(Generated Datasets)]
+        EvalSvc -- "evaluates" --> EvalResult[(Evaluation Results)]
+        ExportSvc -- "exports to" --> Export[(Export Destinations)]
+    end
+
+    subgraph DataLayer["DATA LAYER"]
+        MetaDB[("metadata.db\nApplication Data")]
+        TelDB[("telemetry.db\nMetrics Data")]
+    end
+
+    subgraph Middleware["MIDDLEWARE LAYER"]
+        TelMid["Telemetry Middleware"]
+        ErrHandler["Error Handler"]
+        Timeout["Request Timeout"]
+    end
+
+    subgraph External["EXTERNAL SYSTEMS"]
+        subgraph LLMProviders["LLM PROVIDERS"]
+            AWSBedrock["AWS Bedrock"]
+            CAII["Cloudera AI Inference"]
+        end
+        
+        subgraph Export["EXPORT DESTINATIONS"]
+            Local["Local Storage"]
+            HF["HuggingFace Hub"]
+            S3["AWS S3"]
+        end
+
+        subgraph JobSystem["CML JOB SYSTEM"]
+            SynthJob["Synthesis Jobs"]
+            EvalJob["Evaluation Jobs"]
+            ExportJob["Export Jobs"]
+        end
+    end
+
+    %% UI connections
+    UI -- "API calls" --> API
+    UI -- "displays" --> TelDash
+    TelDash -- "queries" --> TelAPI
+
+    %% Middleware connections
+    API -- "passes through" --> TelMid
+    API -- "passes through" --> ErrHandler
+    API -- "passes through" --> Timeout
+
+    %% Service to DB connections
+    SynthSvc -- "records metadata" --> MetaDB
+    EvalSvc -- "records metadata" --> MetaDB
+    ExportSvc -- "records metadata" --> MetaDB
+    
+    %% Telemetry connections
+    TelMid -- "logs metrics" --> TelDB
+    TelAPI -- "reads metrics" --> TelDB
+    
+    %% External service connections
+    SynthSvc -- "invokes" --> AWSBedrock
+    SynthSvc -- "invokes" --> CAII
+    EvalSvc -- "invokes" --> AWSBedrock
+    EvalSvc -- "invokes" --> CAII
+    
+    %% Job connections
+    SynthSvc -- "delegates" --> SynthJob
+    EvalSvc -- "delegates" --> EvalJob
+    ExportSvc -- "delegates" --> ExportJob
+    
+    %% Export connections
+    ExportSvc -- "exports to" --> Local
+    ExportSvc -- "exports to" --> HF
+    ExportSvc -- "exports to" --> S3
+
+    %% Styling
+    classDef primary fill:#f9f9f9,stroke:#333,stroke-width:3px
+    classDef db fill:#f5f5f5,stroke:#333,stroke-width:2px
+    classDef ext fill:#e6f7ff,stroke:#333,stroke-width:2px
+    classDef label fill:none,stroke:none,color:#333,font-weight:bold
+    classDef heading fill:none,stroke:none,color:#333,font-size:16px,font-weight:bold
+    
+    class Client,ServiceLayer,DataLayer,Middleware primary
+    class MetaDB,TelDB db
+    class External,LLMProviders,Export,JobSystem ext
