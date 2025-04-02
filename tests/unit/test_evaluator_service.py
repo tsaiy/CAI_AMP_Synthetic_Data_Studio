@@ -61,7 +61,7 @@ def test_evaluate_single_pair():
 def test_evaluate_results_with_error():
     fake_json = '[{"Seeds": "python_basics", "Prompt": "What is Python?", "Completion": "Python is a programming language"}]'
     class DummyHandler:
-        def generate_response(self, prompt):
+        def generate_response(self, prompt, **kwargs):  # Accept any keyword arguments
             raise ModelHandlerError("Test error")
     with patch('app.services.evaluator_service.os.path.exists', return_value=True), \
          patch('builtins.open', new=lambda f, mode, *args, **kwargs: StringIO(fake_json)), \
