@@ -102,7 +102,7 @@ class SynthesisJob:
             page_size=1
         ).job_runs[0].creator.name
     
-    @track_job("generate")
+    #@track_job("generate")
     def generate_job(self, request: Any, cpu: int = 2, memory: int = 4, request_id = None) -> Dict[str, str]:
         """Create and run a synthesis generation job"""
         json_str = request.model_dump_json()
@@ -158,7 +158,7 @@ class SynthesisJob:
         self.db_manager.save_generation_metadata(metadata)
         return {"job_name": job_name, "job_id": job_run.job_id}
     
-    @track_job("evaluate")
+    #@track_job("evaluate")
     def evaluate_job(self, request: Any, cpu: int = 2, memory: int = 4, request_id = None) -> Dict[str, str]:
         """Create and run an evaluation job"""
         json_str = request.model_dump_json()
@@ -199,7 +199,7 @@ class SynthesisJob:
         self.db_manager.save_evaluation_metadata(metadata)
         return {"job_name": job_name, "job_id": job_run.job_id}
 
-    @track_job("export")
+    #@track_job("export")
     def export_job(self, request: Any, cpu: int = 2, memory: int = 4) -> Dict[str, str]:
         """Create and run an export job"""
         params = request.model_dump()

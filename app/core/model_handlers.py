@@ -152,7 +152,7 @@ class UnifiedModelHandler:
             return []
 
 
-    @track_llm_operation("generate")
+    #@track_llm_operation("generate")
     def generate_response(self, prompt: str, retry_with_reduced_tokens: bool = True, request_id = None) -> List[Dict[str, str]]:
         if self.inference_type == "aws_bedrock":
             return self._handle_bedrock_request(prompt, retry_with_reduced_tokens)

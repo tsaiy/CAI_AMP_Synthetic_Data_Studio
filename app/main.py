@@ -51,7 +51,7 @@ from app.core.path_manager import PathManager
 
 # from app.core.telemetry_middleware import TelemetryMiddleware
 # from app.routes.telemetry_routes import router as telemetry_router
-
+#from app.core.telemetry import telemetry_manager
 
 
 #****************************************Initialize************************************************
@@ -125,23 +125,23 @@ def get_job_status( job_id: str) -> str:
 
     status = response.job_runs[0].status
 
-    # Add telemetry tracking for completed jobs
-    if status in ["ENGINE_SCHEDULING", "ENGINE_STARTING", "ENGINE_RUNNING", "ENGINE_STOPPING", "ENGINE_STOPPED", "ENGINE_UNKNOWN","ENGINE_SUCCEEDED", "ENGINE_FAILED", "ENGINE_TIMEDOUT"]:
-        # Get metrics_id from database if available
-        metrics_id = db_manager.get_job_telemetry_id(job_id)
-        if metrics_id:
-            from app.core.telemetry_integration import record_job_completion
-            error = None
-            if status == "ENGINE_FAILED":
-                # Try to get error information from logs
-                error = "Job execution failed" 
+    # # Add telemetry tracking for completed jobs
+    # if status in ["ENGINE_SCHEDULING", "ENGINE_STARTING", "ENGINE_RUNNING", "ENGINE_STOPPING", "ENGINE_STOPPED", "ENGINE_UNKNOWN","ENGINE_SUCCEEDED", "ENGINE_FAILED", "ENGINE_TIMEDOUT"]:
+    #     # Get metrics_id from database if available
+    #     metrics_id = telemetry_manager.get_job_telemetry_id(job_id)
+    #     if metrics_id:
+    #         from app.core.telemetry_integration import record_job_completion
+    #         error = None
+    #         if status == "ENGINE_FAILED":
+    #             # Try to get error information from logs
+    #             error = "Job execution failed" 
             
-            record_job_completion(
-                job_id=job_id,
-                metrics_id=metrics_id,
-                status=status,
-                error=error
-            )
+    #         record_job_completion(
+    #             job_id=job_id,
+    #             metrics_id=metrics_id,
+    #             status=status,
+    #             error=error
+    #         )
 
     return status
 
@@ -1433,13 +1433,13 @@ async def perform_upgrade():
 #****** comment below for testing just backend**************
 current_directory = os.path.dirname(os.path.abspath(__file__))
 client_build_path = os.path.join(current_directory, "client", "dist")
-#app.mount("/static", StaticFiles(directory=client_build_path, html=True), name="webapp")
+app.mount("/static", StaticFiles(directory=client_build_path, html=True), name="webapp")
 
-app.mount("/", StaticFiles(directory=client_build_path, html=True), name="webapp")
+#app.mount("/", StaticFiles(directory=client_build_path, html=True), name="webapp")
 
-# @app.get("/")
-# async def serve_index():
-#    return FileResponse(os.path.join(client_build_path, "index.html"))
+@app.get("/")
+async def serve_index():
+   return FileResponse(os.path.join(client_build_path, "index.html"))
 
 @app.get("/{path_name:path}")
 async def serve_react_app(path_name: str):
