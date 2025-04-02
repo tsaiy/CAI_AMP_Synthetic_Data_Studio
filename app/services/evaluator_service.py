@@ -381,7 +381,11 @@ class EvaluatorService:
                     "output_path": output_path
                 }
         except APIError:
-            raise      
+            raise   
+        except ModelHandlerError as e:
+            # Add this specific handler
+            self.logger.error(f"ModelHandlerError in evaluation: {str(e)}")
+            raise APIError(str(e))   
         except Exception as e:
             error_msg = f"Error in evaluation process: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
@@ -665,6 +669,10 @@ class EvaluatorService:
                 }
         except APIError:
             raise      
+        except ModelHandlerError as e:
+            # Add this specific handler
+            self.logger.error(f"ModelHandlerError in evaluation: {str(e)}")
+            raise APIError(str(e))
         except Exception as e:
             error_msg = f"Error in row evaluation process: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
