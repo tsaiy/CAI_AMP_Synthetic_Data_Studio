@@ -8,25 +8,40 @@ if os.getenv("IS_COMPOSABLE"):
     
     os.chdir("/home/cdsw/synthetic-data-studio")
 
-def check_and_install_requirements():
-    """Check and install requirements from requirements.txt"""
-    # Get the current working directory instead of using __file__
-    current_dir = os.getcwd()
-    requirements_path = os.path.join(current_dir, 'requirements.txt')
+# def check_and_install_requirements():
+#     """Check and install requirements from requirements.txt"""
+#     # Get the current working directory instead of using __file__
+#     current_dir = os.getcwd()
+#     requirements_path = os.path.join(current_dir, 'requirements.txt')
     
-    if os.path.exists(requirements_path):
-        try:
-            print(f"Installing requirements from: {requirements_path}")
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', requirements_path])
-        except subprocess.CalledProcessError as e:
-            print(f"Error installing requirements: {e}")
-            sys.exit(1)
-    else:
-        print("No requirements.txt found, continuing with existing packages")
+#     if os.path.exists(requirements_path):
+#         try:
+#             print(f"Installing requirements from: {requirements_path}")
+#             subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', requirements_path])
+#         except subprocess.CalledProcessError as e:
+#             print(f"Error installing requirements: {e}")
+#             sys.exit(1)
+#     else:
+#         print("No requirements.txt found, continuing with existing packages")
 
-# Run installation check at start
-check_and_install_requirements()
+# # Run installation check at start
+# check_and_install_requirements()
 
+# Get the current notebook's directory
+notebook_dir = os.getcwd()
+
+# Detect the Python version dynamically
+python_version = f"python{sys.version_info.major}.{sys.version_info.minor}"
+
+# Path for Linux virtual environment structure
+venv_path = os.path.join(notebook_dir, '.venv', 'lib', python_version, 'site-packages')
+
+# Add to path if not already there and if it exists
+if os.path.exists(venv_path) and venv_path not in sys.path:
+    sys.path.insert(0, venv_path)
+    print(f"Added virtual environment path: {venv_path}")
+else:
+    print(f"Virtual environment path not found: {venv_path}")
 
 
 import sys

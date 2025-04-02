@@ -17,6 +17,8 @@ from app.services.aws_bedrock import get_bedrock_client
 from app.migrations.alembic_manager import AlembicMigrationManager
 from app.core.config import responses, caii_check
 from app.core.path_manager import PathManager
+from app.core.telemetry import telemetry_manager
+from app.core.telemetry_integration import track_job
 import cmlapi
 
 # Initialize services
@@ -49,7 +51,8 @@ class SynthesisJob:
         job_prefix: str,
         params: Dict[str, Any],
         cpu: int,
-        memory: int
+        memory: int,
+        request_id = None
     ) -> tuple:
         """Common job creation and execution logic"""
         script_path = self.path_manager.get_str_path(f"app/{script_name}")
@@ -58,6 +61,7 @@ class SynthesisJob:
         display_name = params.get('display_name', '')
         job_name = f"{display_name}_{random_id}" if display_name else f"{job_prefix}_{random_id}"
         params['job_name'] = job_name
+        params['request_id'] = request_id
         file_name = f"{job_prefix}_args_{random_id}.json"
         
         # Write parameters to file
@@ -97,8 +101,9 @@ class SynthesisJob:
             sort="-created_at",
             page_size=1
         ).job_runs[0].creator.name
-
-    def generate_job(self, request: Any, cpu: int = 2, memory: int = 4) -> Dict[str, str]:
+    
+    #@track_job("generate")
+    def generate_job(self, request: Any, cpu: int = 2, memory: int = 4, request_id = None) -> Dict[str, str]:
         """Create and run a synthesis generation job"""
         json_str = request.model_dump_json()
         params = json.loads(json_str)
@@ -108,7 +113,8 @@ class SynthesisJob:
             "synth_job",
             params,
             cpu=cpu,
-            memory=memory
+            memory=memory,
+            request_id=request_id
         )
 
         # Calculate total count
@@ -151,8 +157,9 @@ class SynthesisJob:
         
         self.db_manager.save_generation_metadata(metadata)
         return {"job_name": job_name, "job_id": job_run.job_id}
-
-    def evaluate_job(self, request: Any, cpu: int = 2, memory: int = 4) -> Dict[str, str]:
+    
+    #@track_job("evaluate")
+    def evaluate_job(self, request: Any, cpu: int = 2, memory: int = 4, request_id = None) -> Dict[str, str]:
         """Create and run an evaluation job"""
         json_str = request.model_dump_json()
         params = json.loads(json_str)
@@ -162,7 +169,8 @@ class SynthesisJob:
             "eval_job",
             params,
             cpu=cpu,
-            memory=memory
+            memory=memory,
+            request_id=request_id
         )
 
         custom_prompt_str = PromptHandler.get_default_custom_eval_prompt(
@@ -191,6 +199,7 @@ class SynthesisJob:
         self.db_manager.save_evaluation_metadata(metadata)
         return {"job_name": job_name, "job_id": job_run.job_id}
 
+    #@track_job("export")
     def export_job(self, request: Any, cpu: int = 2, memory: int = 4) -> Dict[str, str]:
         """Create and run an export job"""
         params = request.model_dump()
@@ -292,3 +301,46 @@ class SynthesisJob:
             page_size=1
         )
         return response.job_runs[0].status
+
+    
+    def get_job_status(self, job_id: str) -> str:
+        """
+        Get the status of a job run
+        
+        Args:
+            job_id (str): The ID of the job to check
+            
+        Returns:
+            str: The status of the most recent job run
+        """
+        response = self.client_cml.list_job_runs(
+            self.project_id, 
+            job_id, 
+            sort="-created_at", 
+            page_size=1
+        )
+
+        status = response.job_runs[0].status
+        try:
+
+            # Add telemetry tracking for completed jobs
+            if status in ["ENGINE_SCHEDULING", "ENGINE_STARTING", "ENGINE_RUNNING", "ENGINE_STOPPING", "ENGINE_STOPPED", "ENGINE_UNKNOWN","ENGINE_SUCCEEDED", "ENGINE_FAILED", "ENGINE_TIMEDOUT"]:
+                # Get metrics_id from database if available
+                metrics_id = telemetry_manager.get_job_telemetry_id(job_id)
+                if metrics_id:
+                    from app.core.telemetry_integration import record_job_completion
+                    error = None
+                    if status == "ENGINE_FAILED":
+                        # Try to get error information from logs
+                        error = "Job execution failed" 
+                    
+                    record_job_completion(
+                        job_id=job_id,
+                        metrics_id=metrics_id,
+                        status=status,
+                        error=error
+                    )
+        except:
+            pass
+
+        return status

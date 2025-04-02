@@ -71,6 +71,12 @@ const pages: MenuItem[] = [
       <Link to={`${Pages.GENERATOR}`}>{LABELS[Pages.GENERATOR]}</Link>
     ),
   },
+  // {
+  //   key: Pages.TELEMETRY,  
+  //   label: (
+  //     <Link to={`${Pages.TELEMETRY}`}>{LABELS[Pages.TELEMETRY]}</Link>
+  //   ),
+  // },
   {
     key: Pages.FEEDBACK,
     label: (

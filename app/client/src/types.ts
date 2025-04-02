@@ -7,6 +7,7 @@ export enum Pages {
     WELCOME = 'welcome',
     FEEDBACK = 'feedback',
     UPGRADE = 'upgrade'
+    //TELEMETRY = 'telemetry' 
 }
 
 export enum ModelParameters {

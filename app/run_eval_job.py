@@ -9,25 +9,39 @@ if os.getenv("IS_COMPOSABLE"):
     
     os.chdir("/home/cdsw/synthetic-data-studio")
 
-def check_and_install_requirements():
-    """Check and install requirements from requirements.txt"""
-    # Get the current working directory instead of using __file__
-    current_dir = os.getcwd()
-    requirements_path = os.path.join(current_dir, 'requirements.txt')
+# def check_and_install_requirements():
+#     """Check and install requirements from requirements.txt"""
+#     # Get the current working directory instead of using __file__
+#     current_dir = os.getcwd()
+#     requirements_path = os.path.join(current_dir, 'requirements.txt')
     
-    if os.path.exists(requirements_path):
-        try:
-            print(f"Installing requirements from: {requirements_path}")
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', requirements_path])
-        except subprocess.CalledProcessError as e:
-            print(f"Error installing requirements: {e}")
-            sys.exit(1)
-    else:
-        print("No requirements.txt found, continuing with existing packages")
+#     if os.path.exists(requirements_path):
+#         try:
+#             print(f"Installing requirements from: {requirements_path}")
+#             subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', requirements_path])
+#         except subprocess.CalledProcessError as e:
+#             print(f"Error installing requirements: {e}")
+#             sys.exit(1)
+#     else:
+#         print("No requirements.txt found, continuing with existing packages")
 
-# Run installation check at start
-check_and_install_requirements()
+# # Run installation check at start
+# check_and_install_requirements()
+# Get the current notebook's directory
+notebook_dir = os.getcwd()
 
+# Detect the Python version dynamically
+python_version = f"python{sys.version_info.major}.{sys.version_info.minor}"
+
+# Path for Linux virtual environment structure
+venv_path = os.path.join(notebook_dir, '.venv', 'lib', python_version, 'site-packages')
+
+# Add to path if not already there and if it exists
+if os.path.exists(venv_path) and venv_path not in sys.path:
+    sys.path.insert(0, venv_path)
+    print(f"Added virtual environment path: {venv_path}")
+else:
+    print(f"Virtual environment path not found: {venv_path}")
 
 
 import sys
@@ -41,14 +55,24 @@ import nest_asyncio
 # Enable nested event loop
 nest_asyncio.apply()
 
-async def run_eval(request, job_name):
+async def run_eval(request, job_name, request_id):
     try:
         
         job = EvaluatorService()
-        result = job.evaluate_results(request,job_name, is_demo=False)
+        result = job.evaluate_results(request,job_name, is_demo=False, request_id=request_id)
         return result
     except Exception as e:
         print(f"Error in evaluation: {e}")
+        raise
+
+async def run_freeform_eval(request, job_name, request_id):
+    """Run freeform data synthesis job"""
+    try:
+        job = EvaluatorService()
+        result = await job.evaluate_row_data(request, job_name, is_demo=False, request_id=request_id)
+        return result
+    except Exception as e:
+        print(f"Error in freeform synthesis: {e}")
         raise
 
 if __name__ == "__main__":
@@ -60,9 +84,12 @@ if __name__ == "__main__":
         with open(file_name, 'r') as f:
             params = json.load(f)
         job_name = params.pop('job_name')
-
+        request_id = params.pop('request_id')
         print(params)
         os.remove(file_name)
+        # Check if this is a freeform generation request
+        is_freeform = params.pop('generation_type', None) == 'freeform'
+        
         request = EvaluationRequest.model_validate(params)
         # Get current loop or create new one
         try:
@@ -70,9 +97,13 @@ if __name__ == "__main__":
         except RuntimeError:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            
-        result = loop.run_until_complete(run_eval(request, job_name))
-        print(result)
+        # Run appropriate synthesis based on type
+        if is_freeform:
+            print("Running freeform data generation job")
+            result = loop.run_until_complete(run_freeform_eval(request, job_name, request_id))  
+        else:
+            result = loop.run_until_complete(run_eval(request, job_name, request_id))
+        #print(result)
         
     except Exception as e:
         print(f"Error: {e}")

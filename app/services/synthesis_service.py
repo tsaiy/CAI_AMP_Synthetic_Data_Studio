@@ -2,6 +2,7 @@ import boto3
 import json
 import uuid
 import time
+import csv
 from typing import List, Dict, Optional, Tuple
 import uuid
 from datetime import datetime, timezone
@@ -25,6 +26,7 @@ from app.services.doc_extraction import DocumentProcessor
 import logging
 from logging.handlers import RotatingFileHandler
 import traceback
+from app.core.telemetry_integration import track_llm_operation
 import uuid 
 
 
@@ -76,8 +78,8 @@ class SynthesisService:
         self.logger.addHandler(error_handler)
 
     
-
-    def process_single_topic(self, topic: str, model_handler: any, request: SynthesisRequest, num_questions: int) -> Tuple[str, List[Dict], List[str], List[Dict]]:
+    #@track_llm_operation("process_single_topic")
+    def process_single_topic(self, topic: str, model_handler: any, request: SynthesisRequest, num_questions: int, request_id=None) -> Tuple[str, List[Dict], List[str], List[Dict]]:
         """
         Process a single topic to generate questions and solutions.
         Attempts batch processing first (default 5 questions), falls back to single question processing if batch fails.
@@ -126,10 +128,10 @@ class SynthesisService:
                         schema=request.schema,
                         custom_prompt=request.custom_prompt,
                     )
-                    #print("prompt :", prompt)
+                   # print("prompt :", prompt)
                     batch_qa_pairs = None
                     try:
-                        batch_qa_pairs = model_handler.generate_response(prompt)
+                        batch_qa_pairs = model_handler.generate_response(prompt, request_id=request_id)
                     except ModelHandlerError as e:
                         self.logger.warning(f"Batch processing failed: {str(e)}")
                         if isinstance(e, JSONParsingError):
@@ -196,7 +198,7 @@ class SynthesisService:
                                     )
                                     
                                     try:
-                                        single_qa_pairs = model_handler.generate_response(prompt)
+                                        single_qa_pairs = model_handler.generate_response(prompt, request_id=request_id)
                                     except ModelHandlerError as e:
                                         self.logger.warning(f"Batch processing failed: {str(e)}")
                                         if isinstance(e, JSONParsingError):
@@ -265,7 +267,7 @@ class SynthesisService:
         return topic, topic_results, topic_errors, topic_output
                
         
-    async def generate_examples(self, request: SynthesisRequest , job_name = None, is_demo: bool = True) -> Dict:
+    async def generate_examples(self, request: SynthesisRequest , job_name = None, is_demo: bool = True, request_id= None) -> Dict:
         """Generate examples based on request parameters"""
         try:
             output_key = request.output_key 
@@ -324,7 +326,8 @@ class SynthesisService:
                         topic,
                         model_handler,
                         request,
-                        num_questions
+                        num_questions,
+                        request_id
                     )
                     for topic in topics
                 ]
@@ -477,8 +480,8 @@ class SynthesisService:
             len(pair["question"].strip()) > 0 and
             len(pair["solution"].strip()) > 0
         )
-    
-    async def process_single_input(self, input, model_handler, request):
+    #@track_llm_operation("process_single_input") 
+    async def process_single_input(self, input, model_handler, request, request_id=None):
         try:
             prompt = PromptBuilder.build_generate_result_prompt(
                 model_id=request.model_id,
@@ -489,7 +492,7 @@ class SynthesisService:
                 custom_prompt=request.custom_prompt,
             )
             try:
-                result = model_handler.generate_response(prompt)
+                result = model_handler.generate_response(prompt, request_id=request_id)
             except ModelHandlerError as e:
                 self.logger.error(f"ModelHandlerError in generate_response: {str(e)}")
                 raise
@@ -502,7 +505,7 @@ class SynthesisService:
             self.logger.error(f"Error processing input: {str(e)}")
             raise APIError(f"Failed to process input: {str(e)}")
 
-    async def generate_result(self, request: SynthesisRequest , job_name = None, is_demo: bool = True) -> Dict:
+    async def generate_result(self, request: SynthesisRequest , job_name = None, is_demo: bool = True, request_id=None) -> Dict:
         try:
             self.logger.info(f"Starting example generation - Demo Mode: {is_demo}")
             
@@ -533,7 +536,7 @@ class SynthesisService:
                 input_futures = [
                     loop.run_in_executor(
                         executor,
-                        lambda x: asyncio.run(self.process_single_input(x, model_handler, request)),
+                        lambda x: asyncio.run(self.process_single_input(x, model_handler, request, request_id)),
                         input
                     )
                     for input in inputs
@@ -662,8 +665,448 @@ class SynthesisService:
                 self.db.update_job_generate(job_name, file_name, output_path, time_stamp, job_status)
                 raise  # Just re-raise the original exception
 
+    #@track_llm_operation("process_single_freeform") 
+    def process_single_freeform(self, topic: str, model_handler: any, request: SynthesisRequest, num_questions: int, request_id=None) -> Tuple[str, List[Dict], List[str], List[Dict]]:
+        """
+        Process a single topic to generate freeform data.
+        Attempts batch processing first (default batch size), falls back to single item processing if batch fails.
+        
+        Args:
+            topic: The topic to generate freeform data for
+            model_handler: Handler for the AI model
+            request: The synthesis request object
+            num_questions: Total number of data items to generate
+        
+        Returns:
+            Tuple containing:
+            - topic (str)
+            - list of generated data items
+            - list of error messages
+            - list of output dictionaries with topic information
+        
+        Raises:
+            ModelHandlerError: When there's an error in model generation that should stop processing
+        """
+        topic_results = []
+        topic_output = []
+        topic_errors = []
+        questions_remaining = num_questions
+        omit_questions = []
+        
+        try:
+            # Process data in batches
+            for batch_idx in range(0, num_questions, self.QUESTIONS_PER_BATCH):
+                if questions_remaining <= 0:
+                    break
+                    
+                batch_size = min(self.QUESTIONS_PER_BATCH, questions_remaining)
+                self.logger.info(f"Processing topic: {topic}, attempting batch {batch_idx+1}-{batch_idx+batch_size}")
+                
+                try:
+                    # Attempt batch processing
+                    prompt = PromptBuilder.build_freeform_prompt(
+                        model_id=request.model_id,
+                        use_case=request.use_case,
+                        topic=topic,
+                        num_questions=batch_size,
+                        omit_questions=omit_questions,
+                        example_custom=request.example_custom or [],
+                        example_path=request.example_path,
+                        custom_prompt=request.custom_prompt,
+                        schema=request.schema,
+                    )
+                    #print(prompt)
+                    batch_items = None
+                    try:
+                        batch_items = model_handler.generate_response(prompt, request_id=request_id)
+                    except ModelHandlerError as e:
+                        self.logger.warning(f"Batch processing failed: {str(e)}")
+                        if isinstance(e, JSONParsingError):
+                            # For JSON parsing errors, fall back to single processing
+                            self.logger.info("JSON parsing failed, falling back to single processing")
+                            continue
+                        else:
+                            # For other model errors, propagate up
+                            raise
+                    
+                    if batch_items:
+                        # Process batch results
+                        valid_items = []
+                        valid_outputs = []
+                        invalid_count = 0
+                        
+                        for item in batch_items:
+                            if self._validate_freeform_item(item):
+                                valid_items.append(item)
+                                
+                                # Create a new dict with Topic field added
+                                output_item = {"Topic": topic}
+                                output_item.update(item)
+                                valid_outputs.append(output_item)
+                                
+                                # Initialize item_identifier variable
+                                item_identifier = None 
+                                    # First try the specific potential keys
+                                for potential_key in ["id", "name", "title", "question", "prompt", "key"]:
+                                    if potential_key in item and isinstance(item[potential_key], str):
+                                        #item_identifier = item[potential_key]
+                                        item_identifier = f"{potential_key} : {item[potential_key]} "
+                                        break
+                                
+                                # If no suitable identifier found among preferred keys, look for any string value
+                                if not item_identifier:
+                                    for key, value in item.items():
+                                        if isinstance(value, str) and value.strip():  # Check for non-empty string
+                                            #item_identifier = value
+                                            item_identifier = f"{key} : {value} "
+                                            break
+                                
+                                # If still no string value found, use a blank string
+                                if not item_identifier:
+                                    item_identifier = ""
+                                        
+                                omit_questions.append(item_identifier)
+                        #print("topic :", topic, '\n',omit_questions)        
+                            
+                        invalid_count = batch_size - len(valid_items)
+                        
+                        if valid_items:
+                            topic_results.extend(valid_items)
+                            topic_output.extend(valid_outputs)
+                            questions_remaining -= len(valid_items)
+                            omit_questions = omit_questions[-100:]  # Keep last 100 items
+                            self.logger.info(f"Successfully generated {len(valid_items)} items in batch for topic {topic}")
+                        
+                        print("invalid_count:", invalid_count, '\n', "batch_size: ", batch_size, '\n', "valid_items: ", len(valid_items))
+                        # If all items were valid, skip fallback
+                        if invalid_count <= 0:
+                            continue
+                    
+                        # Fall back to single processing for remaining or failed items
+                        self.logger.info(f"Falling back to single processing for remaining items in topic {topic}")
+                        remaining_batch = invalid_count
+                        print("remaining_batch:", remaining_batch, '\n', "batch_size: ", batch_size, '\n', "valid_items: ", len(valid_items))
+                        
+                        for _ in range(remaining_batch):
+                            if questions_remaining <= 0:
+                                break
+                                
+                            try:
+                                # Single item processing
+                                prompt = PromptBuilder.build_freeform_prompt(
+                                     model_id=request.model_id,
+                                        use_case=request.use_case,
+                                        topic=topic,
+                                        num_questions=batch_size,
+                                        omit_questions=omit_questions,
+                                        example_custom=request.example_custom or [],
+                                        example_path=request.example_path,
+                                        custom_prompt=request.custom_prompt,
+                                        schema=request.schema,
+                                )
+                                
+                                try:
+                                    single_items = model_handler.generate_response(prompt, request_id=request_id)
+                                except ModelHandlerError as e:
+                                    self.logger.warning(f"Single processing failed: {str(e)}")
+                                    if isinstance(e, JSONParsingError):
+                                        self.logger.info("JSON parsing failed in single processing")
+                                        continue
+                                    else:
+                                        # For other model errors, propagate up
+                                        raise
+                                
+                                if single_items and len(single_items) > 0:
+                                    item = single_items[0]
+                                    if self._validate_freeform_item(item):
+                                        # Create a new dict with Topic field added
+                                        output_item = {"Topic": topic}
+                                        output_item.update(item)
+                                        
+                                        topic_results.append(item)
+                                        topic_output.append(output_item)
+                                        
+                                        # Initialize item_identifier variable
+                                        item_identifier = None 
+                                       # First try the specific potential keys
+                                        for potential_key in ["id", "name", "title", "question", "prompt", "key"]:
+                                            if potential_key in item and isinstance(item[potential_key], str):
+                                                #item_identifier = item[potential_key]
+                                                item_identifier = f"{potential_key} : {item[potential_key]} "
+                                                break
+                                        
+                                        # If no suitable identifier found among preferred keys, look for any string value
+                                        if not item_identifier:
+                                            for key, value in item.items():
+                                                if isinstance(value, str) and value.strip():  # Check for non-empty string
+                                                    #item_identifier = value
+                                                    item_identifier = f"{key} : {value} "
+                                                    break
+                                        
+                                        # If still no string value found, use a blank string
+                                        if not item_identifier:
+                                            item_identifier = ""
+                                                
+                                        omit_questions.append(item_identifier)
+                                        omit_questions = omit_questions[-100:]
+                                        
+                                        questions_remaining -= 1
+                                        self.logger.info(f"Successfully generated single item for topic {topic}")
+                                    else:
+                                        error_msg = f"Invalid item structure in single processing for topic {topic}"
+                                        self.logger.warning(error_msg)
+                                        topic_errors.append(error_msg)
+                                else:
+                                    error_msg = f"No item generated in single processing for topic {topic}"
+                                    self.logger.warning(error_msg)
+                                    topic_errors.append(error_msg)
+                                    
+                            except ModelHandlerError:
+                                # Re-raise ModelHandlerError to propagate up
+                                raise
+                            except Exception as e:
+                                error_msg = f"Error in single processing for topic {topic}: {str(e)}"
+                                self.logger.error(error_msg)
+                                topic_errors.append(error_msg)
+                                raise
+                                
+                except ModelHandlerError:
+                    # Re-raise ModelHandlerError to propagate up
+                    raise
+                except Exception as e:
+                    error_msg = f"Error processing batch for topic {topic}: {str(e)}"
+                    self.logger.error(error_msg)
+                    topic_errors.append(error_msg)
+                    raise
+                    
+        except ModelHandlerError:
+            # Re-raise ModelHandlerError to propagate up
+            raise
+        except Exception as e:
+            error_msg = f"Critical error processing topic {topic}: {str(e)}"
+            self.logger.error(error_msg)
+            topic_errors.append(error_msg)
+            raise
+            
+        return topic, topic_results, topic_errors, topic_output
 
+    def _validate_freeform_item(self, item: Dict) -> bool:
+        """
+        Validate a freeform data item.
+        For freeform data, we just check that it's a non-empty dictionary.
+        """
+        return isinstance(item, dict) and len(item) > 0
 
+    async def generate_freeform(self, request: SynthesisRequest, job_name=None, is_demo: bool = True, request_id=None) -> Dict:
+        """Generate freeform data based on request parameters"""
+        try:
+            output_key = request.output_key 
+            output_value = request.output_value
+            st = time.time()
+            self.logger.info(f"Starting freeform data generation - Demo Mode: {is_demo}")
+            
+            # Use default parameters if none provided
+            model_params = request.model_params or ModelParameters()
+            
+            # Create model handler
+            self.logger.info("Creating model handler")
+            model_handler = create_handler(
+                request.model_id, 
+                self.bedrock_client, 
+                model_params=model_params, 
+                inference_type=request.inference_type, 
+                caii_endpoint=request.caii_endpoint
+            )
+
+            # Handle topics from documents or direct topics
+            if request.doc_paths:
+                processor = DocumentProcessor(chunk_size=1000, overlap=100)
+                paths = request.doc_paths
+                topics = []
+                for path in paths:
+                    chunks = processor.process_document(path)
+                    topics.extend(chunks)
+                
+                print("total chunks: ", len(topics))
+                if request.num_questions <= len(topics):
+                    topics = topics[0:request.num_questions]
+                    num_questions = 1
+                    print("num_questions :", num_questions)
+                else:
+                    num_questions = math.ceil(request.num_questions/len(topics))
+                
+                total_count = request.num_questions
+            else:
+                if request.topics:
+                    topics = request.topics
+                    num_questions = request.num_questions
+                    total_count = request.num_questions * len(request.topics)
+                else:
+                    self.logger.error("Generation failed: No topics provided")
+                    raise RuntimeError("Invalid input: No topics provided")
+
+            # Track results for each topic
+            results = {}
+            all_errors = []
+            final_output = []
+            
+            # Create thread pool
+            loop = asyncio.get_event_loop()
+            with ThreadPoolExecutor(max_workers=self.MAX_CONCURRENT_TOPICS) as executor:
+                topic_futures = [
+                    loop.run_in_executor(
+                        executor,
+                        self.process_single_freeform,
+                        topic,
+                        model_handler,
+                        request,
+                        num_questions, request_id
+                    )
+                    for topic in topics
+                ]
+                
+                # Wait for all futures to complete
+                try:
+                    completed_topics = await asyncio.gather(*topic_futures)
+                except ModelHandlerError as e:
+                    self.logger.error(f"Model generation failed: {str(e)}")
+                    raise APIError(f"Failed to generate content: {str(e)}")
+                
+            # Process results
+            for topic, topic_results, topic_errors, topic_output in completed_topics:
+                if topic_errors:
+                    all_errors.extend(topic_errors)
+                if topic_results and is_demo:
+                    results[topic] = topic_results
+                if topic_output:
+                    final_output.extend(topic_output)
+
+            generation_time = time.time() - st
+            self.logger.info(f"Generation completed in {generation_time:.2f} seconds")
+
+            timestamp = datetime.now(timezone.utc).isoformat()
+            time_file = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%f')[:-3] 
+            mode_suffix = "test" if is_demo else "final"
+            model_name = get_model_family(request.model_id).split('.')[-1]
+            file_path = f"freeform_data_{model_name}_{time_file}_{mode_suffix}.json"
+            
+            # Transform output based on document paths
+            if request.doc_paths:
+                final_output = [{
+                                'Generated_From': item['Topic'],
+                                **{k: v for k, v in item.items() if k != 'Topic'}
+                            } for item in final_output]
+            else:
+                final_output = [{
+                                'Seeds': item['Topic'],
+                                **{k: v for k, v in item.items() if k != 'Topic'}
+                            } for item in final_output]
+            
+            output_path = {}
+            try:
+                with open(file_path, "w") as f:
+                    json.dump(final_output, indent=2, fp=f)
+            except Exception as e:
+                self.logger.error(f"Error saving results: {str(e)}", exc_info=True)
+                
+            output_path['local'] = file_path
+            
+            
+            # Handle custom prompt, examples and schema
+            custom_prompt_str = PromptHandler.get_default_custom_prompt(request.use_case, request.custom_prompt)
+            
+            # For examples
+            if request.example_path:
+                file_extension = os.path.splitext(request.example_path)[1].lower()
+    
+                with open(request.example_path, 'r') as f:
+                    if file_extension == '.json':
+                        # Handle JSON files
+                        example_upload = json.load(f)
+                        examples_str = json.dumps(example_upload, indent=2)
+                    elif file_extension == '.csv':
+                        # Handle CSV files
+                        csv_reader = csv.DictReader(f)
+                        example_upload = list(csv_reader)
+                        examples_str = json.dumps(example_upload, indent=2)  # Convert CSV data to JSON string format
+                    else:
+                        raise ValueError(f"Unsupported file extension: {file_extension}. Only .json and .csv are supported.")
+            else:
+                examples_value = request.example_custom if hasattr(request, 'example_custom') else None
+                examples_str = self.safe_json_dumps(examples_value)
+
+            # For topics
+            topics_value = topics if not getattr(request, 'doc_paths', None) else None
+            topic_str = self.safe_json_dumps(topics_value)
+
+            # For doc_paths and input_path
+            doc_paths_str = self.safe_json_dumps(getattr(request, 'doc_paths', None))
+            input_path_str = self.safe_json_dumps(getattr(request, 'input_path', None))
+
+             # For schema
+            schema_value = (
+                PromptHandler.get_default_schema(request.use_case, request.schema)
+                if hasattr(request, 'schema') 
+                else None
+            )
+            schema_str = self.safe_json_dumps(schema_value)
+        
+            metadata = {
+                'timestamp': timestamp,
+                'technique': request.technique,
+                'model_id': request.model_id,
+                'inference_type': request.inference_type,
+                'caii_endpoint': request.caii_endpoint,
+                'use_case': request.use_case,
+                'final_prompt': custom_prompt_str,
+                'model_parameters': json.dumps(model_params.model_dump()) if model_params else None,
+                'generate_file_name': os.path.basename(output_path['local']),
+                'display_name': request.display_name,
+                'output_path': output_path,
+                'num_questions': getattr(request, 'num_questions', None),
+                'topics': topic_str,
+                'examples': examples_str,
+                "total_count": total_count,
+                'schema': schema_str,
+                'doc_paths': doc_paths_str,
+                'input_path': input_path_str,
+                'input_key': request.input_key,
+                'output_key': request.output_key,
+                'output_value': request.output_value
+            }
+            
+            if is_demo:
+                self.db.save_generation_metadata(metadata)
+                return {
+                    "status": "completed" if results else "failed",
+                    "results": results,
+                    "errors": all_errors if all_errors else None,
+                    "export_path": output_path
+                }
+            else:
+                job_status = "ENGINE_SUCCEEDED"
+                generate_file_name = os.path.basename(output_path['local'])
+                
+                self.db.update_job_generate(job_name, generate_file_name, output_path['local'], timestamp, job_status)
+                self.db.backup_and_restore_db()
+                return {
+                    "status": "completed" if final_output else "failed",
+                    "export_path": output_path
+                }
+        except APIError:
+            raise
+            
+        except Exception as e:
+            self.logger.error(f"Generation failed: {str(e)}", exc_info=True)
+            if is_demo:
+                raise APIError(str(e))  # Let middleware decide status code
+            else:
+                time_stamp = datetime.now(timezone.utc).isoformat()
+                job_status = "ENGINE_FAILED"
+                file_name = ''
+                output_path = ''
+                self.db.update_job_generate(job_name, file_name, output_path, time_stamp, job_status)
+                raise  # Just re-raise the original exception
 
     def get_health_check(self) -> Dict:
         """Get service health status"""

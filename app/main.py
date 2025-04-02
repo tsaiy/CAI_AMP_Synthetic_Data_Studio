@@ -43,11 +43,15 @@ from app.core.config import UseCase, USE_CASE_CONFIGS
 from app.core.database import DatabaseManager
 from app.core.exceptions import APIError, InvalidModelError, ModelHandlerError
 from app.services.model_alignment import ModelAlignment
-from app.core.model_handlers import create_handler
+from app.core.model_handlers import create_handler, UnifiedModelHandler
 from app.services.aws_bedrock import get_bedrock_client
 from app.migrations.alembic_manager import AlembicMigrationManager
 from app.core.config import responses, caii_check
 from app.core.path_manager import PathManager
+
+# from app.core.telemetry_middleware import TelemetryMiddleware
+# from app.routes.telemetry_routes import router as telemetry_router
+#from app.core.telemetry import telemetry_manager
 
 
 #****************************************Initialize************************************************
@@ -118,7 +122,28 @@ def get_job_status( job_id: str) -> str:
         sort="-created_at", 
         page_size=1
     )
-    return response.job_runs[0].status
+
+    status = response.job_runs[0].status
+
+    # # Add telemetry tracking for completed jobs
+    # if status in ["ENGINE_SCHEDULING", "ENGINE_STARTING", "ENGINE_RUNNING", "ENGINE_STOPPING", "ENGINE_STOPPED", "ENGINE_UNKNOWN","ENGINE_SUCCEEDED", "ENGINE_FAILED", "ENGINE_TIMEDOUT"]:
+    #     # Get metrics_id from database if available
+    #     metrics_id = telemetry_manager.get_job_telemetry_id(job_id)
+    #     if metrics_id:
+    #         from app.core.telemetry_integration import record_job_completion
+    #         error = None
+    #         if status == "ENGINE_FAILED":
+    #             # Try to get error information from logs
+    #             error = "Job execution failed" 
+            
+    #         record_job_completion(
+    #             job_id=job_id,
+    #             metrics_id=metrics_id,
+    #             status=status,
+    #             error=error
+    #         )
+
+    return status
 
 def get_total_size(file_paths):
   
@@ -179,9 +204,11 @@ class StudioUpgradeResponse(BaseModel):
 async def lifespan(app: FastAPI):
     """Lifespan context manager for the FastAPI application"""
     # Create document upload directory on startup
-    path_manager.make_dirs(path_manager.upload_dir)
+    #path_manager.make_dirs(path_manager.upload_dir)
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
     print(f"Document upload directory created at: {UPLOAD_DIR}")
     yield
+
 
 app = FastAPI(
     title="LLM Data Synthesis API",
@@ -190,7 +217,11 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# app.add_middleware(TelemetryMiddleware)
 
+# # Add telemetry router to the FastAPI app
+# # Add this line after other app.include_router() calls
+# app.include_router(telemetry_router)
 
 @app.middleware("http")
 async def global_middleware(request: Request, call_next):
@@ -243,6 +274,8 @@ def get_timeout_for_request(request: Request) -> float:
     
     # Longer timeouts for job creation endpoints
     if path.endswith("/generate"):
+        return 200.0  # 2 minutes for generation
+    elif path.endswith("/freeform"):
         return 200.0  # 2 minutes for generation
     elif path.endswith("/evaluate"):
         return 200.0  # 2 minutes for evaluation
@@ -337,6 +370,9 @@ async def get_dataset_size(request:JsonDataSize):
 async def generate_examples(request: SynthesisRequest):
     """Generate question-answer pairs"""
     
+    # Generate a request ID
+    request_id = str(uuid.uuid4())
+
     if request.inference_type== "CAII":
         caii_endpoint = request.caii_endpoint
         response = caii_check(caii_endpoint)
@@ -376,11 +412,64 @@ async def generate_examples(request: SynthesisRequest):
     
     if is_demo== True:
         if request.input_path:
-            return await synthesis_service.generate_result(request,is_demo)
+            return await synthesis_service.generate_result(request,is_demo, request_id=request_id)
         else:
-            return await synthesis_service.generate_examples(request,is_demo)
+            return await synthesis_service.generate_examples(request,is_demo, request_id=request_id)
     else:
-       return synthesis_job.generate_job(request, core, mem)
+       return synthesis_job.generate_job(request, core, mem, request_id=request_id)
+    
+
+@app.post("/synthesis/freeform", include_in_schema=True,
+    responses=responses,
+    description="Generate freeform structured data")
+async def generate_freeform_data(request: SynthesisRequest):
+    """Generate freeform structured data based on provided examples and custom instructions"""
+    
+    request_id = str(uuid.uuid4())
+
+    if request.inference_type == "CAII":
+        caii_endpoint = request.caii_endpoint
+        response = caii_check(caii_endpoint)
+        message = "The CAII endpoint you are trying to reach is downscaled, please try after >15 minutes while it autoscales, meanwhile please try another model"
+        if response.status_code != 200:
+            return JSONResponse(
+                status_code=503,  # Service Unavailable
+                content={"status": "failed", "error": message}
+            )
+    
+    is_demo = request.is_demo
+    mem = 4
+    core = 2
+    if project_id != "local":
+        if request.doc_paths:
+            paths = request.doc_paths
+            data_size = get_total_size(paths)
+            if data_size > 1 and data_size <= 10:
+                is_demo = False
+                mem = data_size + 2
+                core = max(2, data_size // 2)
+            elif data_size > 10:
+                return JSONResponse(
+                    status_code=413,  # Payload Too Large
+                    content={
+                        "status": "failed",
+                        "error": f"Total dataset size ({data_size:} GB) exceeds limit of 10 GB. Please select smaller datasets."
+                    }
+                )
+            else:
+                is_demo = request.is_demo
+                mem = 4
+                core = 2
+    
+    if is_demo:
+        return await synthesis_service.generate_freeform(request, is_demo=is_demo, request_id=request_id )
+    else:
+        # Pass additional parameter to indicate this is a freeform request
+        request_dict = request.model_dump()
+        request_dict['generation_type'] = 'freeform'
+        # Convert back to SynthesisRequest object
+        freeform_request = SynthesisRequest(**request_dict)
+        return synthesis_job.generate_job(freeform_request, core, mem, request_id=request_id)
 
 @app.post("/synthesis/evaluate", 
     include_in_schema=True,
@@ -388,6 +477,8 @@ async def generate_examples(request: SynthesisRequest):
     description="Evaluate generated QA pairs")
 async def evaluate_examples(request: EvaluationRequest):
     """Evaluate generated QA pairs"""
+    request_id = str(uuid.uuid4())
+
     if request.inference_type== "CAII":
         caii_endpoint = request.caii_endpoint
         response = caii_check(caii_endpoint)
@@ -400,10 +491,38 @@ async def evaluate_examples(request: EvaluationRequest):
    
     is_demo = request.is_demo
     if is_demo:
-       return evaluator_service.evaluate_results(request)
+       return evaluator_service.evaluate_results(request, request_id=request_id)
     
     else:
-        return synthesis_job.evaluate_job(request)
+        return synthesis_job.evaluate_job(request, request_id=request_id)
+    
+@app.post("/synthesis/evaluate_freeform", 
+    include_in_schema=True,
+    responses=responses,
+    description="Evaluate data rows")
+async def evaluate_freeform(request: EvaluationRequest):
+    """Evaluate data rows"""
+    request_id = str(uuid.uuid4())
+
+    if request.inference_type == "CAII":
+        caii_endpoint = request.caii_endpoint
+        response = caii_check(caii_endpoint)
+        message = "The CAII endpoint you are trying to reach is downscaled, please try after >15 minutes while it autoscales, meanwhile please try another model"
+        if response.status_code != 200:
+            return JSONResponse(
+                status_code=503,  # Service Unavailable
+                content={"status": "failed", "error": message}
+            )
+   
+    is_demo = getattr(request, 'is_demo', True)
+    if is_demo:
+        return evaluator_service.evaluate_row_data(request, request_id=request_id)
+    else:
+        request_dict = request.model_dump()
+        request_dict['generation_type'] = 'freeform'
+        # Convert back to SynthesisRequest object
+        freeform_request = EvaluationRequest(**request_dict)
+        return synthesis_job.evaluate_job(freeform_request, request_id=request_id)
 
 
 @app.post("/model/alignment",
@@ -464,7 +583,7 @@ async def export_results(request:Export_synth):
         )
 
 @app.post("/create_custom_prompt")
-async def create_custom_prompt(request: CustomPromptRequest):
+async def create_custom_prompt(request: CustomPromptRequest, request_id = None):
     """Allow users to customize prompt. Only part of the prompt which can be customized"""
     try:
         bedrock_client =   get_bedrock_client()
@@ -475,7 +594,7 @@ async def create_custom_prompt(request: CustomPromptRequest):
                 custom_prompt=request.custom_prompt,
             )
         #print(prompt)
-        prompt_gen = model_handler.generate_response(prompt)
+        prompt_gen = model_handler.generate_response(prompt, request_id=request_id)
 
         return {"generated_prompt":prompt_gen}
     except Exception as e:
@@ -579,6 +698,8 @@ async def get_model_id():
 
         return {"models": models}
     
+
+    
     except client_s.exceptions.ValidationException as e:
         print(f"Validation error: {str(e)}")
         raise
@@ -594,6 +715,163 @@ async def get_model_id():
     except Exception as e:
         print(f"Unexpected error occurred: {str(e)}")
         raise
+@app.get("/model/model_id_filter", include_in_schema=True)
+async def get_model_id_filtered():
+    """
+    Get available models with health check, with results bifurcated into enabled and disabled lists.
+    Returns filtered model IDs categorized by their health/availability status.
+    """
+    region = os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION"))
+    new_target_region = "us-west-2"
+    retry_config = Config(
+        region_name=new_target_region,
+        retries={
+            "max_attempts": 2,
+            "mode": "standard",
+        },
+    )
+
+    try:
+        # Create Bedrock clients for listing and runtime checks
+        bedrock_client = boto3.client(service_name="bedrock", region_name=region, config=retry_config)
+        bedrock_runtime = boto3.client(service_name="bedrock-runtime", region_name=region, config=retry_config)
+        
+        # Get foundation models
+        response = bedrock_client.list_foundation_models()
+        all_models = response['modelSummaries']
+
+        mod_list = [m['modelId']
+            for m in all_models 
+            if 'ON_DEMAND' in m['inferenceTypesSupported'] 
+            and 'TEXT' in m['inputModalities'] 
+            and 'TEXT' in m['outputModalities']
+            and m['providerName'] in ['Anthropic', 'Meta', 'Mistral AI']]
+        
+        # Get inference profiles with comprehensive error handling
+        try:
+            inference_models = bedrock_client.list_inference_profiles()
+            inference_mod_list = []
+            if 'inferenceProfileSummaries' in inference_models:
+                inference_mod_list = [
+                    m['inferenceProfileId'] 
+                    for m in inference_models['inferenceProfileSummaries']
+                    if any(provider in m['inferenceProfileId'].lower() 
+                        for provider in ['meta', 'anthropic', 'mistral'])
+                ]
+        except (
+            bedrock_client.exceptions.ResourceNotFoundException,
+            bedrock_client.exceptions.ValidationException,
+            bedrock_client.exceptions.AccessDeniedException,
+            bedrock_client.exceptions.ThrottlingException,
+            bedrock_client.exceptions.InternalServerException
+        ) as e:
+            print(f"Error retrieving inference profiles: {str(e)}")
+            inference_mod_list = []
+        
+        # Combine and sort the lists
+        bedrock_list = sort_unique_models(inference_mod_list + mod_list)
+        
+        # Perform health checks in parallel
+        import asyncio
+        from app.models.request_models import ModelParameters
+        
+        # Define async function for checking a single model
+        async def check_model_health(model_id):
+            try:
+                # Create minimal model parameters for health check
+                minimal_params = ModelParameters(
+                    max_tokens=10,
+                    temperature=0,
+                    top_p=1,
+                    top_k=1
+                )
+                
+                # Check model health with a simple prompt
+                test_handler = UnifiedModelHandler(
+                    model_id=model_id,
+                    bedrock_client=bedrock_runtime,
+                    model_params=minimal_params
+                )
+                
+                # Use a lightweight health check prompt
+                health_check_prompt = "Return HEALTHY if you can process this message."
+                
+                try:
+                    # Create a task with timeout to avoid hanging on slow models
+                    response = await asyncio.wait_for(
+                        asyncio.to_thread(test_handler.generate_response, health_check_prompt, False),
+                        timeout=5.0  # 5 second timeout
+                    )
+                    
+                    # If we reach here, the model is considered healthy
+                    return (model_id, True)
+                    
+                except (asyncio.TimeoutError, Exception) as e:
+                    print(f"Health check failed for {model_id}: {str(e)}")
+                    return (model_id, False)
+                
+            except Exception as e:
+                print(f"Model {model_id} health check failed: {str(e)}")
+                return (model_id, False)
+        
+        # Run all health checks in parallel with concurrency limit
+        # Using a semaphore to limit concurrent requests and avoid overwhelming the API
+        sem = asyncio.Semaphore(10)  # Allow up to 10 concurrent requests
+        
+        async def bounded_check(model_id):
+            async with sem:
+                return await check_model_health(model_id)
+        
+        # Launch all tasks and wait for them to complete
+        tasks = [bounded_check(model_id) for model_id in bedrock_list]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Process results
+        enabled_models = []
+        disabled_models = []
+        
+        for result in results:
+            if isinstance(result, tuple) and len(result) == 2:
+                model_id, is_healthy = result
+                if is_healthy:
+                    enabled_models.append(model_id)
+                else:
+                    disabled_models.append(model_id)
+            else:
+                # Handle case where the task itself raised an exception
+                print(f"Health check task failed with exception: {result}")
+                # We don't have the model_id in this case, but that's ok since
+                # all models are already in bedrock_list
+        
+        # Create the response structure with bifurcated lists
+        models = {
+            "aws_bedrock": {
+                "enabled": enabled_models,
+                "disabled": disabled_models
+            },
+            "CAII": {
+                "enabled": ['meta/llama-3_1-8b-instruct', 'mistralai/mistral-7b-instruct-v0.3'],
+                
+            }
+        }
+
+        return {"models": models}
+    
+    except Exception as e:
+        print(f"Unexpected error in model filter endpoint: {str(e)}")
+        # Return empty structure in case of failure
+        return {
+            "models": {
+                "aws_bedrock": {
+                    "enabled": [],
+                    "disabled": bedrock_list if 'bedrock_list' in locals() else []
+                },
+                "CAII": {
+                    "enabled": ['meta/llama-3_1-8b-instruct', 'mistralai/mistral-7b-instruct-v0.3']
+                    
+                }
+            }
+        }
 
 @app.get("/use-cases", include_in_schema=True)
 async def get_use_cases():
@@ -628,6 +906,14 @@ async def customise_prompt(use_case: UseCase):
     """Allow users to customize prompt. Only part of the prompt which can be customized"""
     try:
         return PromptHandler.get_default_custom_prompt(use_case,custom_prompt=None)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/{use_case}/gen_freeform_prompt")
+async def customise_prompt(use_case: UseCase):
+    """Allow users to customize prompt. Only part of the prompt which can be customized"""
+    try:
+        return PromptHandler.get_freeform_default_custom_prompt(use_case, custom_prompt=None)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -993,42 +1279,63 @@ async def get_example_payloads(use_case:UseCase):
 async def check_upgrade_status():
     """Check if any upgrades are available"""
     try:
-        with path_manager.in_project_directory():
-            # Fetch latest changes
-            subprocess.run(["git", "fetch"], check=True, capture_output=True)
-            
-            # Get current branch
-            branch = subprocess.run(
-                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                check=True, 
-                capture_output=True, 
-                text=True
-            ).stdout.strip()
-            
-            # Get local and remote commits
-            local_commit = subprocess.run(
-                ["git", "rev-parse", branch],
-                check=True,
-                capture_output=True,
-                text=True
-            ).stdout.strip()
-            
-            remote_commit = subprocess.run(
-                ["git", "rev-parse", f"origin/{branch}"],
-                check=True,
-                capture_output=True,
-                text=True
-            ).stdout.strip()
-            
-            updates_available = local_commit != remote_commit
-            
-            return StudioUpgradeStatus(
-                git_local_commit=local_commit,
-                git_remote_commit=remote_commit,
-                updates_available=updates_available
-            )
+    
+        # Fetch latest changes
+        subprocess.run(["git", "fetch"], check=True, capture_output=True)
+        
+        # Get current branch
+        branch = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            check=True, 
+            capture_output=True, 
+            text=True
+        ).stdout.strip()
+        
+        # Get local and remote commits
+        local_commit = subprocess.run(
+            ["git", "rev-parse", branch],
+            check=True,
+            capture_output=True,
+            text=True
+        ).stdout.strip()
+        
+        remote_commit = subprocess.run(
+            ["git", "rev-parse", f"origin/{branch}"],
+            check=True,
+            capture_output=True,
+            text=True
+        ).stdout.strip()
+        
+        updates_available = local_commit != remote_commit
+        
+        return StudioUpgradeStatus(
+            git_local_commit=local_commit,
+            git_remote_commit=remote_commit,
+            updates_available=updates_available
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+# Ensure uv is installed
+def ensure_uv_installed():
+    try:
+        print(subprocess.run(["uv", "--version"], check=True, capture_output=True))
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print(subprocess.run(["curl -LsSf https://astral.sh/uv/install.sh | sh"], shell=True, check=True))
+        os.environ["PATH"] = f"{os.environ['HOME']}/.cargo/bin:{os.environ['PATH']}"
+
+# Setup virtual environment and dependencies
+def setup_environment(PROJECT_ROOT):
+    
+    venv_dir = PROJECT_ROOT / ".venv"
+    
+    # Create venv if it doesn't exist - specifying the path explicitly
+    if not venv_dir.exists():
+        print(subprocess.run(["uv", "venv", ".venv"], cwd=PROJECT_ROOT, check=True))
+    
+    # Install dependencies with uv pip instead of sync to avoid pyproject.toml parsing issues
+    print(subprocess.run(["uv", "pip", "install", "-e", "."], cwd=PROJECT_ROOT, check=True))
 
 @app.post("/synthesis-studio/upgrade", response_model=StudioUpgradeResponse)
 async def perform_upgrade():
@@ -1046,23 +1353,25 @@ async def perform_upgrade():
         frontend_rebuilt = False
         db_upgraded = False
         
+        PROJECT_ROOT = Path(os.getcwd())
         # 1. Git operations
         try:
-            with path_manager.in_project_directory():
-                # Stash any changes
-                subprocess.run(["git", "stash"], check=True, capture_output=True)
-                
-                # Pull updates
-                subprocess.run(["git", "pull"], check=True, capture_output=True)
-                
-                # Try to pop stash
-                try:
-                    subprocess.run(["git", "stash", "pop"], check=True, capture_output=True)
-                except subprocess.CalledProcessError:
-                    messages.append("Warning: Could not restore local changes")
-                
-                git_updated = True
-                messages.append("Git repository updated")
+            
+            # Stash any changes
+            print(subprocess.run(["git", "stash"], check=True, capture_output=True))
+            
+            # Pull updates
+            print(subprocess.run(["git", "pull"], check=True, capture_output=True))
+            
+            # Try to pop stash
+            try:
+                print(subprocess.run(["git", "stash", "pop"], check=True, capture_output=True))
+            except subprocess.CalledProcessError:
+                messages.append("Warning: Could not restore local changes")
+            
+            git_updated = True
+            messages.append("Git repository updated")
+            print(messages)
             
         except subprocess.CalledProcessError as e:
             messages.append(f"Git update failed: {e}")
@@ -1083,9 +1392,11 @@ async def perform_upgrade():
         
         # 3. Run build_client.sh
         try:
-            # script_path = "build/build_client.py"
-            # #script_path = path_manager.get_str_path(script_path)
-            # subprocess.run(["python", script_path], check=True)
+            
+            ensure_uv_installed()
+            
+            setup_environment(PROJECT_ROOT)
+
             subprocess.run(["bash build/shell_scripts/build_client.sh"], shell=True, check=True)
             frontend_rebuilt = True
             messages.append("Frontend rebuilt successfully")
@@ -1098,6 +1409,7 @@ async def perform_upgrade():
             try:
                 # Small delay to ensure logs are captured
                 time.sleep(10)
+                print("application restart will happen now")
                 restart_application()
                 messages.append("Application restart initiated")
                 
@@ -1122,6 +1434,8 @@ async def perform_upgrade():
 current_directory = os.path.dirname(os.path.abspath(__file__))
 client_build_path = os.path.join(current_directory, "client", "dist")
 app.mount("/static", StaticFiles(directory=client_build_path, html=True), name="webapp")
+
+#app.mount("/", StaticFiles(directory=client_build_path, html=True), name="webapp")
 
 @app.get("/")
 async def serve_index():
