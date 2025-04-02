@@ -10,6 +10,7 @@ from app.core.config import get_model_family, MODEL_CONFIGS
 from app.models.request_models import ModelParameters
 from openai import OpenAI
 from app.core.exceptions import APIError, InvalidModelError, ModelHandlerError, JSONParsingError
+from app.core.telemetry_integration import track_llm_operation
 
 
 
@@ -151,8 +152,8 @@ class UnifiedModelHandler:
             return []
 
 
-
-    def generate_response(self, prompt: str, retry_with_reduced_tokens: bool = True) -> List[Dict[str, str]]:
+    @track_llm_operation("generate")
+    def generate_response(self, prompt: str, retry_with_reduced_tokens: bool = True, request_id = None) -> List[Dict[str, str]]:
         if self.inference_type == "aws_bedrock":
             return self._handle_bedrock_request(prompt, retry_with_reduced_tokens)
         elif self.inference_type == "CAII":

@@ -49,6 +49,10 @@ from app.migrations.alembic_manager import AlembicMigrationManager
 from app.core.config import responses, caii_check
 from app.core.path_manager import PathManager
 
+from app.core.telemetry_middleware import TelemetryMiddleware
+from app.routes.telemetry_routes import router as telemetry_router
+
+
 
 #****************************************Initialize************************************************
 
@@ -118,7 +122,28 @@ def get_job_status( job_id: str) -> str:
         sort="-created_at", 
         page_size=1
     )
-    return response.job_runs[0].status
+
+    status = response.job_runs[0].status
+
+    # Add telemetry tracking for completed jobs
+    if status in ["ENGINE_SCHEDULING", "ENGINE_STARTING", "ENGINE_RUNNING", "ENGINE_STOPPING", "ENGINE_STOPPED", "ENGINE_UNKNOWN","ENGINE_SUCCEEDED", "ENGINE_FAILED", "ENGINE_TIMEDOUT"]:
+        # Get metrics_id from database if available
+        metrics_id = db_manager.get_job_telemetry_id(job_id)
+        if metrics_id:
+            from app.core.telemetry_integration import record_job_completion
+            error = None
+            if status == "ENGINE_FAILED":
+                # Try to get error information from logs
+                error = "Job execution failed" 
+            
+            record_job_completion(
+                job_id=job_id,
+                metrics_id=metrics_id,
+                status=status,
+                error=error
+            )
+
+    return status
 
 def get_total_size(file_paths):
   
@@ -179,9 +204,11 @@ class StudioUpgradeResponse(BaseModel):
 async def lifespan(app: FastAPI):
     """Lifespan context manager for the FastAPI application"""
     # Create document upload directory on startup
-    path_manager.make_dirs(path_manager.upload_dir)
+    #path_manager.make_dirs(path_manager.upload_dir)
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
     print(f"Document upload directory created at: {UPLOAD_DIR}")
     yield
+
 
 app = FastAPI(
     title="LLM Data Synthesis API",
@@ -190,7 +217,11 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# app.add_middleware(TelemetryMiddleware)
 
+# # Add telemetry router to the FastAPI app
+# # Add this line after other app.include_router() calls
+# app.include_router(telemetry_router)
 
 @app.middleware("http")
 async def global_middleware(request: Request, call_next):
@@ -339,6 +370,9 @@ async def get_dataset_size(request:JsonDataSize):
 async def generate_examples(request: SynthesisRequest):
     """Generate question-answer pairs"""
     
+    # Generate a request ID
+    request_id = str(uuid.uuid4())
+
     if request.inference_type== "CAII":
         caii_endpoint = request.caii_endpoint
         response = caii_check(caii_endpoint)
@@ -378,11 +412,11 @@ async def generate_examples(request: SynthesisRequest):
     
     if is_demo== True:
         if request.input_path:
-            return await synthesis_service.generate_result(request,is_demo)
+            return await synthesis_service.generate_result(request,is_demo, request_id=request_id)
         else:
-            return await synthesis_service.generate_examples(request,is_demo)
+            return await synthesis_service.generate_examples(request,is_demo, request_id=request_id)
     else:
-       return synthesis_job.generate_job(request, core, mem)
+       return synthesis_job.generate_job(request, core, mem, request_id=request_id)
     
 
 @app.post("/synthesis/freeform", include_in_schema=True,
@@ -391,6 +425,8 @@ async def generate_examples(request: SynthesisRequest):
 async def generate_freeform_data(request: SynthesisRequest):
     """Generate freeform structured data based on provided examples and custom instructions"""
     
+    request_id = str(uuid.uuid4())
+
     if request.inference_type == "CAII":
         caii_endpoint = request.caii_endpoint
         response = caii_check(caii_endpoint)
@@ -426,14 +462,14 @@ async def generate_freeform_data(request: SynthesisRequest):
                 core = 2
     
     if is_demo:
-        return await synthesis_service.generate_freeform(request, is_demo=is_demo)
+        return await synthesis_service.generate_freeform(request, is_demo=is_demo, request_id=request_id )
     else:
         # Pass additional parameter to indicate this is a freeform request
         request_dict = request.model_dump()
         request_dict['generation_type'] = 'freeform'
         # Convert back to SynthesisRequest object
         freeform_request = SynthesisRequest(**request_dict)
-        return synthesis_job.generate_job(freeform_request, core, mem)
+        return synthesis_job.generate_job(freeform_request, core, mem, request_id=request_id)
 
 @app.post("/synthesis/evaluate", 
     include_in_schema=True,
@@ -441,6 +477,8 @@ async def generate_freeform_data(request: SynthesisRequest):
     description="Evaluate generated QA pairs")
 async def evaluate_examples(request: EvaluationRequest):
     """Evaluate generated QA pairs"""
+    request_id = str(uuid.uuid4())
+
     if request.inference_type== "CAII":
         caii_endpoint = request.caii_endpoint
         response = caii_check(caii_endpoint)
@@ -453,10 +491,10 @@ async def evaluate_examples(request: EvaluationRequest):
    
     is_demo = request.is_demo
     if is_demo:
-       return evaluator_service.evaluate_results(request)
+       return evaluator_service.evaluate_results(request, request_id=request_id)
     
     else:
-        return synthesis_job.evaluate_job(request)
+        return synthesis_job.evaluate_job(request, request_id=request_id)
     
 @app.post("/synthesis/evaluate_freeform", 
     include_in_schema=True,
@@ -464,6 +502,8 @@ async def evaluate_examples(request: EvaluationRequest):
     description="Evaluate data rows")
 async def evaluate_freeform(request: EvaluationRequest):
     """Evaluate data rows"""
+    request_id = str(uuid.uuid4())
+
     if request.inference_type == "CAII":
         caii_endpoint = request.caii_endpoint
         response = caii_check(caii_endpoint)
@@ -476,13 +516,13 @@ async def evaluate_freeform(request: EvaluationRequest):
    
     is_demo = getattr(request, 'is_demo', True)
     if is_demo:
-        return evaluator_service.evaluate_row_data(request)
+        return evaluator_service.evaluate_row_data(request, request_id=request_id)
     else:
         request_dict = request.model_dump()
         request_dict['generation_type'] = 'freeform'
         # Convert back to SynthesisRequest object
         freeform_request = EvaluationRequest(**request_dict)
-        return synthesis_job.evaluate_job(freeform_request)
+        return synthesis_job.evaluate_job(freeform_request, request_id=request_id)
 
 
 @app.post("/model/alignment",
@@ -543,7 +583,7 @@ async def export_results(request:Export_synth):
         )
 
 @app.post("/create_custom_prompt")
-async def create_custom_prompt(request: CustomPromptRequest):
+async def create_custom_prompt(request: CustomPromptRequest, request_id = None):
     """Allow users to customize prompt. Only part of the prompt which can be customized"""
     try:
         bedrock_client =   get_bedrock_client()
@@ -554,7 +594,7 @@ async def create_custom_prompt(request: CustomPromptRequest):
                 custom_prompt=request.custom_prompt,
             )
         #print(prompt)
-        prompt_gen = model_handler.generate_response(prompt)
+        prompt_gen = model_handler.generate_response(prompt, request_id=request_id)
 
         return {"generated_prompt":prompt_gen}
     except Exception as e:
@@ -1239,42 +1279,63 @@ async def get_example_payloads(use_case:UseCase):
 async def check_upgrade_status():
     """Check if any upgrades are available"""
     try:
-        with path_manager.in_project_directory():
-            # Fetch latest changes
-            subprocess.run(["git", "fetch"], check=True, capture_output=True)
-            
-            # Get current branch
-            branch = subprocess.run(
-                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                check=True, 
-                capture_output=True, 
-                text=True
-            ).stdout.strip()
-            
-            # Get local and remote commits
-            local_commit = subprocess.run(
-                ["git", "rev-parse", branch],
-                check=True,
-                capture_output=True,
-                text=True
-            ).stdout.strip()
-            
-            remote_commit = subprocess.run(
-                ["git", "rev-parse", f"origin/{branch}"],
-                check=True,
-                capture_output=True,
-                text=True
-            ).stdout.strip()
-            
-            updates_available = local_commit != remote_commit
-            
-            return StudioUpgradeStatus(
-                git_local_commit=local_commit,
-                git_remote_commit=remote_commit,
-                updates_available=updates_available
-            )
+    
+        # Fetch latest changes
+        subprocess.run(["git", "fetch"], check=True, capture_output=True)
+        
+        # Get current branch
+        branch = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            check=True, 
+            capture_output=True, 
+            text=True
+        ).stdout.strip()
+        
+        # Get local and remote commits
+        local_commit = subprocess.run(
+            ["git", "rev-parse", branch],
+            check=True,
+            capture_output=True,
+            text=True
+        ).stdout.strip()
+        
+        remote_commit = subprocess.run(
+            ["git", "rev-parse", f"origin/{branch}"],
+            check=True,
+            capture_output=True,
+            text=True
+        ).stdout.strip()
+        
+        updates_available = local_commit != remote_commit
+        
+        return StudioUpgradeStatus(
+            git_local_commit=local_commit,
+            git_remote_commit=remote_commit,
+            updates_available=updates_available
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+# Ensure uv is installed
+def ensure_uv_installed():
+    try:
+        print(subprocess.run(["uv", "--version"], check=True, capture_output=True))
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print(subprocess.run(["curl -LsSf https://astral.sh/uv/install.sh | sh"], shell=True, check=True))
+        os.environ["PATH"] = f"{os.environ['HOME']}/.cargo/bin:{os.environ['PATH']}"
+
+# Setup virtual environment and dependencies
+def setup_environment(PROJECT_ROOT):
+    
+    venv_dir = PROJECT_ROOT / ".venv"
+    
+    # Create venv if it doesn't exist - specifying the path explicitly
+    if not venv_dir.exists():
+        print(subprocess.run(["uv", "venv", ".venv"], cwd=PROJECT_ROOT, check=True))
+    
+    # Install dependencies with uv pip instead of sync to avoid pyproject.toml parsing issues
+    print(subprocess.run(["uv", "pip", "install", "-e", "."], cwd=PROJECT_ROOT, check=True))
 
 @app.post("/synthesis-studio/upgrade", response_model=StudioUpgradeResponse)
 async def perform_upgrade():
@@ -1292,23 +1353,25 @@ async def perform_upgrade():
         frontend_rebuilt = False
         db_upgraded = False
         
+        PROJECT_ROOT = Path(os.getcwd())
         # 1. Git operations
         try:
-            with path_manager.in_project_directory():
-                # Stash any changes
-                subprocess.run(["git", "stash"], check=True, capture_output=True)
-                
-                # Pull updates
-                subprocess.run(["git", "pull"], check=True, capture_output=True)
-                
-                # Try to pop stash
-                try:
-                    subprocess.run(["git", "stash", "pop"], check=True, capture_output=True)
-                except subprocess.CalledProcessError:
-                    messages.append("Warning: Could not restore local changes")
-                
-                git_updated = True
-                messages.append("Git repository updated")
+            
+            # Stash any changes
+            print(subprocess.run(["git", "stash"], check=True, capture_output=True))
+            
+            # Pull updates
+            print(subprocess.run(["git", "pull"], check=True, capture_output=True))
+            
+            # Try to pop stash
+            try:
+                print(subprocess.run(["git", "stash", "pop"], check=True, capture_output=True))
+            except subprocess.CalledProcessError:
+                messages.append("Warning: Could not restore local changes")
+            
+            git_updated = True
+            messages.append("Git repository updated")
+            print(messages)
             
         except subprocess.CalledProcessError as e:
             messages.append(f"Git update failed: {e}")
@@ -1329,9 +1392,11 @@ async def perform_upgrade():
         
         # 3. Run build_client.sh
         try:
-            # script_path = "build/build_client.py"
-            # #script_path = path_manager.get_str_path(script_path)
-            # subprocess.run(["python", script_path], check=True)
+            
+            ensure_uv_installed()
+            
+            setup_environment(PROJECT_ROOT)
+
             subprocess.run(["bash build/shell_scripts/build_client.sh"], shell=True, check=True)
             frontend_rebuilt = True
             messages.append("Frontend rebuilt successfully")
@@ -1344,6 +1409,7 @@ async def perform_upgrade():
             try:
                 # Small delay to ensure logs are captured
                 time.sleep(10)
+                print("application restart will happen now")
                 restart_application()
                 messages.append("Application restart initiated")
                 
@@ -1367,11 +1433,13 @@ async def perform_upgrade():
 #****** comment below for testing just backend**************
 current_directory = os.path.dirname(os.path.abspath(__file__))
 client_build_path = os.path.join(current_directory, "client", "dist")
-app.mount("/static", StaticFiles(directory=client_build_path, html=True), name="webapp")
+#app.mount("/static", StaticFiles(directory=client_build_path, html=True), name="webapp")
 
-@app.get("/")
-async def serve_index():
-   return FileResponse(os.path.join(client_build_path, "index.html"))
+app.mount("/", StaticFiles(directory=client_build_path, html=True), name="webapp")
+
+# @app.get("/")
+# async def serve_index():
+#    return FileResponse(os.path.join(client_build_path, "index.html"))
 
 @app.get("/{path_name:path}")
 async def serve_react_app(path_name: str):

@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 import json
 import logging
 from logging.handlers import RotatingFileHandler
+from app.core.telemetry_integration import track_llm_operation
 from functools import partial
 
 class EvaluatorService:
@@ -56,8 +57,8 @@ class EvaluatorService:
         self.logger.addHandler(error_handler)
 
     
-
-    def evaluate_single_pair(self, qa_pair: Dict, model_handler, request: EvaluationRequest) -> Dict:
+    #@track_llm_operation("evaluate_single_pair")
+    def evaluate_single_pair(self, qa_pair: Dict, model_handler, request: EvaluationRequest, request_id=None) -> Dict:
         """Evaluate a single QA pair"""
         try:
             # Default error response
@@ -99,7 +100,7 @@ class EvaluatorService:
                 return error_response
 
             try:
-                response = model_handler.generate_response(prompt)
+                response = model_handler.generate_response(prompt, request_id=request_id)
             except ModelHandlerError as e:
                 self.logger.error(f"ModelHandlerError in generate_response: {str(e)}")
                 raise  
@@ -144,8 +145,9 @@ class EvaluatorService:
         except Exception as e:
             self.logger.error(f"Critical error in evaluate_single_pair: {str(e)}")
             return error_response
-
-    def evaluate_topic(self, topic: str, qa_pairs: List[Dict], model_handler, request: EvaluationRequest) -> Dict:
+        
+    #@track_llm_operation("evaluate_topic")
+    def evaluate_topic(self, topic: str, qa_pairs: List[Dict], model_handler, request: EvaluationRequest, request_id=None) -> Dict:
         """Evaluate all QA pairs for a given topic in parallel"""
         try:
             self.logger.info(f"Starting evaluation for topic: {topic} with {len(qa_pairs)} QA pairs")
@@ -158,7 +160,7 @@ class EvaluatorService:
                         evaluate_func = partial(
                             self.evaluate_single_pair,
                             model_handler=model_handler,
-                            request=request
+                            request=request, request_id=request_id
                         )
                         
                         future_to_pair = {
@@ -241,8 +243,8 @@ class EvaluatorService:
                 "failed_pairs": [],
                 "error": error_msg
             }
-
-    def evaluate_results(self, request: EvaluationRequest, job_name=None,is_demo: bool = True) -> Dict:
+    #@track_llm_operation("evaluate_results")
+    def evaluate_results(self, request: EvaluationRequest, job_name=None,is_demo: bool = True, request_id=None) -> Dict:
         """Evaluate all QA pairs with parallel processing"""
         try:
             self.logger.info(f"Starting evaluation process - Demo Mode: {is_demo}")
@@ -292,7 +294,7 @@ class EvaluatorService:
                         topic,
                         qa_pairs,
                         model_handler,
-                        request
+                        request, request_id=request_id
                     ): topic
                     for topic, qa_pairs in transformed_data['results'].items()
                 }
@@ -395,7 +397,7 @@ class EvaluatorService:
                 
                 raise
 
-    def evaluate_single_row(self, row: Dict[str, Any], model_handler, request: EvaluationRequest) -> Dict:
+    def evaluate_single_row(self, row: Dict[str, Any], model_handler, request: EvaluationRequest, request_id = None) -> Dict:
         """Evaluate a single data row"""
         try:
             # Default error response
@@ -428,7 +430,7 @@ class EvaluatorService:
                 return error_response
 
             try:
-                response = model_handler.generate_response(prompt)
+                response = model_handler.generate_response(prompt, request_id=request_id)
             except ModelHandlerError as e:
                 self.logger.error(f"ModelHandlerError in generate_response: {str(e)}")
                 raise  
@@ -472,8 +474,9 @@ class EvaluatorService:
         except Exception as e:
             self.logger.error(f"Critical error in evaluate_single_row: {str(e)}")
             return error_response
-
-    def evaluate_rows(self, rows: List[Dict[str, Any]], model_handler, request: EvaluationRequest) -> Dict:
+        
+    #@track_llm_operation("evaluate_all_rows")
+    def evaluate_rows(self, rows: List[Dict[str, Any]], model_handler, request: EvaluationRequest, request_id=None) -> Dict:
         """Evaluate all data rows in parallel"""
         try:
             self.logger.info(f"Starting row evaluation with {len(rows)} rows")
@@ -486,7 +489,7 @@ class EvaluatorService:
                         evaluate_func = partial(
                             self.evaluate_single_row,
                             model_handler=model_handler,
-                            request=request
+                            request=request, request_id=request_id
                         )
                         
                         future_to_row = {
@@ -569,8 +572,9 @@ class EvaluatorService:
                 "failed_rows": [],
                 "error": error_msg
             }
-
-    def evaluate_row_data(self, request: EvaluationRequest, job_name=None, is_demo: bool = True) -> Dict:
+        
+    #@track_llm_operation("evaluate_freeform_data")
+    def evaluate_row_data(self, request: EvaluationRequest, job_name=None, is_demo: bool = True, request_id = None) -> Dict:
         """Evaluate rows of data with parallel processing"""
         try:
             self.logger.info(f"Starting row evaluation process - Demo Mode: {is_demo}")
@@ -594,7 +598,7 @@ class EvaluatorService:
             rows = data if isinstance(data, list) else [data]
             
             # Evaluate all rows
-            evaluated_results = self.evaluate_rows(rows, model_handler, request)
+            evaluated_results = self.evaluate_rows(rows, model_handler, request, request_id=request_id)
             all_scores = [row["evaluation"]["score"] for row in evaluated_results["evaluated_rows"]]
             
             overall_average = sum(all_scores) / len(all_scores) if all_scores else 0

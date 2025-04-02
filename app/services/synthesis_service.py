@@ -26,6 +26,7 @@ from app.services.doc_extraction import DocumentProcessor
 import logging
 from logging.handlers import RotatingFileHandler
 import traceback
+from app.core.telemetry_integration import track_llm_operation
 import uuid 
 
 
@@ -77,8 +78,8 @@ class SynthesisService:
         self.logger.addHandler(error_handler)
 
     
-
-    def process_single_topic(self, topic: str, model_handler: any, request: SynthesisRequest, num_questions: int) -> Tuple[str, List[Dict], List[str], List[Dict]]:
+    #@track_llm_operation("process_single_topic")
+    def process_single_topic(self, topic: str, model_handler: any, request: SynthesisRequest, num_questions: int, request_id=None) -> Tuple[str, List[Dict], List[str], List[Dict]]:
         """
         Process a single topic to generate questions and solutions.
         Attempts batch processing first (default 5 questions), falls back to single question processing if batch fails.
@@ -127,10 +128,10 @@ class SynthesisService:
                         schema=request.schema,
                         custom_prompt=request.custom_prompt,
                     )
-                    print("prompt :", prompt)
+                   # print("prompt :", prompt)
                     batch_qa_pairs = None
                     try:
-                        batch_qa_pairs = model_handler.generate_response(prompt)
+                        batch_qa_pairs = model_handler.generate_response(prompt, request_id=request_id)
                     except ModelHandlerError as e:
                         self.logger.warning(f"Batch processing failed: {str(e)}")
                         if isinstance(e, JSONParsingError):
@@ -197,7 +198,7 @@ class SynthesisService:
                                     )
                                     
                                     try:
-                                        single_qa_pairs = model_handler.generate_response(prompt)
+                                        single_qa_pairs = model_handler.generate_response(prompt, request_id=request_id)
                                     except ModelHandlerError as e:
                                         self.logger.warning(f"Batch processing failed: {str(e)}")
                                         if isinstance(e, JSONParsingError):
@@ -266,7 +267,7 @@ class SynthesisService:
         return topic, topic_results, topic_errors, topic_output
                
         
-    async def generate_examples(self, request: SynthesisRequest , job_name = None, is_demo: bool = True) -> Dict:
+    async def generate_examples(self, request: SynthesisRequest , job_name = None, is_demo: bool = True, request_id= None) -> Dict:
         """Generate examples based on request parameters"""
         try:
             output_key = request.output_key 
@@ -325,7 +326,8 @@ class SynthesisService:
                         topic,
                         model_handler,
                         request,
-                        num_questions
+                        num_questions,
+                        request_id
                     )
                     for topic in topics
                 ]
@@ -478,8 +480,8 @@ class SynthesisService:
             len(pair["question"].strip()) > 0 and
             len(pair["solution"].strip()) > 0
         )
-    
-    async def process_single_input(self, input, model_handler, request):
+    #@track_llm_operation("process_single_input") 
+    async def process_single_input(self, input, model_handler, request, request_id=None):
         try:
             prompt = PromptBuilder.build_generate_result_prompt(
                 model_id=request.model_id,
@@ -490,7 +492,7 @@ class SynthesisService:
                 custom_prompt=request.custom_prompt,
             )
             try:
-                result = model_handler.generate_response(prompt)
+                result = model_handler.generate_response(prompt, request_id=request_id)
             except ModelHandlerError as e:
                 self.logger.error(f"ModelHandlerError in generate_response: {str(e)}")
                 raise
@@ -503,7 +505,7 @@ class SynthesisService:
             self.logger.error(f"Error processing input: {str(e)}")
             raise APIError(f"Failed to process input: {str(e)}")
 
-    async def generate_result(self, request: SynthesisRequest , job_name = None, is_demo: bool = True) -> Dict:
+    async def generate_result(self, request: SynthesisRequest , job_name = None, is_demo: bool = True, request_id=None) -> Dict:
         try:
             self.logger.info(f"Starting example generation - Demo Mode: {is_demo}")
             
@@ -534,7 +536,7 @@ class SynthesisService:
                 input_futures = [
                     loop.run_in_executor(
                         executor,
-                        lambda x: asyncio.run(self.process_single_input(x, model_handler, request)),
+                        lambda x: asyncio.run(self.process_single_input(x, model_handler, request, request_id)),
                         input
                     )
                     for input in inputs
@@ -663,7 +665,8 @@ class SynthesisService:
                 self.db.update_job_generate(job_name, file_name, output_path, time_stamp, job_status)
                 raise  # Just re-raise the original exception
 
-    def process_single_freeform(self, topic: str, model_handler: any, request: SynthesisRequest, num_questions: int) -> Tuple[str, List[Dict], List[str], List[Dict]]:
+    #@track_llm_operation("process_single_freeform") 
+    def process_single_freeform(self, topic: str, model_handler: any, request: SynthesisRequest, num_questions: int, request_id=None) -> Tuple[str, List[Dict], List[str], List[Dict]]:
         """
         Process a single topic to generate freeform data.
         Attempts batch processing first (default batch size), falls back to single item processing if batch fails.
@@ -712,10 +715,10 @@ class SynthesisService:
                         custom_prompt=request.custom_prompt,
                         schema=request.schema,
                     )
-                    print(prompt)
+                    #print(prompt)
                     batch_items = None
                     try:
-                        batch_items = model_handler.generate_response(prompt)
+                        batch_items = model_handler.generate_response(prompt, request_id=request_id)
                     except ModelHandlerError as e:
                         self.logger.warning(f"Batch processing failed: {str(e)}")
                         if isinstance(e, JSONParsingError):
@@ -803,7 +806,7 @@ class SynthesisService:
                                 )
                                 
                                 try:
-                                    single_items = model_handler.generate_response(prompt)
+                                    single_items = model_handler.generate_response(prompt, request_id=request_id)
                                 except ModelHandlerError as e:
                                     self.logger.warning(f"Single processing failed: {str(e)}")
                                     if isinstance(e, JSONParsingError):
@@ -894,7 +897,7 @@ class SynthesisService:
         """
         return isinstance(item, dict) and len(item) > 0
 
-    async def generate_freeform(self, request: SynthesisRequest, job_name=None, is_demo: bool = True) -> Dict:
+    async def generate_freeform(self, request: SynthesisRequest, job_name=None, is_demo: bool = True, request_id=None) -> Dict:
         """Generate freeform data based on request parameters"""
         try:
             output_key = request.output_key 
@@ -957,7 +960,7 @@ class SynthesisService:
                         topic,
                         model_handler,
                         request,
-                        num_questions
+                        num_questions, request_id
                     )
                     for topic in topics
                 ]

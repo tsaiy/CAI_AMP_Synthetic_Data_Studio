@@ -9,6 +9,7 @@ import DatasetDetailsPage from "./pages/DatasetDetails/DatasetDetailsPage";
 import WelcomePage from "./pages/Home/WelcomePage";
 import ErrorPage from "./pages/ErrorPage";
 import EvaluationDetailsPage from "./pages/EvaluationDetails/EvaluationDetailsPage";
+import TelemetryDashboard from "./components/TelemetryDashboard";
 
 
 const router = createBrowserRouter([
@@ -59,6 +60,12 @@ const router = createBrowserRouter([
       {
         path: `welcome`,
         element: <WelcomePage />,
+        errorElement: <ErrorPage />,
+        loader: async () => null
+      },
+      {
+        path: `telemetry`,
+        element: <TelemetryDashboard />,
         errorElement: <ErrorPage />,
         loader: async () => null
       }

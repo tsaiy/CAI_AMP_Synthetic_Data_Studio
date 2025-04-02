@@ -55,21 +55,21 @@ import nest_asyncio
 # Enable nested event loop
 nest_asyncio.apply()
 
-async def run_eval(request, job_name):
+async def run_eval(request, job_name, request_id):
     try:
         
         job = EvaluatorService()
-        result = job.evaluate_results(request,job_name, is_demo=False)
+        result = job.evaluate_results(request,job_name, is_demo=False, request_id=request_id)
         return result
     except Exception as e:
         print(f"Error in evaluation: {e}")
         raise
 
-async def run_freeform_eval(request, job_name):
+async def run_freeform_eval(request, job_name, request_id):
     """Run freeform data synthesis job"""
     try:
         job = EvaluatorService()
-        result = await job.evaluate_row_data(request, job_name, is_demo=False)
+        result = await job.evaluate_row_data(request, job_name, is_demo=False, request_id=request_id)
         return result
     except Exception as e:
         print(f"Error in freeform synthesis: {e}")
@@ -84,11 +84,12 @@ if __name__ == "__main__":
         with open(file_name, 'r') as f:
             params = json.load(f)
         job_name = params.pop('job_name')
-
+        request_id = params.pop('request_id')
         print(params)
         os.remove(file_name)
         # Check if this is a freeform generation request
         is_freeform = params.pop('generation_type', None) == 'freeform'
+        
         request = EvaluationRequest.model_validate(params)
         # Get current loop or create new one
         try:
@@ -99,9 +100,9 @@ if __name__ == "__main__":
         # Run appropriate synthesis based on type
         if is_freeform:
             print("Running freeform data generation job")
-            result = loop.run_until_complete(run_freeform_eval(request, job_name))  
+            result = loop.run_until_complete(run_freeform_eval(request, job_name, request_id))  
         else:
-            result = loop.run_until_complete(run_eval(request, job_name))
+            result = loop.run_until_complete(run_eval(request, job_name, request_id))
         #print(result)
         
     except Exception as e:

@@ -54,25 +54,25 @@ import nest_asyncio  # Add this import
 # Enable nested event loop
 nest_asyncio.apply()
 
-async def run_synthesis(request, job_name):
+async def run_synthesis(request, job_name, request_id):
     """Run standard synthesis job for question-answer pairs"""
     try:
         job = SynthesisService()
         if request.input_path:
-            result = await job.generate_result(request, job_name, is_demo=False)
+            result = await job.generate_result(request, job_name, is_demo=False, request_id=request_id)
         else:
-            result = await job.generate_examples(request, job_name, is_demo=False)
+            result = await job.generate_examples(request, job_name, is_demo=False, request_id=request_id)
         
         return result
     except Exception as e:
         print(f"Error in synthesis: {e}")
         raise
 
-async def run_freeform_synthesis(request, job_name):
+async def run_freeform_synthesis(request, job_name, request_id):
     """Run freeform data synthesis job"""
     try:
         job = SynthesisService()
-        result = await job.generate_freeform(request, job_name, is_demo=False)
+        result = await job.generate_freeform(request, job_name, is_demo=False, request_id=request_id)
         return result
     except Exception as e:
         print(f"Error in freeform synthesis: {e}")
@@ -87,6 +87,7 @@ if __name__ == "__main__":
             params = json.load(f)
         
         job_name = params.pop('job_name')
+        request_id  = params.pop('request_id')
         print(f"Starting job: {job_name}")
         print(f"Parameters: {params}")
         
@@ -109,10 +110,10 @@ if __name__ == "__main__":
         # Run appropriate synthesis based on type
         if is_freeform:
             print("Running freeform data generation job")
-            result = loop.run_until_complete(run_freeform_synthesis(request, job_name))
+            result = loop.run_until_complete(run_freeform_synthesis(request, job_name, request_id))
         else:
             print("Running standard question-answer generation job")
-            result = loop.run_until_complete(run_synthesis(request, job_name))
+            result = loop.run_until_complete(run_synthesis(request, job_name, request_id))
             
         print(f"Job completed successfully: {result}")
         
