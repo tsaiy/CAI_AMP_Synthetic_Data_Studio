@@ -9,25 +9,7 @@ if os.getenv("IS_COMPOSABLE"):
     
     os.chdir("/home/cdsw/synthetic-data-studio")
 
-# def check_and_install_requirements():
-#     """Check and install requirements from requirements.txt"""
-#     # Get the current working directory instead of using __file__
-#     current_dir = os.getcwd()
-#     requirements_path = os.path.join(current_dir, 'requirements.txt')
-    
-#     if os.path.exists(requirements_path):
-#         try:
-#             print(f"Installing requirements from: {requirements_path}")
-#             subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', requirements_path])
-#         except subprocess.CalledProcessError as e:
-#             print(f"Error installing requirements: {e}")
-#             sys.exit(1)
-#     else:
-#         print("No requirements.txt found, continuing with existing packages")
 
-# # Run installation check at start
-# check_and_install_requirements()
-# Get the current notebook's directory
 notebook_dir = os.getcwd()
 
 # Detect the Python version dynamically
@@ -69,7 +51,7 @@ async def run_freeform_eval(request, job_name, request_id):
     """Run freeform data synthesis job"""
     try:
         job = EvaluatorService()
-        result = await job.evaluate_row_data(request, job_name, is_demo=False, request_id=request_id)
+        result = job.evaluate_row_data(request, job_name, is_demo=False, request_id=request_id)
         return result
     except Exception as e:
         print(f"Error in freeform synthesis: {e}")

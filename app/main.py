@@ -466,10 +466,10 @@ async def generate_freeform_data(request: SynthesisRequest):
     else:
         # Pass additional parameter to indicate this is a freeform request
         request_dict = request.model_dump()
-        request_dict['generation_type'] = 'freeform'
+        freeform = True
         # Convert back to SynthesisRequest object
         freeform_request = SynthesisRequest(**request_dict)
-        return synthesis_job.generate_job(freeform_request, core, mem, request_id=request_id)
+        return synthesis_job.generate_job(freeform_request, core, mem, request_id=request_id, freeform = freeform)
 
 @app.post("/synthesis/evaluate", 
     include_in_schema=True,
@@ -519,10 +519,10 @@ async def evaluate_freeform(request: EvaluationRequest):
         return evaluator_service.evaluate_row_data(request, request_id=request_id)
     else:
         request_dict = request.model_dump()
-        request_dict['generation_type'] = 'freeform'
+        freeform = True
         # Convert back to SynthesisRequest object
         freeform_request = EvaluationRequest(**request_dict)
-        return synthesis_job.evaluate_job(freeform_request, request_id=request_id)
+        return synthesis_job.evaluate_job(freeform_request, request_id=request_id,freeform = freeform)
 
 
 @app.post("/model/alignment",

@@ -8,25 +8,9 @@ import traceback
 if os.getenv("IS_COMPOSABLE"):
     os.chdir("/home/cdsw/synthetic-data-studio")
 
-# def check_and_install_requirements():
-#     """Check and install requirements from requirements.txt"""
-#     # Get the current working directory instead of using __file__
-#     current_dir = os.getcwd()
-#     requirements_path = os.path.join(current_dir, 'requirements.txt')
-    
-#     if os.path.exists(requirements_path):
-#         try:
-#             print(f"Installing requirements from: {requirements_path}")
-#             subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', requirements_path])
-#         except subprocess.CalledProcessError as e:
-#             print(f"Error installing requirements: {e}")
-#             sys.exit(1)
-#     else:
-#         print("No requirements.txt found, continuing with existing packages")
 
 
-# # Run installation check at start
-# check_and_install_requirements()
+
 
 # Get the current notebook's directory
 notebook_dir = os.getcwd()
