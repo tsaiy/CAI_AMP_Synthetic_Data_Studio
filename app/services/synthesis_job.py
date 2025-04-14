@@ -52,7 +52,8 @@ class SynthesisJob:
         params: Dict[str, Any],
         cpu: int,
         memory: int,
-        request_id = None
+        request_id = None,
+        freeform = None
     ) -> tuple:
         """Common job creation and execution logic"""
         script_path = self.path_manager.get_str_path(f"app/{script_name}")
@@ -62,6 +63,8 @@ class SynthesisJob:
         job_name = f"{display_name}_{random_id}" if display_name else f"{job_prefix}_{random_id}"
         params['job_name'] = job_name
         params['request_id'] = request_id
+        if freeform:
+            params['generation_type'] = 'freeform'
         file_name = f"{job_prefix}_args_{random_id}.json"
         
         # Write parameters to file
@@ -103,7 +106,7 @@ class SynthesisJob:
         ).job_runs[0].creator.name
     
     #@track_job("generate")
-    def generate_job(self, request: Any, cpu: int = 2, memory: int = 4, request_id = None) -> Dict[str, str]:
+    def generate_job(self, request: Any, cpu: int = 2, memory: int = 4, request_id = None, freeform = False) -> Dict[str, str]:
         """Create and run a synthesis generation job"""
         json_str = request.model_dump_json()
         params = json.loads(json_str)
@@ -114,7 +117,9 @@ class SynthesisJob:
             params,
             cpu=cpu,
             memory=memory,
-            request_id=request_id
+            request_id=request_id,
+          freeform = freeform
+            
         )
 
         # Calculate total count
@@ -159,7 +164,7 @@ class SynthesisJob:
         return {"job_name": job_name, "job_id": job_run.job_id}
     
     #@track_job("evaluate")
-    def evaluate_job(self, request: Any, cpu: int = 2, memory: int = 4, request_id = None) -> Dict[str, str]:
+    def evaluate_job(self, request: Any, cpu: int = 2, memory: int = 4, request_id = None, freeform = None) -> Dict[str, str]:
         """Create and run an evaluation job"""
         json_str = request.model_dump_json()
         params = json.loads(json_str)
@@ -170,7 +175,8 @@ class SynthesisJob:
             params,
             cpu=cpu,
             memory=memory,
-            request_id=request_id
+            request_id=request_id,
+            freeform = freeform
         )
 
         custom_prompt_str = PromptHandler.get_default_custom_eval_prompt(
