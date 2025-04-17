@@ -69,7 +69,7 @@ tasks:
     script: build/build_client.py
     arguments: None
     cpu: 2
-    memory: 2
+    memory: 4
     short_summary: Create job to build client application
     environment:
       TASK_TYPE: CREATE/RUN_JOB
