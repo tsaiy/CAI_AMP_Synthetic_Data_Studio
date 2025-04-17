@@ -142,12 +142,14 @@ const Examples = () => {
         form.setFieldValue('examples', examples.examples)
     }
     const rowLimitReached = form.getFieldValue('examples')?.length === MAX_EXAMPLES;
+    const workflowType = form.getFieldValue('workflow_type');
 
     const onAddFiles = (files: File[]) => {
       console.log(files);
+      //  {_path: 'uv.lock', _is_dir: false, _file_size: '335615', discriminator: null, name: 'uv.lock', …}
     }
 
-    const workflowType = form.getFieldValue('workflow_type');
+    
 
     return (
         <Container>

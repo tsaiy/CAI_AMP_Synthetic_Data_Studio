@@ -31,7 +31,8 @@ export const USECASE_OPTIONS = [
 
 export const WORKFLOW_OPTIONS = [
     { label: 'Supervised Fine-Tuning', value: 'supervised-fine-tuning' },
-    { label: 'Custom Data Generation', value: 'custom' }
+    { label: 'Custom Data Generation', value: 'custom' },
+    { label: 'Free From Data Generation', value: 'freeform' }
 ];
 
 export const MODEL_TYPE_OPTIONS: ModelProvidersDropdownOpts = [
@@ -209,7 +210,8 @@ const Configure = () => {
                         )}
                     </Select>
                 </Form.Item>
-                {formData?.workflow_type === WorkflowType.SUPERVISED_FINE_TUNING && 
+                {(formData?.workflow_type === WorkflowType.SUPERVISED_FINE_TUNING || 
+                 formData?.workflow_type === WorkflowType.FREE_FORM_DATA_GENERATION) && 
                 <Form.Item
                     name='use_case'
                     label='Template'

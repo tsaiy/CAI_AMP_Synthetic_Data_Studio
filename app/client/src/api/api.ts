@@ -27,8 +27,11 @@ export const useFetchModels = (): UseFetchApiReturn<FetchModelsResp> => {
     return useFetch(url);
 }
 
-export const useFetchDefaultPrompt = (useCase: string): UseFetchApiReturn<FetchDefaultPromptResp> => {
-    const url = `${baseUrl}/${isEmpty(useCase) ? 'custom' : useCase}/gen_prompt`;
+export const useFetchDefaultPrompt = (useCase: string, workflowType?: WorkerType): UseFetchApiReturn<FetchDefaultPromptResp> => {
+    let url = `${baseUrl}/${isEmpty(useCase) ? 'custom' : useCase}/gen_prompt`;
+    if (workflowType && workflowType === 'freeform') {
+        url = `${baseUrl}/${isEmpty(useCase) ? 'custom' : useCase}/gen_freeform_prompt`;
+    }
     return useFetch(url);
 }
 
