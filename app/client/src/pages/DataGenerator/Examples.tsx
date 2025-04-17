@@ -5,7 +5,6 @@ import { useFetchExamples } from '../../api/api';
 import TooltipIcon from '../../components/TooltipIcon';
 import PCModalContent from './PCModalContent';
 import { File, QuestionSolution, WorkflowType } from './types';
-import { console } from 'inspector';
 import FileSelectorButton from './FileSelectorButton';
 
 const { Title } = Typography;
