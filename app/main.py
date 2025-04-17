@@ -364,7 +364,7 @@ async def get_dataset_size(request:JsonDataSize):
     return {"dataset_size": len(inputs)}
 
 @app.post("/json/get_content", include_in_schema=True, responses = responses,
-          description = "get total dataset size for jsons")
+          description = "get json content")
 async def get_dataset_size(request: RelativePath):
 
     if request.path:
