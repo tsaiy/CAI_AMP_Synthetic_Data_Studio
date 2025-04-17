@@ -4,7 +4,9 @@ import styled from 'styled-components';
 import { useFetchExamples } from '../../api/api';
 import TooltipIcon from '../../components/TooltipIcon';
 import PCModalContent from './PCModalContent';
-import { QuestionSolution } from './types';
+import { File, QuestionSolution, WorkflowType } from './types';
+import { console } from 'inspector';
+import FileSelectorButton from './FileSelectorButton';
 
 const { Title } = Typography;
 const Container = styled.div`
@@ -142,6 +144,12 @@ const Examples = () => {
     }
     const rowLimitReached = form.getFieldValue('examples')?.length === MAX_EXAMPLES;
 
+    const onAddFiles = (files: File[]) => {
+      console.log(files);
+    }
+
+    const workflowType = form.getFieldValue('workflow_type');
+
     return (
         <Container>
             <Header align='center' justify='space-between'>
@@ -152,6 +160,12 @@ const Examples = () => {
                     </Space>
                 </StyledTitle>
                 <Flex align='center' gap={15}>
+                
+                           
+                    {workflowType === WorkflowType.FREE_FORM_DATA_GENERATION && 
+                      <FileSelectorButton onAddFiles={onAddFiles} workflowType={workflowType} />
+                    }
+                    
                     <Button
                         onClick={() => {
                             return Modal.warning({
