@@ -13,6 +13,7 @@ class Technique(str, Enum):
     SFT = "sft"
     Custom_Workflow = "custom_workflow"
     Model_Alignment = "model_alignment"
+    Freeform = "freeform"
     
 
 class Example(BaseModel):
