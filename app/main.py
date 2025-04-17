@@ -363,6 +363,40 @@ async def get_dataset_size(request:JsonDataSize):
             
     return {"dataset_size": len(inputs)}
 
+@app.post("/json/get_content", include_in_schema=True, responses = responses,
+          description = "get total dataset size for jsons")
+async def get_dataset_size(request: RelativePath):
+
+    if request.path:
+        path = request.path
+        try:
+            with open(path) as f:
+                data = json.load(f)
+                
+                    
+        except json.JSONDecodeError as e:
+            error_msg = f"Invalid JSON format in file {path}: {str(e)}"
+            print(error_msg)
+            return JSONResponse(
+                status_code=400,
+                content={"status": "failed", "error": error_msg}
+            )
+        except (KeyError, ValueError) as e:
+            print(str(e))
+            return JSONResponse(
+                status_code=400,
+                content={"status": "failed", "error": str(e)}
+            )
+        except Exception as e:
+            error_msg = f"Error processing {path}: {str(e)}"
+            print(error_msg)
+            return JSONResponse(
+                status_code=400,
+                content={"status": "failed", "error": error_msg}
+            )
+            
+    return {"data": data}
+
 
 @app.post("/synthesis/generate", include_in_schema=True,
     responses=responses,
