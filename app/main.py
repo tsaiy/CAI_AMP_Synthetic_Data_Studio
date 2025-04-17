@@ -368,7 +368,8 @@ async def get_dataset_size(request:JsonDataSize):
 async def get_dataset_size(request: RelativePath):
 
     if request.path:
-        path = request.path
+        path = path_manager.get_str_path(request.path)
+      
         try:
             with open(path) as f:
                 data = json.load(f)
