@@ -45,10 +45,12 @@ class Example_eval(BaseModel):
     )
 
 
+# In app/models/request_models.py
 class S3Config(BaseModel):
     """S3 export configuration"""
     bucket: str
-    key: str
+    key: str = ""  # Make key optional with default empty string
+    create_if_not_exists: bool = True  # Flag to create bucket if it doesn't exist
 
 class HFConfig(BaseModel):
     """HF export configuration"""
@@ -59,39 +61,38 @@ class HFConfig(BaseModel):
     hf_commit_message: Optional[str] = "Hugging face export"  # Commit message
 
 class Export_synth(BaseModel):
-    # Export configuration
-    export_type: List[str] = Field(default_factory=lambda: ["huggingface"])  # Accept multiple export types (e.g., ["s3", "huggingface"])
-    file_path:str
-    display_name:Optional[str]= None
+    # Existing fields...
+    export_type: List[str] = Field(default_factory=lambda: ["huggingface"])
+    file_path: str
+    display_name: Optional[str] = None
     output_key: Optional[str] = 'Prompt'
     output_value: Optional[str] = 'Completion'
 
-
     # Hugging Face-specific fields
-    hf_config:HFConfig
+    hf_config: Optional[HFConfig] = None  # Make HF config optional
 
     # Optional s3 config
     s3_config: Optional[S3Config] = None
 
-    model_config = ConfigDict(protected_namespaces=(),
+    model_config = ConfigDict(
+        protected_namespaces=(),
         json_schema_extra={
             "example": {
-                        "export_type": [
-                                        "huggingface"
-                                        ],
-                    "file_path": "qa_pairs_claude_20241204_132411_test.json",
-                    "hf_config": {
-                        "hf_token": "your token",
-                        "hf_username": "your_username",
-                        "hf_repo_name": "file_name",
-                        "hf_commit_message": "dataset trial"
-                    }
-                
-                
+                "export_type": ["huggingface", "s3"],
+                "file_path": "qa_pairs_claude_20241204_132411_test.json",
+                "hf_config": {
+                    "hf_token": "your token",
+                    "hf_username": "your_username",
+                    "hf_repo_name": "file_name",
+                    "hf_commit_message": "dataset trial"
+                },
+                "s3_config": {
+                    "bucket": "my-dataset-bucket",
+                    "create_if_not_exists": True
+                }
             }
         }
     )
-
 
 
 class ModelParameters(BaseModel):
