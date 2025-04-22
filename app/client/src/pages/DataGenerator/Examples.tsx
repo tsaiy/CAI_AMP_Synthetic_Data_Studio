@@ -12,6 +12,8 @@ import { File, QuestionSolution, WorkflowType } from './types';
 import FileSelectorButton from './FileSelectorButton';
 
 import { fetchFileContent } from './hooks';
+import { useState } from 'react';
+import FreeFormExampleTable from './FreeFormExampleTable';
 
 const { Title } = Typography;
 const Container = styled.div`
@@ -34,7 +36,13 @@ const StyledTable = styled(Table)`
 `
 const MAX_EXAMPLES = 5;
 
+enum ExampleType {
+  FREE_FORM = 'freeform',
+  PROMPT_COMPLETION = 'promptcompletion'
+}
+
 const Examples = () => {
+    const [exampleType, setExampleType] = useState(ExampleType.PROMPT_COMPLETION);
     const form = Form.useFormInstance();
     const mutation = useMutation({
         mutationFn: fetchFileContent
@@ -165,6 +173,7 @@ const Examples = () => {
         mutation.mutate({
             path: get(file, '_path'),      
         });
+        setExampleType(ExampleType.FREE_FORM);
       }
     }
 
@@ -244,6 +253,7 @@ const Examples = () => {
                     </Tooltip>
                 </Flex>
             </Header>
+            {exampleType === ExampleType.FREE_FORM && <FreeFormExampleTable />}
             <Form.Item
                 name='examples'
             >
