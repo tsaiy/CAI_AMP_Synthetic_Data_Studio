@@ -126,8 +126,11 @@ const isDemoMode = (numQuestions: number, topics: [], form: FormInstance) => {
 
 const Finish = () => {
     const form = Form.useFormInstance();
-    const { data: genDatasetResp, loading, error: generationError, triggerPost } = useTriggerDatagen<GenDatasetResponse>();
-    const { num_questions, topics } = form.getFieldsValue(true)
+    const { num_questions, topics, workflow_type } = form.getFieldsValue(true);
+    console.log('Finish >> form:', form.getFieldsValue(true));
+    console.log('Finish >> workflow_type:', workflow_type);
+    const { data: genDatasetResp, loading, error: generationError, triggerPost } = useTriggerDatagen<GenDatasetResponse>(workflow_type);
+    
     const isDemo = isDemoMode(num_questions, topics, form)
 
     useEffect(() => { 

@@ -45,7 +45,7 @@ export const useFetchDefaultModelParams = (): UseFetchApiReturn<FetchDefaultPara
     return useFetch(url);
 }
 
-export const useTriggerDatagen = <T>() => {
-    const genDatasetUrl = `${import.meta.env.VITE_AMP_URL}/synthesis/generate`;
+export const useTriggerDatagen = <T>(workflow_type: string) => {
+    const genDatasetUrl = `${import.meta.env.VITE_AMP_URL}/synthesis/${workflow_type === 'freeform' ? 'freeform' : 'generate'}`;
     return usePostApi<T>(genDatasetUrl);
 }
