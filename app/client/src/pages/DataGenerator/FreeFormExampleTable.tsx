@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AgGridReact } from 'ag-grid-react';
+import { themeBalham } from 'ag-grid-community';
 // import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
 
 // Register all Community features
@@ -27,6 +28,7 @@ const FreeFormExampleTable: React.FC<Props> = () => {
   return (
     <div>
        <AgGridReact
+            theme={themeBalham}
             rowData={rowData}
             columnDefs={colDefs}
         />
