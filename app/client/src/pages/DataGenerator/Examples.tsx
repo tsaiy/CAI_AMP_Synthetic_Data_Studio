@@ -1,11 +1,17 @@
+import first from 'lodash/first';
+import get from 'lodash/get';
+import isEmpty from 'lodash/isEmpty';
 import { Button, Form, Modal, Space, Table, Tooltip, Typography, Flex } from 'antd';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import styled from 'styled-components';
+import { useMutation } from "@tanstack/react-query";
 import { useFetchExamples } from '../../api/api';
 import TooltipIcon from '../../components/TooltipIcon';
 import PCModalContent from './PCModalContent';
 import { File, QuestionSolution, WorkflowType } from './types';
 import FileSelectorButton from './FileSelectorButton';
+
+import { fetchFileContent } from './hooks';
 
 const { Title } = Typography;
 const Container = styled.div`
@@ -30,6 +36,11 @@ const MAX_EXAMPLES = 5;
 
 const Examples = () => {
     const form = Form.useFormInstance();
+    const mutation = useMutation({
+        mutationFn: fetchFileContent
+    });
+
+    console.log('Examples >> mutation:', mutation);
     // const { setIsStepValid } = useWizardCtx();
     // const _values = Form.useWatch('examples', form);
     // useEffect (() => {
@@ -147,6 +158,14 @@ const Examples = () => {
     const onAddFiles = (files: File[]) => {
       console.log(files);
       //  {_path: 'uv.lock', _is_dir: false, _file_size: '335615', discriminator: null, name: 'uv.lock', …}
+      // 
+      if (!isEmpty (files)) {
+        const file = first(files);  
+        console.log('Examples >> file:', file);
+        mutation.mutate({
+            path: get(file, '_path'),      
+        });
+      }
     }
 
     
