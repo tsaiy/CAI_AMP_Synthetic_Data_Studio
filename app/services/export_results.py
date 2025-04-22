@@ -15,6 +15,7 @@ from app.core.exceptions import APIError
 from app.models.request_models import  Export_synth
 
 from app.core.database import DatabaseManager
+from app.services.s3_export import export_to_s3
 
 import logging
 from logging.handlers import RotatingFileHandler
@@ -101,30 +102,62 @@ class Export_Service:
         return dataset
 
 
-    def export(self,request:Export_synth):
+    def export(self, request: Export_synth):
         try:
             export_paths = {}
             file_name = os.path.basename(request.file_path)
-            try:
-                with open(request.file_path, 'r') as f:
-                    output_data = json.load(f)
-            except FileNotFoundError:
-                raise HTTPException(status_code=404, detail=f"File not found: {request.file_path}")
-            except json.JSONDecodeError as e:
-                raise HTTPException(status_code=400, detail=f"Invalid JSON file: {str(e)}")
             
             for export_type in request.export_type:
-                if export_type == "s3" and request.s3_config:
-                    s3_client = boto3.client("s3")
-                    s3_client.put_object(
-                        Bucket=request.s3_config.bucket,
-                        Key=request.s3_config.key,
-                        Body=json.dumps(output_data, indent=2),
-                    )
-                    export_paths['s3']= f"s3://{request.s3_config.bucket}/{request.s3_config.key}"
-                    self.logger.info(f"Results saved to S3: {export_paths['s3']}")
-
+                # S3 Export
+                if export_type == "s3":
+                    if not request.s3_config:
+                        raise HTTPException(status_code=400, detail="S3 configuration required for S3 export")
+                    
+                    try:
+                        # Get bucket and key from request
+                        bucket_name = request.s3_config.bucket
+                        key = request.s3_config.key or file_name
+                        
+                        # Override with display_name if provided
+                        if request.display_name and not request.s3_config.key:
+                            key = f"{request.display_name}.json"
+                        
+                        
+                        
+                        
+                        create_bucket = getattr(request.s3_config, 'create_if_not_exists', True)
+                        
+                        s3_result = export_to_s3(
+                            file_path=request.file_path,
+                            bucket_name=bucket_name,
+                            key=key,
+                            create_bucket=create_bucket
+                        )
+                        
+                        s3_path = s3_result['s3']
+                        self.logger.info(f"Results saved to S3: {s3_path}")
+                        
+                        # Update database with S3 path
+                        self.db.update_s3_path(file_name, s3_path)
+                        self.logger.info(f"Generation Metadata updated for s3_path: {s3_path}")
+                        
+                        export_paths['s3'] = s3_path
+                        
+                    except Exception as e:
+                        self.logger.error(f"Error exporting to S3: {str(e)}", exc_info=True)
+                        raise APIError(f"S3 export failed: {str(e)}")
+                
+                # HuggingFace Export (existing code)
                 elif export_type == "huggingface" and request.hf_config:
+                    # We still need to read the file for HuggingFace export
+                    try:
+                        with open(request.file_path, 'r') as f:
+                            output_data = json.load(f)
+                    except FileNotFoundError:
+                        raise HTTPException(status_code=404, detail=f"File not found: {request.file_path}")
+                    except json.JSONDecodeError as e:
+                        raise HTTPException(status_code=400, detail=f"Invalid JSON file: {str(e)}")
+                    
                     self.logger.info(f"Creating HuggingFace dataset: {request.hf_config.hf_repo_name}")
                     
                     # Set up HuggingFace authentication
@@ -132,7 +165,6 @@ class Export_Service:
                     
                     # Convert JSON to dataset
                     dataset = self._create_dataset(output_data, request.output_key, request.output_value, request.file_path)
-                    print(dataset)
                     
                     # Push to HuggingFace Hub as a dataset
                     repo_id = f"{request.hf_config.hf_username}/{request.hf_config.hf_repo_name}"
@@ -146,8 +178,8 @@ class Export_Service:
                     self.logger.info(f"Dataset published to HuggingFace: {export_paths['huggingface']}")
                     self.db.update_hf_path(file_name, export_paths['huggingface'])
                     self.logger.info(f"Generation Metadata updated for hf_path: {export_paths['huggingface']}")
-                        
-                return export_paths
+            
+            return export_paths
             
         except Exception as e:
             self.logger.error(f"Error saving results: {str(e)}", exc_info=True)

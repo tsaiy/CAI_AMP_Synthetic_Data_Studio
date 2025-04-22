@@ -60,6 +60,7 @@ class DatabaseManager:
                         display_name TEXT,
                         local_export_path TEXT,
                         hf_export_path TEXT,
+                        s3_export_path TEXT,
                         num_questions FLOAT,
                         total_count FLOAT,
                         topics TEXT,
@@ -107,6 +108,7 @@ class DatabaseManager:
                         display_name TEXT,
                         local_export_path TEXT,
                         hf_export_path TEXT,
+                        s3_export_path TEXT,
                         job_id TEXT,
                         job_name TEXT UNIQUE,
                         job_status TEXT,
@@ -145,29 +147,24 @@ class DatabaseManager:
         try:
             # Prepare data outside transaction
             if metadata.get('generate_file_name'):
-                
                 output_paths = metadata.get('output_path', {})
             else:
-                
                 output_paths = {}
-                
-            
             
             # Use a single connection with enhanced settings
             with self.get_connection() as conn:
                 conn.execute("BEGIN IMMEDIATE")
                 
-                
                 cursor = conn.cursor()
                 
                 query = """
                 INSERT INTO generation_metadata (
-                timestamp, technique, model_id, inference_type,  caii_endpoint, use_case,
-                custom_prompt, model_parameters, input_key, output_key, output_value, generate_file_name,
-                display_name, local_export_path, hf_export_path,
-                num_questions, total_count, topics, examples, 
-                schema, doc_paths, input_path, job_id, job_name, job_status, job_creator_name
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    timestamp, technique, model_id, inference_type, caii_endpoint, use_case,
+                    custom_prompt, model_parameters, input_key, output_key, output_value, generate_file_name,
+                    display_name, local_export_path, hf_export_path, s3_export_path,
+                    num_questions, total_count, topics, examples, 
+                    schema, doc_paths, input_path, job_id, job_name, job_status, job_creator_name
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
                 
                 values = (
@@ -186,6 +183,7 @@ class DatabaseManager:
                     metadata.get('display_name', None),
                     output_paths.get('local', None),
                     output_paths.get('huggingface', None),
+                    output_paths.get('s3', None),
                     metadata.get('num_questions', None),
                     metadata.get('total_count', None),
                     metadata.get('topics', None),
@@ -198,20 +196,18 @@ class DatabaseManager:
                     metadata.get('job_status', None),
                     metadata.get('job_creator_name', None)
                 )
-                #print(values)
                 
                 cursor.execute(query, values)
                 conn.commit()
                 return cursor.lastrowid
                 
         except sqlite3.OperationalError as e:
-            if conn:
+            if 'conn' in locals():
                 conn.rollback()
             print(f"Database operation error in save_generation_metadata: {e}")
-            
             raise
         except Exception as e:
-            if conn:
+            if 'conn' in locals():
                 conn.rollback()
             print(f"Error saving metadata to database: {str(e)}")
             raise
@@ -359,7 +355,6 @@ class DatabaseManager:
     def save_export_metadata(self, metadata: Dict) -> int:
         """Save export metadata to database with prepared transaction"""
         try:
-          
             # Use a single connection with enhanced settings
             with self.get_connection() as conn:
                 conn.execute("BEGIN IMMEDIATE")
@@ -373,11 +368,12 @@ class DatabaseManager:
                         display_name,
                         local_export_path,
                         hf_export_path,
+                        s3_export_path,
                         job_id,
                         job_name,
                         job_status,
                         job_creator_name
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
                 
                 values = (
@@ -386,6 +382,7 @@ class DatabaseManager:
                     metadata.get('display_name'),
                     metadata.get('local_export_path', None),
                     metadata.get('hf_export_path', None),
+                    metadata.get('s3_export_path', None),  # Add this line
                     metadata.get('job_id', None),
                     metadata.get('job_name', None),
                     metadata.get('job_status', None),
@@ -1131,4 +1128,21 @@ class DatabaseManager:
                     print(f"Force restore failed: {str(restore_error)}")
             return False
     
+    def update_s3_path(self, file_name: str, s3_path: str):
+        """Update s3_export_path for a generation"""
+        try:
+            with self.get_connection() as conn:
+                conn.execute("BEGIN IMMEDIATE")
+                cursor = conn.cursor()
+                
+                # Update the s3_path
+                cursor.execute(
+                    "UPDATE generation_metadata SET s3_export_path = ? WHERE generate_file_name = ?",
+                    (s3_path, file_name)
+                )
+                conn.commit()
+                print(f"S3 path update successful for file: {file_name}")
+        except Exception as e:
+            print(f"Error updating S3 export path: {str(e)}")
+        raise
         

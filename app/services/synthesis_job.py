@@ -206,28 +206,49 @@ class SynthesisJob:
         return {"job_name": job_name, "job_id": job_run.job_id}
 
     #@track_job("export")
+    # In the file containing synthesis_job
     def export_job(self, request: Any, cpu: int = 2, memory: int = 4) -> Dict[str, str]:
         """Create and run an export job"""
         params = request.model_dump()
         
+        # Generate job name based on export type
+        if "s3" in request.export_type and request.s3_config:
+            job_name_prefix = f"s3_{request.s3_config.bucket}"
+        elif "huggingface" in request.export_type and request.hf_config:
+            job_name_prefix = f"hf_{request.hf_config.hf_repo_name}"
+        else:
+            job_name_prefix = "export"
+        
         job_name, job_run, file_name = self._create_and_run_job(
             "run_export_job.py",
-            f"hf_{request.hf_config.hf_repo_name}",
+            job_name_prefix,
             params,
             cpu=cpu,
             memory=memory
-           
         )
 
-        repo_id = f"{request.hf_config.hf_username}/{request.hf_config.hf_repo_name}"
-        export_path = f"https://huggingface.co/datasets/{repo_id}"
+        # Initialize export paths
+        export_paths = {}
+        
+        # Add HF export path if applicable
+        if "huggingface" in request.export_type and request.hf_config:
+            repo_id = f"{request.hf_config.hf_username}/{request.hf_config.hf_repo_name}"
+            export_paths['huggingface'] = f"https://huggingface.co/datasets/{repo_id}"
+        
+        # Add S3 export path if applicable
+        if "s3" in request.export_type and request.s3_config:
+            key = request.s3_config.key or os.path.basename(request.file_path)
+            if request.display_name and not request.s3_config.key:
+                key = f"{request.display_name}.json"
+            export_paths['s3'] = f"s3://{request.s3_config.bucket}/{key}"
         
         metadata = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "display_export_name": request.hf_config.hf_repo_name,
+            "display_export_name": request.display_name or os.path.basename(request.file_path),
             "display_name": request.display_name,
             "local_export_path": request.file_path,
-            "hf_export_path": export_path,
+            "hf_export_path": export_paths.get('huggingface', ''),
+            "s3_export_path": export_paths.get('s3', ''),
             "job_id": job_run.job_id,
             "job_name": job_name,
             "job_status": self.get_job_status(job_run.job_id),
@@ -235,13 +256,21 @@ class SynthesisJob:
             "cpu": cpu,
             "memory": memory
         }
-        
+       
         self.db_manager.save_export_metadata(metadata)
-        return {
+        
+        result = {
             "job_name": job_name,
             "job_id": job_run.job_id,
-            "hf_link": export_path
         }
+        
+        # Add export paths to result
+        if 'huggingface' in export_paths:
+            result["hf_link"] = export_paths['huggingface']
+        if 's3' in export_paths:
+            result["s3_link"] = export_paths['s3']
+        
+        return result
 
 
     def _calculate_total_count(self, request: Any) -> int:
