@@ -11,6 +11,10 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@ag-grid-community/all-modules": "27.3.0",
+    "@ag-grid-community/client-side-row-model": "30.2.0",
+    "@ag-grid-community/core": "30.2.0",
+    "@ag-grid-community/react": "30.2.0",
     "@emotion/react": "11.13.3",
     "@emotion/styled": "11.13.0",
     "@mui/icons-material": "6.1.7",

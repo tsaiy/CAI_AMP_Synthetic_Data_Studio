@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { AgGridReact } from 'ag-grid-react';
-import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
+// import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
 
 // Register all Community features
-ModuleRegistry.registerModules([AllCommunityModule]);
+// ModuleRegistry.registerModules([AllCommunityModule]);
 
 
 interface Props {
