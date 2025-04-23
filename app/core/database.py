@@ -1144,5 +1144,5 @@ class DatabaseManager:
                 print(f"S3 path update successful for file: {file_name}")
         except Exception as e:
             print(f"Error updating S3 export path: {str(e)}")
-        raise
+            raise (f"Error updating S3 export path: {str(e)}")
         
