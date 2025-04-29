@@ -195,6 +195,7 @@ class SynthesisResponse(BaseModel):
 class EvaluationRequest(BaseModel):
     """Request model for evaluating generated QA pairs"""
     use_case: UseCase
+    technique: Technique | None = Field(default=Technique.SFT) 
     model_id: str
     import_path: Optional[str] = None
     import_type: str = "local" 

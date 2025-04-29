@@ -34,7 +34,7 @@ UPLOAD_DIR = ROOT_DIR / "document_upload"
 sys.path.append(str(ROOT_DIR))
 
 from app.services.evaluator_service import EvaluatorService
-from app.models.request_models import SynthesisRequest, EvaluationRequest, Export_synth, ModelParameters, CustomPromptRequest, JsonDataSize, RelativePath
+from app.models.request_models import SynthesisRequest, EvaluationRequest, Export_synth, ModelParameters, CustomPromptRequest, JsonDataSize, RelativePath, Technique
 from app.services.synthesis_service import SynthesisService
 from app.services.export_results import Export_Service
 
@@ -932,6 +932,149 @@ async def get_model_parameters() -> Dict:
             "max_tokens": {"min": 1, "max": 8192, "default": 8192}
         }
     }
+
+
+
+@app.post("/complete_gen_prompt")
+async def complete_prompt(request: SynthesisRequest):
+    """Allow users to see whole prompt which goes finally into LLM"""
+    try:
+        topic = request.topics[0]
+        batch_size = 5 if request.num_questions>=5 else request.num_questions
+        omit_questions = []
+
+        if request.technique == Technique.Freeform:
+            prompt = PromptBuilder.build_freeform_prompt(
+                                        model_id=request.model_id,
+                                        use_case=request.use_case,
+                                        topic=topic,
+                                        num_questions=batch_size,
+                                        omit_questions=omit_questions,
+                                        example_custom=request.example_custom or [],
+                                        example_path=request.example_path,
+                                        custom_prompt=request.custom_prompt,
+                                        schema=request.schema,
+                                )
+        elif request.technique == Technique.Custom_Workflow:
+
+            inputs = []
+            path = None # Initialize path
+
+            try:
+                if not request.input_path:
+                    raise ValueError("input_path must not be empty or None")
+                if not isinstance(request.input_path, (list, tuple)):
+                    # Or handle a single string case if needed, e.g., path = request.input_path
+                    raise TypeError("input_path must be a list or tuple of paths")
+                if not request.input_path[0]:
+                    raise ValueError("First path in input_path is empty")
+
+                path = request.input_path[0]
+
+            except (ValueError, TypeError, IndexError) as e: # Catch specific errors for clarity
+                # Raise appropriate HTTP exception for bad request data
+                raise HTTPException(status_code=400, detail=f"Invalid input_path: {str(e)}")
+            except Exception as e: # Catch any other unexpected errors getting the path
+                raise HTTPException(status_code=500, detail=f"Unexpected error getting input path: {str(e)}")
+
+
+            # Proceed only if path was successfully retrieved
+            try:
+                with open(path) as f:
+                    data = json.load(f)
+
+                    # Assuming data is a list of dicts
+                    if not isinstance(data, list):
+                        raise ValueError(f"Expected JSON data in {path} to be a list, but got {type(data).__name__}")
+
+                    inputs.extend(item.get(request.input_key, '') for item in data if isinstance(item, dict)) # Ensure item is a dict
+
+            except FileNotFoundError:
+                raise HTTPException(status_code=404, detail=f"Input file not found: {path}")
+            except json.JSONDecodeError:
+                raise HTTPException(status_code=400, detail=f"Invalid JSON in file: {path}")
+            except ValueError as e: # For the list/dict structure check
+                raise HTTPException(status_code=400, detail=f"Invalid data structure in {path}: {str(e)}")
+            except Exception as e: # Catch any other unexpected file processing errors
+                raise HTTPException(status_code=500, detail=f"Error processing file {path}: {str(e)}")
+
+
+            # Check if inputs list is empty before accessing index 0
+            if not inputs:
+                # Raise an error indicating no data was extracted based on the key
+                raise HTTPException(status_code=400, detail=f"No data extracted from {path} using key '{request.input_key}'. The file might be empty, the key might not exist, or the JSON structure is unexpected.")
+
+            input_data = inputs[0] 
+
+            prompt = PromptBuilder.build_generate_result_prompt(
+                model_id=request.model_id,
+                use_case=request.use_case,
+                input=input_data,
+                examples=request.examples or [],
+                schema=request.schema,
+                custom_prompt=request.custom_prompt,
+            )
+        elif request.technique == Technique.SFT:
+             prompt = PromptBuilder.build_prompt(
+                        model_id=request.model_id,
+                        use_case=request.use_case,
+                        topic=topic,
+                        num_questions=batch_size,
+                        omit_questions=omit_questions,
+                        examples=request.examples or [],
+                        technique=request.technique,
+                        schema=request.schema,
+                        custom_prompt=request.custom_prompt,
+                    )
+
+        return {"complete_prompt":prompt}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/complete_eval_prompt")
+async def complete_prompt(request: EvaluationRequest):
+    """Allow users to see whole prompt which goes finally into LLM"""
+    try:
+      
+
+        if request.technique == Technique.Freeform:
+            with open(request.import_path, 'r') as file:
+                data = json.load(file)
+            
+                # Ensure data is a list of rows
+            rows = data if isinstance(data, list) else [data]
+            prompt = PromptBuilder.build_freeform_eval_prompt(
+                request.model_id,
+                request.use_case,
+                rows[0],
+                request.examples,
+                request.custom_prompt
+            )
+  
+        elif request.technique == Technique.SFT or request.technique == Technique.Custom_Workflow:
+                  
+                with open(request.import_path, 'r') as file:
+                    data = json.load(file)
+                qa_pairs =  [{
+                request.output_key: item.get(request.output_key, ''),  # Use get() with default value
+                request.output_value: item.get(request.output_value, '')   # Use get() with default value
+            } for item in data]
+                qa_pair = qa_pairs[0]
+                prompt = PromptBuilder.build_eval_prompt(
+                    request.model_id,
+                    request.use_case,
+                    qa_pair[request.output_key],
+                    qa_pair[request.output_value],
+                    request.examples,
+                    request.custom_prompt
+                )
+
+        return {"complete_prompt":prompt}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 
