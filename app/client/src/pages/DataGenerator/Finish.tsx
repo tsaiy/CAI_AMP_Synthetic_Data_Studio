@@ -1,6 +1,8 @@
 import isNumber from 'lodash/isNumber';
 import filter from 'lodash/filter';
 import isString from 'lodash/isString';
+import get from 'lodash/get';
+import isEmpty from 'lodash/isEmpty';
 import { FC, useEffect } from 'react';
 import { HomeOutlined, PageviewOutlined } from '@mui/icons-material';
 import AssessmentIcon from '@mui/icons-material/Assessment';
@@ -16,10 +18,10 @@ import { useTriggerDatagen } from './../../api/api'
 import { DEMO_MODE_THRESHOLD } from './constants'
 import { GenDatasetResponse, QuestionSolution, WorkflowType } from './types';
 import { Pages } from '../../types';
-import { isEmpty } from 'lodash';
 import CustomResultTable from './CustomResultTable';
 import SeedResultTable from './SeedResultTable';
 import { getFilesURL } from '../Evaluator/util';
+import FreeFormTable from './FreeFormTable';
 
 const { Title } = Typography;
 
@@ -156,6 +158,8 @@ const Finish = () => {
             formValues.technique = 'sft';
         } else if (formValues.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) {
             formValues.technique = 'custom_workflow';
+        } else if (formValues.workflow_type === WorkflowType.FREE_FORM_DATA_GENERATION) {
+            formValues.technique = 'freeform';
         }
         // send examples as null when the array is empty
         if (isEmpty(formValues.examples)) {
@@ -200,7 +204,9 @@ const Finish = () => {
             key: `${topic}-${i}`,
             label: <Typography.Text style={{ maxWidth: '300px' }} ellipsis={true}>{topic}</Typography.Text>,
             value: topic,
-            children: <TopicsTable formData={genDatasetResp} topic={topic} />
+            children: workflow_type !== WorkflowType.FREE_FORM_DATA_GENERATION ?
+            <TopicsTable formData={genDatasetResp} topic={topic} /> :
+            <FreeFormTable data={get(genDatasetResp, `results.${topic}`)} />
         }));
     }
     
