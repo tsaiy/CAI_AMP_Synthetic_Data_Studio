@@ -35,6 +35,17 @@ const StyledTable = styled(Table)`
         cursor: pointer;
     }
 `
+
+const StyledContainer = styled.div`
+  margin-bottom: 24px;
+  height: 48px;
+  color: rgba(0, 0, 0, 0.45);
+  svg {
+    font-size: 48px;
+  } 
+
+`;
+
 const MAX_EXAMPLES = 5;
 
 enum ExampleType {
@@ -291,23 +302,24 @@ const Examples: React.FC = () => {
               <FreeFormExampleTable  data={mutation.data}/>}
             {exampleType === ExampleType.FREE_FORM && isEmpty(mutation.data) &&
                 <Empty
-                image={<CloudUploadOutlined />}
-                styles={{ image: { height: 60 } }}
+                image={
+                   <StyledContainer>
+                     <CloudUploadOutlined />
+                   </StyledContainer>
+                }
+                imageStyle={{
+                    height: 60,
+                    marginBottom: 24
+                }}
                 description={
-                  <Typography.Text>
+                  <>
+                    <h4>
                     Upload a JSON file containing examples
-                    <br />
-                    <Alert type='info' message={
-                        <Typography.Text>
-                            Example: {`[{
-                            address: "123 Privacy Protected St"
-                            annual_inc: 95000
-                            application_type: "INDIVIDUAL"
-                            }]`}
-                        </Typography.Text>
-                    }/>
-                    <br />
-                  </Typography.Text>
+                    </h4>
+                    <p>
+                    {'Examples should be in the format of a JSON array containing array of key & value pairs. The key should be the column name and the value should be the cell value.'}
+                    </p>
+                  </>
                 }
               >
               </Empty>
