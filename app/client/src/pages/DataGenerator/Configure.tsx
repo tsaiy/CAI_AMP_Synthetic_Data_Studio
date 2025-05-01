@@ -66,6 +66,13 @@ const Configure = () => {
         validateForm()
     }, [form, formData])
 
+    // keivan
+    useEffect(() => {
+        if (formData && formData?.inference_type === undefined) {
+            form.setFieldValue('inference_type', ModelProviders.CAII);
+        }
+    }, [formData]);
+
     const labelCol = {
       span: 8
     };
@@ -236,7 +243,7 @@ const Configure = () => {
                     formData?.workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) && 
                 <Form.Item
                     name='doc_paths'
-                    label='Files'
+                    label='Context'
                     labelCol={labelCol}
                     dependencies={['workflow_type']}
                     shouldUpdate

@@ -2,7 +2,7 @@ import first from 'lodash/first';
 import get from 'lodash/get';
 import isEmpty from 'lodash/isEmpty';
 import React, { useEffect } from 'react';
-import { Button, Form, Modal, Space, Table, Tooltip, Typography, Flex, Input } from 'antd';
+import { Button, Form, Modal, Space, Table, Tooltip, Typography, Flex, Input, Empty } from 'antd';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import styled from 'styled-components';
 import { useMutation } from "@tanstack/react-query";
@@ -226,7 +226,7 @@ const Examples: React.FC = () => {
                       </>
                     }
                     
-                    
+                    {exampleType !== ExampleType.FREE_FORM && 
                     <Button
                         onClick={() => {
                             return Modal.warning({
@@ -253,8 +253,9 @@ const Examples: React.FC = () => {
                         }}
                     >
                         {'Restore Defaults'}
-                    </Button>
+                    </Button>}
                    
+                    {exampleType !== ExampleType.FREE_FORM && 
                     <Tooltip title={rowLimitReached ? `You can add up to ${MAX_EXAMPLES} examples. To add more, you must remove one.` : undefined}>
                         <Button
                             disabled={rowLimitReached}
@@ -283,11 +284,25 @@ const Examples: React.FC = () => {
                         >
                             {'Add Example'}
                         </Button>
-                    </Tooltip>
+                    </Tooltip>}
                 </Flex>
             </Header>
             {exampleType === ExampleType.FREE_FORM && !isEmpty(mutation.data) && 
               <FreeFormExampleTable  data={mutation.data}/>}
+            {exampleType === ExampleType.FREE_FORM && isEmpty(mutation.data) &&
+                <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                styles={{ image: { height: 60 } }}
+                description={
+                  <Typography.Text>
+                    Upload a JSON file containing examples
+                    <br />
+                    <Typography.Text strong>Example: {`{"examples": [{"question": "What is your name?", "solution": "My name is John Doe."}]}`}</Typography.Text>
+                  </Typography.Text>
+                }
+              >
+              </Empty>
+            }  
             {exampleType !== ExampleType.FREE_FORM && 
             <Form.Item
                 name='examples'
