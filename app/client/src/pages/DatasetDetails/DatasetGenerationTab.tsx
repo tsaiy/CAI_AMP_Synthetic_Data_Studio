@@ -7,6 +7,7 @@ import CustomGenerationTable from './CustomGenerationTable';
 import DatasetGenerationTopics from './DatasetGenerationTopics';
 import { CustomResult } from "../DataGenerator/types";
 import { DatasetDetails, DatasetGeneration } from '../Home/types';
+import DatasetViewer from './DatasetViewer';
 
 
 
@@ -26,12 +27,14 @@ const DatasetGenerationTab: React.FC<Props> = ({ dataset, datasetDetails }) => {
     console.log('datasetDetails', datasetDetails);
     console.log('dataset', dataset);
     const topics = get(dataset, 'topics', []);
+    const technique = get(dataset, 'technique');
     const hasCustomSeeds = !Array.isArray(datasetDetails?.generation) || isEmpty(topics) || topics !== null;
 
     return (
         <Container>
             <Row>
                 <Col sm={24}>
+                    {technique === 'freeform' && <DatasetViewer dataset={dataset} />}
                     {hasCustomSeeds && <CustomGenerationTable results={datasetDetails?.generation as unknown as DatasetGeneration[]} />}
                     {!hasCustomSeeds && <DatasetGenerationTopics data={datasetDetails?.generation} dataset={dataset} />}
                 </Col>
