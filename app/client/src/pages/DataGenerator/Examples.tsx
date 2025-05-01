@@ -2,8 +2,8 @@ import first from 'lodash/first';
 import get from 'lodash/get';
 import isEmpty from 'lodash/isEmpty';
 import React, { useEffect } from 'react';
-import { Button, Form, Modal, Space, Table, Tooltip, Typography, Flex, Input, Empty } from 'antd';
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { Button, Form, Modal, Space, Table, Tooltip, Typography, Flex, Input, Empty, Alert } from 'antd';
+import { CloudUploadOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import styled from 'styled-components';
 import { useMutation } from "@tanstack/react-query";
 import { useFetchExamples } from '../../api/api';
@@ -291,13 +291,22 @@ const Examples: React.FC = () => {
               <FreeFormExampleTable  data={mutation.data}/>}
             {exampleType === ExampleType.FREE_FORM && isEmpty(mutation.data) &&
                 <Empty
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                image={<CloudUploadOutlined />}
                 styles={{ image: { height: 60 } }}
                 description={
                   <Typography.Text>
                     Upload a JSON file containing examples
                     <br />
-                    <Typography.Text strong>Example: {`{"examples": [{"question": "What is your name?", "solution": "My name is John Doe."}]}`}</Typography.Text>
+                    <Alert type='info' message={
+                        <Typography.Text>
+                            Example: {`[{
+                            address: "123 Privacy Protected St"
+                            annual_inc: 95000
+                            application_type: "INDIVIDUAL"
+                            }]`}
+                        </Typography.Text>
+                    }/>
+                    <br />
                   </Typography.Text>
                 }
               >

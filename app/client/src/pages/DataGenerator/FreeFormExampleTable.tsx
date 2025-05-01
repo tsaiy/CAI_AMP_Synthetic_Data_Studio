@@ -134,9 +134,6 @@ const FreeFormExampleTable: FunctionComponent<Props> = ({ data }) => {
       let index = 0;
       const getRowId = useCallback<GetRowIdFunc>(
         ({ data: { ticker } }: GetRowIdParams) => {
-            console.log('>>> FreeFormExampleTable getRowId:', data);
-            console.log('>>> FreeFormExampleTable getRowId ticker:', ticker);
-            console.log('>>> FreeFormExampleTable getRowId index:', index);
             index++;
             return ticker || toString(index);
         },
