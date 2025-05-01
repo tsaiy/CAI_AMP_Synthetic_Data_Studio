@@ -75,6 +75,7 @@ export type DatasetDetailProps = {
 }
 
 const ExamplesSection= ({ datasetDetails }: DatasetDetailProps)  => {
+    console.log('ExamplesSection >> datasetDetails', datasetDetails);
     const { technique } = datasetDetails;
 
     const exampleCols = [

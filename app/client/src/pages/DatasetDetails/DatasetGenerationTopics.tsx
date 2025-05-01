@@ -5,6 +5,7 @@ import TopicGenerationTable from "./TopicGenerationTable";
 import isEmpty from "lodash/isEmpty";
 import styled from "styled-components";
 import { Dataset } from '../Evaluator/types';
+import FreeFormTable from '../DataGenerator/FreeFormTable';
 
 interface Props {
     data: DatasetGeneration;
@@ -58,7 +59,9 @@ const getTopicTree = (data: DatasetGeneration, topics: string[]) => {
 
 
 const DatasetGenerationTable: React.FC<Props> = ({ data, dataset  }) => {
+    console.log('----DatasetGenerationTable', data, dataset);
     const topics = get(dataset, 'topics', []);
+    const technique = get(dataset, 'technique');
     const topicTree = getTopicTree(data, topics);
 
     let topicTabs = [];
@@ -67,7 +70,9 @@ const DatasetGenerationTable: React.FC<Props> = ({ data, dataset  }) => {
             key: `${topic}-${i}`,
             label: <Typography.Text style={{ maxWidth: '300px' }} ellipsis={true}>{topic}</Typography.Text>,
             value: topic,
-            children: <TopicGenerationTable results={topicTree[topic as string]} topic={topic} />
+            children: technique !== 'freefoem' ?
+            <TopicGenerationTable results={topicTree[topic as string]} topic={topic} /> :
+            <FreeFormTable data={dataset?.examples} />
         }));
     }
 

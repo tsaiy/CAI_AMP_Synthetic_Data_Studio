@@ -23,12 +23,10 @@ const Container = styled.div`
 
 
 const DatasetGenerationTab: React.FC<Props> = ({ dataset, datasetDetails }) => {
-    console.log(`DatasetGenerationTab > dataset`, dataset);
-    console.log(` datasetDetails`, datasetDetails);
+    console.log('datasetDetails', datasetDetails);
+    console.log('dataset', dataset);
     const topics = get(dataset, 'topics', []);
-    console.log(` topics`, topics);
     const hasCustomSeeds = !Array.isArray(datasetDetails?.generation) || isEmpty(topics) || topics !== null;
-    console.log(` hasCustomSeeds`, hasCustomSeeds);
 
     return (
         <Container>
