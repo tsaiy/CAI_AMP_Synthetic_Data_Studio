@@ -5,6 +5,10 @@ from fastapi import FastAPI, HTTPException, Request, status
 import requests
 import json
 from fastapi.responses import JSONResponse
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv() 
 
 class UseCase(str, Enum):
     CODE_GENERATION = "code_generation"
@@ -281,18 +285,55 @@ responses = {
     }
 }
 
+JWT_PATH = Path("/tmp/jwt")
 
-def caii_check(caii_endpoint):
-    API_KEY = json.load(open("/tmp/jwt"))["access_token"]
-    headers = {
-        "Authorization": f"Bearer {API_KEY}"
-    }
-    
-    
-    if caii_endpoint:
-        caii_endpoint = caii_endpoint.removesuffix('/chat/completions') 
-        caii_endpoint = caii_endpoint + "/models"
-        response = requests.get(caii_endpoint, headers=headers, timeout=3)  # Will raise RequestException if fails
-        
-    return response
+def _get_caii_token() -> str:
+    if (tok := os.getenv("CDP_TOKEN")):
+        return tok
+    try:
+        payload = json.loads(open(JWT_PATH).read())
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No CDP_TOKEN env‑var and no /tmp/jwt file")
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Malformed /tmp/jwt")
+
+    if not (tok := payload.get("access_token")):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="access_token missing in /tmp/jwt")
+    return tok
+
+def caii_check(endpoint: str, timeout: int = 3) -> requests.Response:
+    """
+    Return the GET /models response if everything is healthy.
+    Raise HTTPException on *any* problem.
+    """
+    if not endpoint:
+        raise HTTPException(400, "CAII endpoint not provided")
+
+    token = _get_caii_token()
+    url = endpoint.removesuffix("/chat/completions") + "/models"
+
+    try:
+        r = requests.get(url,
+                         headers={"Authorization": f"Bearer {token}"},
+                         timeout=timeout)
+    except requests.exceptions.RequestException as exc:
+        raise HTTPException(503, f"CAII endpoint unreachable: {exc}")
+
+    if r.status_code in (401, 403):
+        raise HTTPException(403, "Token is valid but has no access to this environment")
+    if r.status_code == 404:
+        raise HTTPException(404, "CAII endpoint or resource not found")
+    if 500 <= r.status_code < 600:
+        raise HTTPException(503, "CAII endpoint is downscaled; retry in ~15 min")
+    if r.status_code != 200:
+        raise HTTPException(r.status_code, r.text)
+
+    return r
+
 

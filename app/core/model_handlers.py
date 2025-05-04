@@ -11,6 +11,7 @@ from app.models.request_models import ModelParameters
 from openai import OpenAI
 from app.core.exceptions import APIError, InvalidModelError, ModelHandlerError, JSONParsingError
 from app.core.telemetry_integration import track_llm_operation
+from app.core.config import  _get_caii_token
 
 
 
@@ -280,7 +281,8 @@ class UnifiedModelHandler:
     def _handle_caii_request(self, prompt: str):
         """Original CAII implementation"""
         try:
-            API_KEY = json.load(open("/tmp/jwt"))["access_token"]
+            #API_KEY = json.load(open("/tmp/jwt"))["access_token"]
+            API_KEY = _get_caii_token()
             MODEL_ID = self.model_id
             caii_endpoint = self.caii_endpoint
             

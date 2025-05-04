@@ -57,6 +57,7 @@ Khauneesh/
 # DB
 *metadata.db-shm
 *metadata.db-wal
+telemetry.db
 
 # Test and coverage reports
 .coverage
