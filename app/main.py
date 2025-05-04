@@ -408,15 +408,10 @@ async def generate_examples(request: SynthesisRequest):
     # Generate a request ID
     request_id = str(uuid.uuid4())
 
-    if request.inference_type== "CAII":
+    if request.inference_type == "CAII":
         caii_endpoint = request.caii_endpoint
-        response = caii_check(caii_endpoint)
-        message = "The CAII endpoint you are tring to reach is downscaled, please try after >15 minutes while it autoscales, meanwhile please try another model"
-        if response.status_code != 200:
-                    return JSONResponse(
-                        status_code=503,  # Service Unavailable
-                        content={"status": "failed", "error": message}
-                    )
+       
+        caii_check(caii_endpoint)
        
     
     is_demo = request.is_demo
@@ -464,13 +459,7 @@ async def generate_freeform_data(request: SynthesisRequest):
 
     if request.inference_type == "CAII":
         caii_endpoint = request.caii_endpoint
-        response = caii_check(caii_endpoint)
-        message = "The CAII endpoint you are trying to reach is downscaled, please try after >15 minutes while it autoscales, meanwhile please try another model"
-        if response.status_code != 200:
-            return JSONResponse(
-                status_code=503,  # Service Unavailable
-                content={"status": "failed", "error": message}
-            )
+        caii_check(caii_endpoint)
     
     is_demo = request.is_demo
     mem = 4
@@ -514,15 +503,9 @@ async def evaluate_examples(request: EvaluationRequest):
     """Evaluate generated QA pairs"""
     request_id = str(uuid.uuid4())
 
-    if request.inference_type== "CAII":
+    if request.inference_type == "CAII":
         caii_endpoint = request.caii_endpoint
-        response = caii_check(caii_endpoint)
-        message = "The CAII endpoint you are tring to reach is downscaled, please try after >15 minutes while it autoscales, meanwhile please try another model"
-        if response.status_code != 200:
-                    return JSONResponse(
-                        status_code=503,  # Service Unavailable
-                        content={"status": "failed", "error": message}
-                    )
+        caii_check(caii_endpoint)
    
     is_demo = request.is_demo
     if is_demo:
@@ -541,13 +524,8 @@ async def evaluate_freeform(request: EvaluationRequest):
 
     if request.inference_type == "CAII":
         caii_endpoint = request.caii_endpoint
-        response = caii_check(caii_endpoint)
-        message = "The CAII endpoint you are trying to reach is downscaled, please try after >15 minutes while it autoscales, meanwhile please try another model"
-        if response.status_code != 200:
-            return JSONResponse(
-                status_code=503,  # Service Unavailable
-                content={"status": "failed", "error": message}
-            )
+        caii_check(caii_endpoint)
+        
    
     is_demo = getattr(request, 'is_demo', True)
     if is_demo:

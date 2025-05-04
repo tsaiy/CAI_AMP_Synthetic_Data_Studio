@@ -30,6 +30,10 @@ environment_variables:
     default: "your huggingface username"
     description: >-
       hf_username
+  CDP_TOKEN:
+    default: "API key for Cloudera AI Inference"
+    description: >-
+      CDP_TOKEN
   
 
 
@@ -69,7 +73,7 @@ tasks:
     script: build/build_client.py
     arguments: None
     cpu: 2
-    memory: 2
+    memory: 4
     short_summary: Create job to build client application
     environment:
       TASK_TYPE: CREATE/RUN_JOB
