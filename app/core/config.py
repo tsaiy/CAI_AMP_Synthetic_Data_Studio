@@ -336,4 +336,93 @@ def caii_check(endpoint: str, timeout: int = 3) -> requests.Response:
 
     return r
 
+LENDING_DATA_PROMPT = """
+        Create profile data for the LendingClub company which specialises in lending various types of loans to urban customers.
+
+        Background:
+        LendingClub is a peer-to-peer lending platform connecting borrowers with investors. The dataset captures loan applications, 
+        borrower profiles, and outcomes to assess credit risk, predict defaults, and determine interest rates. 
+
+
+        Loan Record field:
+
+        Each generated record must include the following fields in the exact order provided, with values generated as specified:  
+
+        - loan_amnt: The listed amount of the loan applied for by the borrower. If at some point in time, the credit department 
+        reduces the loan amount, then it will be reflected in this value.
+        - term: The number of payments on the loan. Values are in months and can be either " 36 months" or " 60 months".
+        - int_rate: Interest Rate on the loan
+        - installment: The monthly payment owed by the borrower if the loan originates.
+        - grade: LC assigned loan grade (Possible values: A, B, C, D, E, F, G)
+        - sub_grade: LC assigned loan subgrade (Possible sub-values: 1-5 i.e. A5)
+        - emp_title: The job title supplied by the Borrower when applying for the loan.
+        - emp_length: Employment length in years. Possible values are between 0 and 10 where 0 means less than one year and 10 
+        means ten or more years.
+        - home_ownership: The home ownership status provided by the borrower during registration or obtained from the credit report.
+        Possible values are: RENT, OWN, MORTGAGE, ANY, OTHER
+        - annual_inc: The self-reported annual income provided by the borrower during registration.
+        - verification_status: Indicates if income was verified by LC, not verified, or if the income source was verified
+        - issue_d: The month which the loan was funded
+        - loan_status: Current status of the loan (Possible values: "Fully Paid", "Charged Off")
+        - purpose: A category provided by the borrower for the loan request.
+        - title: The loan title provided by the borrower
+        - dti: A ratio calculated using the borrower’s total monthly debt payments on the total debt obligations, excluding mortgage
+        and the requested LC loan, divided by the borrower’s self-reported monthly income.
+        - earliest_cr_line: The month the borrower's earliest reported credit line was opened
+        - open_acc: The number of open credit lines in the borrower's credit file.
+        - pub_rec: Number of derogatory public records
+        - revol_bal: Total credit revolving balance
+        - revol_util: Revolving line utilization rate, or the amount of credit the borrower is using relative to all available 
+        revolving credit.
+        - total_acc: The total number of credit lines currently in the borrower's credit file
+        - initial_list_status: The initial listing status of the loan. Possible values are: w, f
+        - application_type: Indicates whether the loan is an individual application or a joint application with two co-borrowers
+        - mort_acc: Number of mortgage accounts.
+        - pub_rec_bankruptcies: Number of public record bankruptcies
+        - address: The physical address of the person
+
+        In addition to the definitions above, when generating samples, adhere to following guidelines:
+
+        Privacy Compliance guidelines:
+        1) Ensure PII from examples such as addresses are not used in the generated data to minimize any privacy concerns. 
+        2) Avoid real PII in addresses. Use generic street names and cities.  
+
+        Formatting guidelines:
+        1) Use consistent decimal precision (e.g., "10000.00" for loan_amnt).  
+        2) Dates (e.g. issue_d, earliest_cr_line) should follow the "Jan-YYYY" format.
+        3) term has a leading space before the number of months (i.e. " 36 months")
+        4) The address field is a special case where the State zipcode needs to be exactly as specified in the seed instructions. 
+        The persons address must follow the format as specified in the examples with the State zipcode coming last.
+        5) Any other formatting guidelines that can be inferred from the examples or field definitions but are not listed above.
+
+        Cross-row guidelines:
+        1) Generated data should maintain consistency with all statistical parameters and distributions defined in the seed instruction
+        across records (e.g., 60% of `term` as " 36 months").
+
+        Cross-column guidelines:
+        1) Ensure logical and realistic consistency and correlations between variables. Examples include but not limited to:
+        a) Grade/Sub-grade consistency: Sub-grade must match the grade (e.g., "B" grade → "B1" to "B5").  
+        b) Interest Rate vs Grade/Subgrade relationship: Higher subgrades (e.g., A5) could have higher `int_rate` than lower subgrades (e.g., A3).  
+        c) Mortgage Consistency: `mort_acc` should be 1 or more if `home_ownership` is `MORTGAGE`. 
+        d) Open Accounts: `open_acc` ≤ `total_acc`.  
+
+        Data distribution guidelines:
+        1) Continuous Variables (e.g., `loan_amnt`, `annual_inc`): Adhere to the mean and standard deviation given in the seed 
+        instructions for each variable.
+        2) Categorical variables (e.g., `term`, `home_ownership`): Use probability distributions given in the seed instructions 
+        (e.g. 60% for " 36 months", 40% for " 60 months").
+        3) Discrete Variables (e.g., `pub_rec`, `mort_acc`): Adhere to value ranges and statistical parameters
+        provided in the seed instructions.
+        4) Any other logical data distribution guidelines that can be inferred from the seed instructions or field definitions 
+        and are not specified above. 
+
+        Background knowledge and realism guidelines:
+        1) Ensure fields such as interest rates reflect real-world interest rates at the time the loan is issued.
+        2) Generate values that are plausible (e.g., `annual_inc` ≤ $500,000 for most `emp_length` ranges).  
+        3) Avoid unrealistic values (e.g., `revol_util` as "200%" is unrealistic).  
+        4) Ensure that the generated data is realistic and plausible, avoiding extreme or impossible values.
+        5) Ensure that the generated data is diverse and not repetitive, avoiding identical or very similar records.
+        6) Ensure that the generated data is coherent and consistent, avoiding contradictions or inconsistencies between fields.
+        7) Ensure that the generated data is relevant to the LendingClub use case and adheres to the guidelines provided."""
+
 

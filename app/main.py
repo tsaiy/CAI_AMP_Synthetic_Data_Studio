@@ -1,6 +1,7 @@
 import os
 import boto3
 from datetime import datetime, timezone
+from typing import Any, Dict
 from botocore.config import Config
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse
@@ -9,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+import pandas as pd
+import numpy as np
 from typing import Dict, List, Optional
 import subprocess
 import asyncio
@@ -22,6 +25,7 @@ from urllib3.exceptions import ReadTimeoutError
 import sys
 import json
 import uuid 
+from fastapi.encoders import jsonable_encoder
 print(os.getcwd())
 # Setup absolute paths
 ROOT_DIR = Path(__file__).parent.parent  # Goes up one level from app/main.py to reach project root
@@ -180,7 +184,34 @@ def restart_application():
         print(f"Error restarting application: {e}")
         raise
 
-
+def deep_sanitize_nans(obj: Any) -> Any:
+    """
+    Recursively traverse all data structures and replace NaN with None.
+    This handles all nested structures.
+    """
+    if isinstance(obj, dict):
+        return {k: deep_sanitize_nans(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [deep_sanitize_nans(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple(deep_sanitize_nans(item) for item in obj)
+    elif isinstance(obj, set):
+        return {deep_sanitize_nans(item) for item in obj}
+    elif isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    elif isinstance(obj, (pd.Timestamp, np.datetime64)):
+        return obj.isoformat()
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        if np.isnan(obj) or np.isinf(obj):
+            return None
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return deep_sanitize_nans(obj.tolist())
+    elif pd.isna(obj):
+        return None
+    return obj
 
 
 # Add these models
@@ -276,7 +307,9 @@ def get_timeout_for_request(request: Request) -> float:
     if path.endswith("/generate"):
         return 200.0  # 2 minutes for generation
     elif path.endswith("/freeform"):
-        return 200.0  # 2 minutes for generation
+        return 300.0  # 5 minutes for generation
+    elif path.endswith("/create_custom_prompt"):
+        return 300.0  # 5 minutes for generation
     elif path.endswith("/evaluate"):
         return 200.0  # 2 minutes for evaluation
     elif path.endswith("/export_results"):
@@ -284,7 +317,7 @@ def get_timeout_for_request(request: Request) -> float:
     elif "health" in path:
         return 5.0    # Quick timeout for health checks
     elif path.endswith("/upgrade"):
-        return 1200  # timeout increase for upgrade  
+        return 2000  # timeout increase for upgrade  
     else:
         return 60.0   # Default timeout
 
@@ -486,13 +519,21 @@ async def generate_freeform_data(request: SynthesisRequest):
                 core = 2
     
     if is_demo:
-        return await synthesis_service.generate_freeform(request, is_demo=is_demo, request_id=request_id )
+        result = await synthesis_service.generate_freeform(request, is_demo=is_demo, request_id=request_id )
+          # Apply our deep sanitization to handle all NaN values
+        sanitized_result = deep_sanitize_nans(result)
+        
+        # Then use jsonable_encoder for FastAPI-specific conversions
+        final_result = jsonable_encoder(sanitized_result)
+
+        return final_result
     else:
         # Pass additional parameter to indicate this is a freeform request
         request_dict = request.model_dump()
         freeform = True
         # Convert back to SynthesisRequest object
         freeform_request = SynthesisRequest(**request_dict)
+
         return synthesis_job.generate_job(freeform_request, core, mem, request_id=request_id, freeform = freeform)
 
 @app.post("/synthesis/evaluate", 
@@ -605,8 +646,9 @@ async def create_custom_prompt(request: CustomPromptRequest, request_id = None):
         prompt = PromptBuilder.build_custom_prompt(
                 model_id=request.model_id,
                 custom_prompt=request.custom_prompt,
+                example_path= request.example_path
             )
-        #print(prompt)
+        print(prompt)
         prompt_gen = model_handler.generate_response(prompt, request_id=request_id)
 
         return {"generated_prompt":prompt_gen}
