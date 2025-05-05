@@ -14,6 +14,9 @@ import math
 import asyncio
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from app.core.exceptions import APIError, InvalidModelError, ModelHandlerError, JSONParsingError
+from app.core.data_loader import DataLoader
+import pandas as pd
+import numpy as np
 
 from app.models.request_models import SynthesisRequest, Example, ModelParameters
 from app.core.model_handlers import create_handler
@@ -1017,20 +1020,32 @@ class SynthesisService:
             
             # For examples
             if request.example_path:
-                file_extension = os.path.splitext(request.example_path)[1].lower()
-    
-                with open(request.example_path, 'r') as f:
-                    if file_extension == '.json':
-                        # Handle JSON files
-                        example_upload = json.load(f)
-                        examples_str = json.dumps(example_upload, indent=2)
-                    elif file_extension == '.csv':
-                        # Handle CSV files
-                        csv_reader = csv.DictReader(f)
-                        example_upload = list(csv_reader)
-                        examples_str = json.dumps(example_upload, indent=2)  # Convert CSV data to JSON string format
-                    else:
-                        raise ValueError(f"Unsupported file extension: {file_extension}. Only .json and .csv are supported.")
+                try:
+                    # Use DataLoader to load the file, limiting to 10 rows
+                    df = DataLoader.load(request.example_path, sample_rows=10)
+                    
+                    # Convert DataFrame to list of dictionaries
+                    example_upload = df.head(10).to_dict(orient='records')
+                    
+                    # Handle non-serializable objects
+                    def json_serializable(obj):
+                        if isinstance(obj, (pd.Timestamp, np.datetime64)):
+                            return obj.isoformat()
+                        elif isinstance(obj, np.integer):
+                            return int(obj)
+                        elif isinstance(obj, np.floating):
+                            return float(obj)
+                        elif isinstance(obj, np.ndarray):
+                            return obj.tolist()
+                        else:
+                            return str(obj)
+                    
+                    # Convert to JSON string with custom serialization
+                    examples_str = json.dumps(example_upload, indent=2, default=json_serializable)
+                    
+                except Exception as e:
+                    print(f"Error processing example file: {str(e)}")
+                    examples_str = ""
             else:
                 examples_value = request.example_custom if hasattr(request, 'example_custom') else None
                 examples_str = self.safe_json_dumps(examples_value)

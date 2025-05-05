@@ -240,6 +240,7 @@ class CustomPromptRequest(BaseModel):
     
     inference_type :Optional[str] = "aws_bedrock"
     caii_endpoint: Optional[str] = None
+    example_path: Optional[str] = None
     custom_p:bool =True
 
     model_config = ConfigDict(protected_namespaces=(),
