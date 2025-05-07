@@ -125,6 +125,22 @@ const Configure = () => {
         
         form.setFieldValue('example_paths', paths);
     }
+
+    const onExamplesFilesChange = (selections: any) => {
+        if (Array.isArray(selections) && !isEmpty(selections)) {
+            const paths = selections.map((file: File) => (
+                { 
+                    value: file.name,
+                    label: file.name
+                }));
+            setSelectedFiles(paths);
+            form.setFieldValue('example_paths', paths); 
+        } else {
+            setSelectedFiles([]);
+            form.setFieldValue('example_paths', []); 
+        }
+          
+    }
     
 
     return (
@@ -339,19 +355,19 @@ const Configure = () => {
                         <Input />
                     </Form.Item>
                 </>}
-                {formData?.workflow_type === WorkflowType.SUPERVISED_FINE_TUNING || 
+                {formData?.workflow_type === WorkflowType.FREE_FORM_DATA_GENERATION && 
                  <Form.Item
-                 name='example_paths'
-                 label='Example Files'
-                 labelCol={labelCol}
-                 dependencies={['workflow_type']}
-                 shouldUpdate
-                 validateTrigger="['onBlur','onChange']"
-                 validateFirst
-                 rules={[]}
+                    name='example_paths'
+                    label='Example Files'
+                    labelCol={labelCol}
+                    dependencies={['workflow_type']}
+                    shouldUpdate
+                    validateTrigger="['onBlur','onChange']"
+                    validateFirst
+                    rules={[]}
                  >
                     <Flex>
-                        <Select placeholder={'Select example file'} value={selectedFiles || []} onChange={onFilesChange} allowClear/>    
+                        <Select placeholder={'Select example file'} value={selectedFiles || []} onChange={onExamplesFilesChange} allowClear/>    
                         <FileSelectorButton onAddFiles={onAddExampleFiles} workflowType={form.getFieldValue('workflow_type')} />
                     </Flex>
                  </Form.Item>
