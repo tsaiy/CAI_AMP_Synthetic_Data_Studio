@@ -114,6 +114,17 @@ const Configure = () => {
             setSelectedFiles([]);    
         }
     }
+
+    const onAddExampleFiles = (files: File[]) => {
+        console.log('onAddExampleFiles', files);
+        const paths = files.map((file: File) => (
+            { 
+                value: file?.path,
+                label: file.name
+            }));
+        
+        form.setFieldValue('example_paths', paths);
+    }
     
 
     return (
@@ -328,6 +339,24 @@ const Configure = () => {
                         <Input />
                     </Form.Item>
                 </>}
+                {formData?.workflow_type === WorkflowType.SUPERVISED_FINE_TUNING || 
+                 <Form.Item
+                 name='example_paths'
+                 label='Example Files'
+                 labelCol={labelCol}
+                 dependencies={['workflow_type']}
+                 shouldUpdate
+                 validateTrigger="['onBlur','onChange']"
+                 validateFirst
+                 rules={[]}
+                 >
+                    <Flex>
+                        <Select placeholder={'Select example file'} value={selectedFiles || []} onChange={onFilesChange} allowClear/>    
+                        <FileSelectorButton onAddFiles={onAddExampleFiles} workflowType={form.getFieldValue('workflow_type')} />
+                    </Flex>
+                 </Form.Item>
+
+                }
             </FormContainer>
         </StepContainer>
     )
