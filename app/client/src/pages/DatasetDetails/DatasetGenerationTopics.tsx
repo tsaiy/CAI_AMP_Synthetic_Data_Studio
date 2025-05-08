@@ -64,6 +64,9 @@ const DatasetGenerationTable: React.FC<Props> = ({ data, dataset  }) => {
     const technique = get(dataset, 'technique');
     const topicTree = getTopicTree(data, topics);
 
+    const values = Object.values(topicTree);
+    const datasetExamples = get(dataset, 'examples', []);
+
     let topicTabs = [];
     if (!isEmpty(topics)) {
         topicTabs = topicTree && Object.keys(topicTree).map((topic, i) => ({
