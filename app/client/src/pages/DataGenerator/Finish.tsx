@@ -200,10 +200,15 @@ const Finish = () => {
     let topicTabs = [];
     if (!hasDocSeeds && formValues.workflow_type !== WorkflowType.CUSTOM_DATA_GENERATION && 
         hasTopics(genDatasetResp)) {
+            const values = Object.values(genDatasetResp?.results);
+            console.log('Finish >> values:', values);
+            
+
         topicTabs = genDatasetResp?.results && Object.keys(genDatasetResp.results).map((topic, i) => {
             console.log('Finish >> topic:', topic);
             console.log('Finish >> genDatasetResp:', genDatasetResp);
             console.log('Finish >> genDatasetResp.results:', get(genDatasetResp, `results.${topic}`));
+            console.log('Finish >> values:', values[i]);
             
             return ({
             key: `${topic}-${i}`,
@@ -211,7 +216,10 @@ const Finish = () => {
             value: topic,
             children: workflow_type !== WorkflowType.FREE_FORM_DATA_GENERATION ?
             <TopicsTable formData={genDatasetResp} topic={topic} /> :
-            <FreeFormTable data={get(genDatasetResp, `results.${topic}`)} />
+            // <FreeFormTable data={get(genDatasetResp, `results.${topic}`)} />
+            <FreeFormTable data={values[i]} />
+
+            
         })
         });
     }
