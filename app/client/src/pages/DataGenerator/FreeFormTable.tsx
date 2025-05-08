@@ -83,7 +83,7 @@ interface Props {
 }
 
 const FreeFormTable: FunctionComponent<Props> = ({ data }) => {
-    console.log('>>> FreeFormTable');
+    console.log('>>> FreeFormTable', data);
     const [colDefs, setColDefs] = useState([]);
     const [rowData, setRowData] = useState([]);
     

@@ -200,14 +200,20 @@ const Finish = () => {
     let topicTabs = [];
     if (!hasDocSeeds && formValues.workflow_type !== WorkflowType.CUSTOM_DATA_GENERATION && 
         hasTopics(genDatasetResp)) {
-        topicTabs = genDatasetResp?.results && Object.keys(genDatasetResp.results).map((topic, i) => ({
+        topicTabs = genDatasetResp?.results && Object.keys(genDatasetResp.results).map((topic, i) => {
+            console.log('Finish >> topic:', topic);
+            console.log('Finish >> genDatasetResp:', genDatasetResp);
+            console.log('Finish >> genDatasetResp.results:', get(genDatasetResp, `results.${topic}`));
+            
+            return ({
             key: `${topic}-${i}`,
             label: <Typography.Text style={{ maxWidth: '300px' }} ellipsis={true}>{topic}</Typography.Text>,
             value: topic,
             children: workflow_type !== WorkflowType.FREE_FORM_DATA_GENERATION ?
             <TopicsTable formData={genDatasetResp} topic={topic} /> :
             <FreeFormTable data={get(genDatasetResp, `results.${topic}`)} />
-        }));
+        })
+        });
     }
     
     const nextStepsListPreview = [
