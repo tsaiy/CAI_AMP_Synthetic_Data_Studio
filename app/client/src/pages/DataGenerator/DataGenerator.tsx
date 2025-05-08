@@ -98,10 +98,12 @@ const DataGenerator = () => {
     const [isStepValid, setIsStepValid] = useState<boolean>(false);
     // Data passed from listing table to prepopulate form
     const location = useLocation();
-    console.log('DatGenerator >> location?.state?.data:', location?.state?.data);
+    console.log('location?.state?.data:', location?.state?.data);
     const initialData = location?.state?.data;
     if (initialData?.technique) {
-        initialData.workflow_type = initialData?.technique === 'sft' ? WorkflowType.SUPERVISED_FINE_TUNING :
+        initialData.workflow_type = initialData?.technique === 'sft' ? 
+        WorkflowType.SUPERVISED_FINE_TUNING :
+        initialData?.technique === 'freeform' ? WorkflowType.FREE_FORM_DATA_GENERATION :
         WorkflowType.CUSTOM_DATA_GENERATION;
     }
     if (Array.isArray(initialData?.doc_paths) && !isEmpty(initialData?.doc_paths) ) {
@@ -111,6 +113,11 @@ const DataGenerator = () => {
         }));
         
     }
+
+    if (!isEmpty(initialData?.example_path) ) {
+        initialData.doc_paths = initialData?.example_path;
+    }
+
     if (Array.isArray(initialData?.input_paths) && !isEmpty(initialData?.input_paths) ) {
         initialData.doc_paths = initialData?.input_paths.map((path: string) => ({
             value: path,

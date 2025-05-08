@@ -35,8 +35,8 @@ const DatasetGenerationTab: React.FC<Props> = ({ dataset, datasetDetails }) => {
             <Row>
                 <Col sm={24}>
                     {technique === 'freeform' && <DatasetViewer dataset={dataset} />}
-                    {hasCustomSeeds && <CustomGenerationTable results={datasetDetails?.generation as unknown as DatasetGeneration[]} />}
-                    {!hasCustomSeeds && <DatasetGenerationTopics data={datasetDetails?.generation} dataset={dataset} />}
+                    {(technique !== 'freeform' && hasCustomSeeds) && <CustomGenerationTable results={datasetDetails?.generation as unknown as DatasetGeneration[]} />}
+                    {(technique !== 'freeform' &&  !hasCustomSeeds) && <DatasetGenerationTopics data={datasetDetails?.generation} dataset={dataset} />}
                 </Col>
             </Row>
 
