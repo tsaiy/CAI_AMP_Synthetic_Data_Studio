@@ -199,7 +199,8 @@ const Finish = () => {
 
     let topicTabs = [];
     if (!hasDocSeeds && formValues.workflow_type !== WorkflowType.CUSTOM_DATA_GENERATION && 
-        hasTopics(genDatasetResp)) {
+        hasTopics(genDatasetResp) && !isEmpty(genDatasetResp?.results)) {
+            console.log('Finish >> genDatasetResp:', genDatasetResp);
             const values = Object.values(genDatasetResp?.results);
             console.log('Finish >> values:', values);
             
