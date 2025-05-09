@@ -15,6 +15,7 @@ import FileSelectorButton from './FileSelectorButton';
 import { fetchFileContent } from './hooks';
 import { useState } from 'react';
 import FreeFormExampleTable from './FreeFormExampleTable';
+import { useWizardCtx } from './utils';
 
 const { Title } = Typography;
 const Container = styled.div`
@@ -54,32 +55,47 @@ enum ExampleType {
 }
 
 const Examples: React.FC = () => {
-    const [exampleType, setExampleType] = useState(ExampleType.PROMPT_COMPLETION);
     const form = Form.useFormInstance();
+    const formData = Form.useWatch((values) => values, form);
+    const [exampleType, setExampleType] = useState(ExampleType.PROMPT_COMPLETION);
+    
     const mutation = useMutation({
         mutationFn: fetchFileContent
     });
+    const values = form.getFieldsValue(true)
 
     useEffect(() => {  
+        console.log('Examples >> form.getFieldValue(\'workflow_type\'):', form.getFieldValue('workflow_type'));
         const example_path = form.getFieldValue('example_path');
-        mutation.mutate({
-            path: example_path      
-        });
-        setExampleType(ExampleType.FREE_FORM);
+        console.log('Examples >> example_path:', example_path);
 
-     }, [form.getFieldValue('example_path')]);
+        if (!isEmpty(example_path)) {
+            mutation.mutate({
+                path: example_path      
+            });
+        }
+
+        if (form.getFieldValue('workflow_type') === 'freeform') {
+            setExampleType(ExampleType.FREE_FORM);
+        }
+       
+        
+
+     }, [form.getFieldValue('example_path'), form.getFieldValue('workflow_type')]);
 
     console.log('Examples >> mutation:', mutation);
-    // const { setIsStepValid } = useWizardCtx();
-    // const _values = Form.useWatch('examples', form);
-    // useEffect (() => {
-    //     const values = form.getFieldsValue();
-    //     if (isEmpty(values.examples)) {
-    //         setIsStepValid(false);
-    //     } else if (!isEmpty(values?.examples)) {
-    //         setIsStepValid(true);
-    //     }
-    // }, [_values]); 
+    const { setIsStepValid } = useWizardCtx();
+    const _values = Form.useWatch(['examples', 'example_path'], form);
+    useEffect (() => {
+        const values = form.getFieldsValue();
+        console.log('values:', values);
+        console.log(form.getFieldValue('example_path'));
+        if (isEmpty(values.examples) && isEmpty(form.getFieldValue('example_path'))) {
+            setIsStepValid(false);
+        } else {
+            setIsStepValid(true);
+        }
+    }, [_values, form.getFieldValue('example_path')]);
 
     const columns = [
         {
@@ -206,6 +222,7 @@ const Examples: React.FC = () => {
 
     console.log('exampleType:', exampleType);
     console.log('data:', mutation.data);
+    console.log('formData', formData);
 
     
 
@@ -300,7 +317,9 @@ const Examples: React.FC = () => {
             </Header>
             {exampleType === ExampleType.FREE_FORM && !isEmpty(mutation.data) && 
               <FreeFormExampleTable  data={mutation.data}/>}
-            {exampleType === ExampleType.FREE_FORM && isEmpty(mutation.data) &&
+            {exampleType === ExampleType.FREE_FORM && isEmpty(mutation.data) && !isEmpty(values.examples) && 
+              <FreeFormExampleTable  data={values.examples}/>}  
+            {exampleType === ExampleType.FREE_FORM && isEmpty(mutation.data) && isEmpty(values.examples) &&
                 <Empty
                 image={
                    <StyledContainer>

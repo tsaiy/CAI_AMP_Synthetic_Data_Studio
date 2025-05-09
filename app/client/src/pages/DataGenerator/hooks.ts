@@ -162,7 +162,7 @@ export const useGetProjectFiles = (paths: string[]) => {
     if (mutation.isError) {
         notification.error({
           message: 'Error',
-          description: `An error occurred while fetching the prompt.\n ${mutation.error}`
+          description: `An error occurred while fetching the list of project files.\n ${mutation.error}`
         });
     }
     return {

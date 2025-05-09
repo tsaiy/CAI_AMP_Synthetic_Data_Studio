@@ -153,10 +153,7 @@ const FreeFormExampleTable: FunctionComponent<Props> = ({ data }) => {
         []
       );
 
-      console.log('>>> FreeFormExampleTable colDefs:', colDefs);
-      console.log('>>> FreeFormExampleTable rowData:', rowData);
-      console.log('>>> FreeFormExampleTable defaultColDef:', defaultColDef);
-      console.log('>>> FreeFormExampleTable statusBar:', statusBar);
+      
   return (
     <>
       <div style={{ 

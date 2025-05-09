@@ -17,6 +17,7 @@ import Finish from './Finish';
 
 import { DataGenWizardSteps, WizardStepConfig, WorkflowType } from './types';
 import { WizardCtx } from './utils';
+import { useGetDatasetDetails } from '../DatasetDetails/hooks';
 
 const { Content } = Layout;
 // const { Title } = Typography;
@@ -100,6 +101,8 @@ const DataGenerator = () => {
     const location = useLocation();
     console.log('location?.state?.data:', location?.state?.data);
     const initialData = location?.state?.data;
+
+    const datasetDetailsReq = location?.state?.data &&  useGetDatasetDetails(location?.state?.data?.generate_file_name)
     if (initialData?.technique) {
         initialData.workflow_type = initialData?.technique === 'sft' ? 
         WorkflowType.SUPERVISED_FINE_TUNING :
@@ -114,8 +117,9 @@ const DataGenerator = () => {
         
     }
 
-    if (!isEmpty(initialData?.example_path) ) {
-        initialData.doc_paths = initialData?.example_path;
+    if (datasetDetailsReq && datasetDetailsReq.data && 
+        !isEmpty(datasetDetailsReq?.data?.generate_file_name)) {
+        initialData.example_path = initialData?.example_path;
     }
 
     if (Array.isArray(initialData?.input_paths) && !isEmpty(initialData?.input_paths) ) {
