@@ -177,7 +177,7 @@ const Finish = () => {
             formValues.doc_paths = doc_paths
         }
 
-        if (formValues.workflow_type === WorkflowType.FREE_FORM_DATA_GENERATION) {
+        if (formValues.workflow_type === WorkflowType.FREE_FORM_DATA_GENERATION && !isEmpty(formValues.example_path)) {
             delete formValues.examples;
         }
 

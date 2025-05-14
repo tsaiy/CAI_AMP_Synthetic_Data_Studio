@@ -77,7 +77,18 @@ const Prompt = () => {
     const output_key = form.getFieldValue('output_key');
     const caii_endpoint = form.getFieldValue('caii_endpoint');
     
+    console.log('useCase', useCase);
+    console.log('workflow_type', workflow_type);
     const { data: defaultPrompt, loading: promptsLoading } = useFetchDefaultPrompt(useCase, workflow_type);
+    console.log('----------------------defaultPrompt', defaultPrompt);
+
+    useEffect(() => {
+        console.log('--useEffect', defaultPrompt);
+        if (defaultPrompt) {
+            defaultPromptRef.current = defaultPrompt;
+            form.setFieldValue('custom_prompt', defaultPrompt);
+        }
+    }, [useCase]);
 
     // Page Bootstrap requests and useEffect
     const { data: defaultTopics, loading: topicsLoading } = usefetchTopics(useCase);
@@ -101,6 +112,7 @@ const Prompt = () => {
     }, [error, isError]);
 
     useEffect(() => {
+        console.log('------------useEffect');
         if (defaultTopics) {
             // customTopics is a client-side only fieldValue that persists custom topics added
             // when the user switches between wizard steps
@@ -114,16 +126,24 @@ const Prompt = () => {
                 form.setFieldValue('topics', [])
             }
         }
+        console.log('defaultPromptRef', defaultPromptRef.current);
+        console.log('defaultPrompt', defaultPrompt);
         if (defaultPrompt) {
             defaultPromptRef.current = defaultPrompt;
             if (form.getFieldValue('custom_prompt') === undefined) {
-                form.setFieldValue('custom_prompt', defaultPrompt)
+                console.log('---------> 1');
+                form.setFieldValue('custom_prompt', defaultPrompt);
             }
             if (form.getFieldValue('custom_prompt') !== defaultPrompt && 
                 form.getFieldValue('use_case') !== 'custom') {
-                form.setFieldValue('custom_prompt', defaultPrompt)
+                console.log('---------> 2');
+                form.setFieldValue('custom_prompt', defaultPrompt);
             }
         }
+        // if (useCase === Usecases.CUSTOM.toLocaleLowerCase() && !defaultPrompt) {
+        //     console.log('---------> 3');
+        //     form.setFieldValue('custom_prompt', defaultPrompt);
+        // }
         if (defaultSchema) {
             defaultSchemaRef.current = defaultSchema;
             if (form.getFieldValue('schema') === undefined) {

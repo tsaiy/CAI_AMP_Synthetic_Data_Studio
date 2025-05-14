@@ -9,7 +9,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useFetchExamples } from '../../api/api';
 import TooltipIcon from '../../components/TooltipIcon';
 import PCModalContent from './PCModalContent';
-import { File, QuestionSolution, WorkflowType } from './types';
+import { File, QuestionSolution, UseCaseType, WorkflowType } from './types';
 import FileSelectorButton from './FileSelectorButton';
 
 import { fetchFileContent } from './hooks';
@@ -57,6 +57,7 @@ enum ExampleType {
 const Examples: React.FC = () => {
     const form = Form.useFormInstance();
     const [exampleType, setExampleType] = useState(ExampleType.PROMPT_COMPLETION);
+    const use_case = Form.useWatch('use_case', form);
     
     const mutation = useMutation({
         mutationFn: fetchFileContent
@@ -72,16 +73,21 @@ const Examples: React.FC = () => {
             });
         }
 
-        if (form.getFieldValue('workflow_type') === 'freeform') {
+        if (form.getFieldValue('workflow_type') === 'freeform' && form.getFieldValue('use_case') === UseCaseType.CUSTOM) {
             setExampleType(ExampleType.FREE_FORM);
         }
        
         
 
-     }, [form.getFieldValue('example_path'), form.getFieldValue('workflow_type')]);
+     }, [
+        form.getFieldValue('example_path'), 
+        form.getFieldValue('workflow_type'), 
+        use_case
+    ]);
 
     useEffect(() => {   
         if (!isEmpty(mutation.data)) {
+            console.log('--------------mutation.data:', mutation.data);
             form.setFieldValue('examples', mutation.data);
         }
     }, [mutation.data]); 
@@ -89,15 +95,28 @@ const Examples: React.FC = () => {
     const { setIsStepValid } = useWizardCtx();
     const _values = Form.useWatch(['examples', 'example_path'], form);
     useEffect (() => {
+        console.log('Validation hook triggered');
         const values = form.getFieldsValue(true);
+        console.log('values:', values)
+        console.log('example_path:', values.example_path)
+        console.log('examples:', values.examples)
+        console.log('workflow_type:', values.workflow_type)
+        console.log('use_case:', use_case);
         console.log(form.getFieldValue('example_path'))
         if ((isEmpty(values.examples) && values.workflow_type !== 'freeform') ||
-            (values.workflow_type === 'freeform' && isEmpty(form.getFieldValue('example_path')))) {
+            (values.workflow_type === 'freeform' && 
+                isEmpty(form.getFieldValue('example_path') && 
+                use_case === UseCaseType.CUSTOM))) {
             setIsStepValid(false);
         } else {
             setIsStepValid(true);
         }
-    }, [_values, form.getFieldValue('example_path'), form.getFieldValue('examples')]);
+    }, [
+        _values, 
+        form.getFieldValue('example_path'), 
+        form.getFieldValue('examples'),
+        use_case
+    ]);
 
     const columns = [
         {
@@ -196,9 +215,16 @@ const Examples: React.FC = () => {
     ];
     const dataSource = Form.useWatch('examples', form);
     const { data: examples, loading: examplesLoading } = useFetchExamples(form.getFieldValue('use_case'));
+    console.log('examples:', examples);
+    console.log('dataSource:', dataSource);
     if (!dataSource && examples) {
-        form.setFieldValue('examples', examples.examples)
+        console.log('setting examples....');
+        form.setFieldValue('examples', examples.examples);
     }
+    // if (exampleType === ExampleType.PROMPT_COMPLETION && examples) {
+    //     console.log('setting examples....');
+    //     form.setFieldValue('examples', examples.examples)
+    // }
     const rowLimitReached = form.getFieldValue('examples')?.length === MAX_EXAMPLES;
     const workflowType = form.getFieldValue('workflow_type');
 
@@ -286,7 +312,9 @@ const Examples: React.FC = () => {
                             onClick={(e) => {
                                 e.stopPropagation();
                                 const addRow = (data: QuestionSolution) => {
+                                    console.log('---addRow', data);
                                     const updatedExamples = [...form.getFieldValue('examples'), data];
+                                    console.log('---updatedExamples', updatedExamples);
                                     form.setFieldValue('examples', updatedExamples);
                                     Modal.destroyAll();
                                 }
@@ -311,9 +339,12 @@ const Examples: React.FC = () => {
                     </Tooltip>}
                 </Flex>
             </Header>
-            {exampleType === ExampleType.FREE_FORM && !isEmpty(mutation.data) && 
+            {exampleType === ExampleType.FREE_FORM && !isEmpty(mutation.data) && use_case === UseCaseType.CUSTOM &&
               <FreeFormExampleTable  data={mutation.data}/>}
-            {exampleType === ExampleType.FREE_FORM && isEmpty(mutation.data) && !isEmpty(values.examples) && 
+            {(exampleType === ExampleType.FREE_FORM && 
+              isEmpty(mutation.data) && 
+              !isEmpty(values.examples) && 
+              use_case !== UseCaseType.CUSTOM) &&
               <FreeFormExampleTable  data={values.examples}/>}  
             {exampleType === ExampleType.FREE_FORM && isEmpty(mutation.data) && isEmpty(values.examples) &&
                 <Empty
