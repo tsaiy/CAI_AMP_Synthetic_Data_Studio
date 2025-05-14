@@ -89,13 +89,15 @@ const Examples: React.FC = () => {
     const { setIsStepValid } = useWizardCtx();
     const _values = Form.useWatch(['examples', 'example_path'], form);
     useEffect (() => {
-        const values = form.getFieldsValue();
-        if (isEmpty(values.examples) && isEmpty(form.getFieldValue('example_path'))) {
+        const values = form.getFieldsValue(true);
+        console.log(form.getFieldValue('example_path'))
+        if ((isEmpty(values.examples) && values.workflow_type !== 'freeform') ||
+            (values.workflow_type === 'freeform' && isEmpty(form.getFieldValue('example_path')))) {
             setIsStepValid(false);
         } else {
             setIsStepValid(true);
         }
-    }, [_values, form.getFieldValue('example_path')]);
+    }, [_values, form.getFieldValue('example_path'), form.getFieldValue('examples')]);
 
     const columns = [
         {
