@@ -135,6 +135,7 @@ export const useEvaluations = () => {
   };
 };
 
+
 export const useExports = () => {
   const [searchQuery, setSearchQuery] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ page: 1, pageSize: 10 });
@@ -144,6 +145,7 @@ export const useExports = () => {
       queryKey: ["fetchExports", pagination.page, pagination.pageSize],
       queryFn: () => fetchExports(pagination.page, pagination.pageSize),
       refetchInterval: 15000
+
     }
   );
   
@@ -166,6 +168,7 @@ export const useExports = () => {
       ...data,
       data: filtered,
     };
+
   }
   
   return {
