@@ -15,7 +15,6 @@ import FileSelectorButton from './FileSelectorButton';
 import { fetchFileContent } from './hooks';
 import { useState } from 'react';
 import FreeFormExampleTable from './FreeFormExampleTable';
-import { useWizardCtx } from './utils';
 
 const { Title } = Typography;
 const Container = styled.div`
@@ -84,20 +83,7 @@ const Examples: React.FC = () => {
         if (!isEmpty(mutation.data)) {
             form.setFieldValue('examples', mutation.data);
         }
-    }, [mutation.data]); 
-
-    const { setIsStepValid } = useWizardCtx();
-    const _values = Form.useWatch(['examples', 'example_path'], form);
-    useEffect (() => {
-        const values = form.getFieldsValue(true);
-        console.log(form.getFieldValue('example_path'))
-        if ((isEmpty(values.examples) && values.workflow_type !== 'freeform') ||
-            (values.workflow_type === 'freeform' && isEmpty(form.getFieldValue('example_path')))) {
-            setIsStepValid(false);
-        } else {
-            setIsStepValid(true);
-        }
-    }, [_values, form.getFieldValue('example_path'), form.getFieldValue('examples')]);
+    }, [mutation.data]);
 
     const columns = [
         {
