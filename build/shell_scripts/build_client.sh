@@ -20,7 +20,7 @@ fi
 
 # Install dependencies with uv pip
 echo "Installing Python dependencies..."
-uv pip install -e .
+uv sync --all-extras
 
 # Activate virtual environment
 source "$VENV_DIR/bin/activate"
