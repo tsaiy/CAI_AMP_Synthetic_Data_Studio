@@ -23,17 +23,19 @@ environment_variables:
     description: >-
       AWS region
   hf_token:
-    default: "your huggingface token"
+    default: "hf_token"
     description: >-
-      hf_token
+      your huggingface token
   hf_username:
-    default: "your huggingface username"
+    default: "hf_username"
     description: >-
-      hf_username
+      your huggingface username
   CDP_TOKEN:
-    default: "API key for Cloudera AI Inference"
+    default: null
     description: >-
+     API key for Cloudera AI Inference
       CDP_TOKEN
+  
   
 
 
