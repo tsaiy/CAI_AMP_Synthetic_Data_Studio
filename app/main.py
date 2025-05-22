@@ -55,6 +55,8 @@ from app.services.aws_bedrock import get_bedrock_client
 from app.migrations.alembic_manager import AlembicMigrationManager
 from app.core.config import responses, caii_check
 from app.core.path_manager import PathManager
+from app.models.request_models import AgenticSynthesisRequest  # new import
+
 
 # from app.core.telemetry_middleware import TelemetryMiddleware
 # from app.routes.telemetry_routes import router as telemetry_router
@@ -486,6 +488,93 @@ async def generate_examples(request: SynthesisRequest):
     else:
        return synthesis_job.generate_job(request, core, mem, request_id=request_id)
     
+@app.post("/synthesis/agentic_generate", include_in_schema=True,
+    responses=responses,
+    description="Generate synthetic data using an agentic workflow.")
+async def agentic_generate_data(request: AgenticSynthesisRequest): # Use AgenticSynthesisRequest
+    """
+    Agentic workflow endpoint for synthetic data generation.
+    Determines if generation should be inline or via a CML job based on request.is_demo.
+    """
+    request_id = str(uuid.uuid4())
+
+    if request.inference_type == "CAII":
+        caii_endpoint = request.caii_endpoint
+        if caii_endpoint: # Ensure caii_check is only called if endpoint is provided
+            caii_check(caii_endpoint)
+    
+    # Directly use is_demo from the request
+    is_demo_from_client = request.is_demo 
+
+    # Default memory and core, can be adjusted based on other factors if needed for jobs
+    mem = 4
+    core = 2
+
+    # Logic to adjust mem/core for jobs
+    # if project_id != "local" and not is_demo_from_client: # Only adjust for actual jobs
+    #     if request.doc_paths:
+    # paths = [path_manager.get_str_path(p) for p in request.doc_paths]
+    # data_size_gb = get_total_size(paths) # Assuming get_total_size is available
+            
+    # if data_size_gb > 1 and data_size_gb <= 10:
+    # mem = data_size_gb + 2
+    # core = max(2, data_size_gb // 2)
+    # elif data_size_gb > 10:
+    # return JSONResponse(
+    # status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+    # content={
+    # "status": "failed",
+    # "error": f"Total document size ({data_size_gb} GB) exceeds limit of 10 GB."
+    # }
+    # )
+    # pass # Placeholder for refined resource logic based on doc_paths size for jobs
+
+    if is_demo_from_client:
+        # Inline processing by SynthesisService
+        # The synthesis_service.run_agentic_workflow_inline will receive the AgenticSynthesisRequest
+        # which contains the original is_demo flag.
+        result = await synthesis_service.run_agentic_workflow_inline(
+            request, 
+            is_demo=True, # Explicitly pass True for inline execution path
+            request_id=request_id
+        )
+        return result 
+    else:
+        # Batch processing via CML Job
+        # Ensure synthesis_job is initialized and available
+        global synthesis_job # Assuming synthesis_job is a global or appropriately scoped variable
+        if 'synthesis_job' not in globals() and project_id != "local":
+             # Initialize SynthesisJob if not already done (example setup)
+             # This part depends on how client_cml and runtime_identifier are available here
+             # For a clean setup, these should be dependency injected or part of an app context
+             # For now, assuming they are accessible:
+             if 'client_cml' not in globals() or 'runtime_identifier' not in globals():
+                 # This is a placeholder for proper CML client and runtime ID initialization
+                 # In a real setup, these would be initialized once at startup or passed around
+                 # For demonstration, we'll raise an error if they're not set for a job.
+                 raise HTTPException(status_code=500, detail="CML client or runtime identifier not configured for job creation.")
+
+             synthesis_job = SynthesisJob(
+                 project_id=project_id,
+                 client_cml=client_cml, 
+                 path_manager=path_manager,
+                 db_manager=db_manager, 
+                 runtime_identifier=runtime_identifier 
+             )
+        
+        if project_id != "local":
+            # The request object (which includes the client's is_demo=False) is passed.
+            # The job script will handle this.
+            return synthesis_job.generate_agentic_job(request, core, mem, request_id=request_id)
+        else:
+            # Fallback for local environment if jobs are not supported or for testing
+            # This runs inline but indicates it's conceptually a "batch" mode for the service.
+            return await synthesis_service.run_agentic_workflow_inline(
+                request, 
+                is_demo=False, # Explicitly pass False for job-like execution path
+                request_id=request_id
+            )
+
 
 @app.post("/synthesis/freeform", include_in_schema=True,
     responses=responses,

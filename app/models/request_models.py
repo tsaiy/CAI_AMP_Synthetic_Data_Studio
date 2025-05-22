@@ -134,7 +134,8 @@ class SynthesisRequest(BaseModel):
         description="JSON array where each object has the same structure (consistent columns), but the structure itself can be defined flexibly per use case"
     )
     example_path: Optional[str] = None
-    schema: Optional[str] = None  # Added schema field
+    #schema: Optional[str] = None  # Added schema field
+    data_schema: Optional[str] = Field(None, alias="schema")
     custom_prompt: Optional[str] = None 
     display_name: Optional[str] = None 
     
@@ -161,7 +162,13 @@ class SynthesisRequest(BaseModel):
     )
 
 
-
+class AgenticSynthesisRequest(SynthesisRequest):
+    """
+    Request model for the agentic synthesis workflow.
+    Inherits all fields from SynthesisRequest.
+    Additional agent-specific controls can be added here in the future.
+    """
+    pass
 
 
 class SynthesisResponse(BaseModel):

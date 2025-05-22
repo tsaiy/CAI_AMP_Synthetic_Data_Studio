@@ -12,7 +12,9 @@ from openai import OpenAI
 from app.core.exceptions import APIError, InvalidModelError, ModelHandlerError, JSONParsingError
 from app.core.telemetry_integration import track_llm_operation
 from app.core.config import  _get_caii_token
-
+from langchain_core.language_models.llms import LLM
+from langchain_core.callbacks.manager import CallbackManagerForLLMRun
+from typing import Any, List, Mapping, Optional
 
 
 class UnifiedModelHandler:
@@ -322,3 +324,65 @@ def create_handler(model_id: str, bedrock_client=None, model_params: Optional[Mo
         UnifiedModelHandler instance
     """
     return UnifiedModelHandler(model_id, bedrock_client, model_params, inference_type, caii_endpoint, custom_p)
+
+
+
+
+class LangChainUnifiedLLM(LLM):
+    model_handler_instance: Any # Your UnifiedModelHandler instance
+
+    @property
+    def _llm_type(self) -> str:
+        return "langchain_unified_llm"
+
+    def _call(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None, # LangChain uses 'stop'
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> str:
+        # Adapt this call to your UnifiedModelHandler's generate_response method
+        # Your handler might return structured JSON, this _call expects a string.
+        # You might need to adjust how you call it or what it returns.
+        
+        # If generate_response returns a list of dicts (like QA pairs):
+        response_data = self.model_handler_instance.generate_response(prompt, retry_with_reduced_tokens=True, **kwargs)
+        
+        if isinstance(response_data, list) and response_data:
+            # For structured output, often the first item or a specific field is the main text
+            if isinstance(response_data[0], dict):
+                # Prioritize common keys, or serialize the whole thing if it's complex
+                text_content = response_data[0].get("text", 
+                                 response_data[0].get("solution", 
+                                 response_data[0].get("justification", 
+                                 json.dumps(response_data[0]))))
+                return str(text_content)
+            return str(response_data[0]) # Fallback for list of strings
+        elif isinstance(response_data, str):
+            return response_data
+        return json.dumps(response_data) # Fallback, serialize if not string/list
+
+    @property
+    def _identifying_params(self) -> Mapping[str, Any]:
+        return {
+            "model_id": self.model_handler_instance.model_id,
+            "model_params": self.model_handler_instance.model_params.model_dump(),
+            "inference_type": self.model_handler_instance.inference_type,
+            "caii_endpoint": self.model_handler_instance.caii_endpoint
+        }
+
+def get_langchain_llm(
+    model_id: str,
+    bedrock_client: Optional[Any] = None, # Assuming get_bedrock_client() is available
+    model_params: Optional[ModelParameters] = None,
+    inference_type: str = "aws_bedrock",
+    caii_endpoint: Optional[str] = None
+) -> LangChainUnifiedLLM:
+    # Get your existing UnifiedModelHandler instance
+    # This reuses your existing logic for Bedrock/CAII calls
+    actual_bedrock_client = bedrock_client # or get_bedrock_client() if None
+    unified_handler = create_handler(
+        model_id, actual_bedrock_client, model_params, inference_type, caii_endpoint
+    )
+    return LangChainUnifiedLLM(model_handler_instance=unified_handler)

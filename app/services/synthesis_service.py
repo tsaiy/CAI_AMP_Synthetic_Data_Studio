@@ -31,6 +31,9 @@ from logging.handlers import RotatingFileHandler
 import traceback
 from app.core.telemetry_integration import track_llm_operation
 import uuid 
+from app.agents.orchestrator_agent import OrchestratorAgent
+from app.models.request_models import AgenticSynthesisRequest
+
 
 
 class SynthesisService:
@@ -50,6 +53,7 @@ class SynthesisService:
         self.db = DatabaseManager() 
         self._setup_logging()
         self.guard = ContentGuardrail()
+       
 
 
     def _setup_logging(self):
@@ -1160,3 +1164,127 @@ class SynthesisService:
     def safe_json_dumps(self, value):
         """Convert value to JSON string only if it's not None"""
         return json.dumps(value) if value is not None else None
+    
+
+    async def run_agentic_workflow_inline(self, request: AgenticSynthesisRequest, is_demo: bool, job_name: Optional[str] = None, request_id: Optional[str] = None) -> Dict:
+        """
+        Runs the agentic data generation workflow.
+        - If is_demo is True: called directly by API endpoint for inline processing.
+        - If is_demo is False: called by the CML job script (run_agentic_job.py) for batch processing.
+                              In this case, `job_name` should be provided.
+        """
+        self.logger.info(f"Running AGENTIC workflow. Request ID: {request_id}, Is Demo (execution context): {is_demo}, Job Name (if applicable): {job_name}")
+        
+        try:
+            # The OrchestratorAgent itself doesn't need to know about is_demo for its internal planning logic.
+            # The plan regarding number of rows will be determined by the TaskPlanningAgent.
+            orchestrator = OrchestratorAgent(synthesis_request=request)
+            agent_result = await orchestrator.ainvoke({})
+
+            if agent_result.get("status") != "completed":
+                error_detail = agent_result.get("error", "Agentic workflow did not complete successfully.")
+                self.logger.error(f"Agentic workflow error for request {request_id} (job: {job_name}): {error_detail}")
+                raise APIError(message=error_detail, status_code=500)
+
+            final_data = agent_result.get("results", [])
+            
+            timestamp = datetime.now(timezone.utc).isoformat()
+            model_name_suffix = get_model_family(request.model_id).value
+            time_file = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%f')[:-3]
+            
+            # Filename reflects whether it was conceptually a demo/small run or a larger/job run at the API level
+            # The actual content size is len(final_data)
+            mode_suffix = "inline_small" if is_demo else "batch_large" 
+            base_filename = f"agentic_{request.technique.value if request.technique else 'data'}_{model_name_suffix}_{time_file}_{mode_suffix}.json"
+            
+            file_path = base_filename
+            output_path_dict = {'local': file_path}
+
+            try:
+                with open(file_path, "w") as f:
+                    json.dump(final_data, f, indent=2)
+                self.logger.info(f"Agentic generation results saved to: {file_path} for request {request_id} (job: {job_name})")
+            except Exception as e:
+                self.logger.error(f"Error saving agentic results for request {request_id} (job: {job_name}): {str(e)}", exc_info=True)
+                raise APIError(message=f"Failed to save results: {str(e)}", status_code=500)
+
+            model_params_dump = request.model_params.model_dump() if request.model_params else {}
+            metadata = {
+                'timestamp': timestamp,
+                'technique': request.technique.value if request.technique else None,
+                'model_id': request.model_id,
+                'inference_type': request.inference_type,
+                'caii_endpoint': request.caii_endpoint,
+                'use_case': request.use_case.value if request.use_case else None,
+                'final_prompt': agent_result.get("final_generation_prompt_for_log", request.custom_prompt),
+                'model_parameters': json.dumps(model_params_dump) if model_params_dump else None,
+                'generate_file_name': os.path.basename(file_path),
+                'display_name': request.display_name or base_filename,
+                'local_export_path': output_path_dict['local'],
+                'hf_export_path': None,
+                's3_export_path': None,
+                'num_questions': request.num_questions, # Original requested
+                'total_count': len(final_data), # Actual generated
+                'topics': json.dumps(request.topics) if request.topics else None,
+                'examples': json.dumps([ex.model_dump() for ex in request.examples]) if request.examples else None,
+                'schema': request.data_schema, # Use data_schema
+                'doc_paths': json.dumps(request.doc_paths) if request.doc_paths else None,
+                'input_path': json.dumps(request.input_path) if request.input_path else None,
+                'job_id': None, # Filled by SynthesisJob if applicable, or remains None for inline
+                'job_name': job_name, # Passed if called from job script
+                'job_status': "COMPLETED_INLINE" if is_demo else "COMPLETED_VIA_JOB_SCRIPT",
+                'job_creator_name': os.getenv("CDSW_PROJECT_OWNER", "local_user"),
+                'input_key': request.input_key,
+                'output_key': request.output_key,
+                'output_value': request.output_value,
+            }
+            
+            if not is_demo and job_name: # This means it's running inside a CML job script
+                metadata['job_status'] = "ENGINE_SUCCEEDED" # Correct status for job completion
+                # The job_id was already set when the job was created by SynthesisJob
+                # We need to ensure that the job_id from the CML job context is used here,
+                # or that the metadata is updated for an existing job_name.
+                # The current `update_job_generate` updates based on job_name.
+                self.db.update_job_generate(
+                     job_name=job_name,
+                     generate_file_name=metadata['generate_file_name'],
+                     local_export_path=metadata['local_export_path'],
+                     timestamp=timestamp,
+                     job_status="ENGINE_SUCCEEDED"
+                 )
+                self.db.backup_and_restore_db()
+            else: # Inline (is_demo=True) run, directly save metadata
+                self.db.save_generation_metadata(metadata)
+
+            return_payload = {
+                "status": "completed",
+                "export_path": output_path_dict,
+                "errors": agent_result.get("errors", [])
+            }
+            if is_demo: # Only return full data for actual demo/inline runs triggered by API
+                return_payload["results"] = final_data
+            
+            return return_payload
+
+        except APIError as e:
+            self.logger.error(f"APIError in agentic workflow for request {request_id} (job: {job_name}): {e.message}", exc_info=True)
+            raise
+        except Exception as e:
+            self.logger.error(f"Unexpected error in agentic workflow for request {request_id} (job: {job_name}): {str(e)}", exc_info=True)
+            if not is_demo and job_name: # Running inside a job and failed
+                try:
+                    self.db.update_job_generate(
+                        job_name=job_name,
+                        generate_file_name=f"error_{job_name}.txt", 
+                        local_export_path=f"error_{job_name}.txt", # Save error info if possible
+                        timestamp=datetime.now(timezone.utc).isoformat(),
+                        job_status="ENGINE_FAILED"
+                    )
+                    # Potentially write error to the error file
+                    error_file_path = f"error_{job_name}.txt"
+                    with open(error_file_path, "w") as ef:
+                        ef.write(f"Error during job {job_name}:\n{traceback.format_exc()}")
+
+                except Exception as db_err:
+                    self.logger.error(f"Failed to update job status to FAILED for {job_name}: {db_err}")
+            raise APIError(message=f"Agentic workflow failed: {str(e)}", status_code=500)

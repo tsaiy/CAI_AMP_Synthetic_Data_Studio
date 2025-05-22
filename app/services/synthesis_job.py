@@ -19,6 +19,7 @@ from app.core.config import responses, caii_check
 from app.core.path_manager import PathManager
 from app.core.telemetry import telemetry_manager
 from app.core.telemetry_integration import track_job
+from app.models.request_models import AgenticSynthesisRequest
 import cmlapi
 
 # Initialize services
@@ -379,3 +380,85 @@ class SynthesisJob:
             pass
 
         return status
+    
+    def _create_agentic_job_params_file(self, request: AgenticSynthesisRequest, job_prefix: str, request_id_for_job: Optional[str]) -> tuple[str, str]:
+        """Helper to create the JSON params file for an agentic job."""
+        random_id = uuid.uuid4().hex[:4]
+        display_name = request.display_name
+        job_name_actual = f"{display_name}_{random_id}" if display_name else f"{job_prefix}_{random_id}"
+        
+        params_to_save = request.model_dump(by_alias=True) # Use by_alias for schema
+        params_to_save['job_name_for_script'] = job_name_actual
+        params_to_save['request_id_for_job'] = request_id_for_job
+        # request.is_demo (which is False for jobs) is already in params_to_save
+        
+        file_name = f"{job_prefix}_args_{random_id}.json"
+        # CML jobs typically run from the project root.
+        # Ensure path_manager creates paths relative to where the job script expects them.
+        # If job script is in app/, and params file is at root, path_manager might not be needed here.
+        # For simplicity, assuming params file is created in the CML job's working directory (project root).
+        file_path = file_name 
+        with open(file_path, 'w') as f:
+            json.dump(params_to_save, f)
+        return file_path, job_name_actual
+
+    def generate_agentic_job(self, request: AgenticSynthesisRequest, cpu: int, memory: int, request_id: Optional[str] = None) -> Dict[str, str]:
+        """Create and run a CML job for the agentic synthesis workflow."""
+        
+        params_file_name, job_name_actual = self._create_agentic_job_params_file(request, "agentic_synth_job", request_id)
+
+        # Path to the job script, relative to the project root
+        script_path = "app/run_agentic_job.py" 
+
+        job_instance = cmlapi.CreateJobRequest(
+            project_id=self.project_id,
+            name=job_name_actual,
+            script=script_path,
+            runtime_identifier=self.runtime_identifier,
+            cpu=cpu,
+            memory=memory,
+            environment={'AGENTIC_PARAMS_FILE': params_file_name}
+        )
+
+        created_job = self.client_cml.create_job(
+            project_id=self.project_id,
+            body=job_instance
+        )
+        job_run = self.client_cml.create_job_run(
+            cmlapi.CreateJobRunRequest(), # Empty body for job run creation
+            project_id=self.project_id,
+            job_id=created_job.id
+        )
+        
+        job_creator_name = self._get_job_creator_name(job_run.job_id)
+        initial_job_status = self.get_job_status(job_run.job_id)
+
+        metadata = {
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'technique': request.technique.value if request.technique else None,
+            'model_id': request.model_id,
+            'inference_type': request.inference_type,
+            'caii_endpoint': request.caii_endpoint,
+            'use_case': request.use_case.value if request.use_case else None,
+            'custom_prompt': request.custom_prompt,
+            'model_parameters': json.dumps(request.model_params.model_dump()) if request.model_params else None,
+            'display_name': request.display_name or job_name_actual,
+            'num_questions': request.num_questions,
+            'total_count': None, # To be updated by job completion
+            'topics': json.dumps(request.topics) if request.topics else None,
+            'examples': json.dumps([ex.model_dump() for ex in request.examples]) if request.examples else None,
+            'schema': request.data_schema, # Using data_schema from request
+            'doc_paths': json.dumps(request.doc_paths) if request.doc_paths else None,
+            'input_path': json.dumps(request.input_path) if request.input_path else None,
+            'job_id': job_run.job_id,
+            'job_name': job_name_actual,
+            'job_status': initial_job_status,
+            'job_creator_name': job_creator_name,
+            'input_key': request.input_key,
+            'output_key': request.output_key,
+            'output_value': request.output_value,
+        }
+        
+        self.db_manager.save_generation_metadata(metadata)
+        
+        return {"job_name": job_name_actual, "job_id": job_run.job_id}
