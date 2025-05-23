@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import styled from "styled-components";
 import { LoadingOutlined } from '@ant-design/icons';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { fetchCustomPrompt, fetchPrompt } from "./hooks";
 import Loading from "../Evaluator/Loading";
 
@@ -64,7 +65,11 @@ const CustomPromptButton: React.FC<Props> = ({ model_id, inference_type, caii_en
 
   return (
     <>
-      <Button onClick={() => setShowModal(true)} style={{ marginLeft: '8px' }}>Generate Custom Prompt</Button>
+      <Button
+        onClick={() => setShowModal(true)}
+        style={{ marginLeft: '8px' }}
+        icon={<AutoAwesomeIcon />}
+      />
       {showModal && 
         (
             <Modal
