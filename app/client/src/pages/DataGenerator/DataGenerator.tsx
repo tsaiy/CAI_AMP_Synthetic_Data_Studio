@@ -15,7 +15,7 @@ import Examples from './Examples';
 import Summary from './Summary';
 import Finish from './Finish';
 
-import { DataGenWizardSteps, WizardStepConfig, WorkflowType } from './types';
+import { DataGenWizardSteps, WizardStepConfig, WorkflowType, ModelProviders } from './types';
 import { WizardCtx } from './utils';
 
 const { Content } = Layout;
@@ -122,7 +122,11 @@ const DataGenerator = () => {
     }
 
 
-    const formData = useRef(initialData || { num_questions: 20, topics: [] });
+    const formData = useRef(initialData || {
+        num_questions: 20,
+        topics: [],
+        inference_type: ModelProviders.CAII,
+    });
 
     const [form] = Form.useForm<FormInstance>();
 
