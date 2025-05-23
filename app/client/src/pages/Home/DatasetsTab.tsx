@@ -11,6 +11,8 @@ import DateTime from '../../components/DateTime/DateTime';
 import DatasetActions from './DatasetActions';
 import { sortItemsByKey } from '../../utils/sortutils';
 import { SyntheticEvent, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { getFilesURL } from '../Evaluator/util';
 import DatasetExportModal, { ExportResult } from '../../components/Export/ExportModal';
 import React from 'react';
 import { JobStatus } from '../../types';
@@ -111,12 +113,25 @@ const DatasetsTab: React.FC = () => {
             title: 'Display Name',
             dataIndex: 'display_name',
             sorter: sortItemsByKey('display_name'),
+            render: (display_name, record: Dataset) => (
+                <Tooltip title={display_name}>
+                    <Link to={`/dataset/${record.generate_file_name}`}> 
+                        <StyledParagraph style={{ width: 200, marginBottom: 0 }} ellipsis={{ rows: 1 }}>{display_name}</StyledParagraph>
+                    </Link>
+                </Tooltip>
+            )
         }, {
             key: 'generate_file_name',
             title: 'Dataset Name',
             dataIndex: 'generate_file_name',
             sorter: sortItemsByKey('generate_file_name'),
-            render: (generate_file_name) => <Tooltip title={generate_file_name}><StyledParagraph style={{ width: 200, marginBottom: 0 }} ellipsis={{ rows: 1 }}>{generate_file_name}</StyledParagraph></Tooltip>
+            render: (_, record: Dataset) => (
+                <Tooltip title={record.generate_file_name}>
+                    <a target="_blank" rel="noopener noreferrer" href={`${getFilesURL(record.local_export_path)}`}> 
+                        <StyledParagraph style={{ width: 200, marginBottom: 0 }} ellipsis={{ rows: 1 }}>{record.generate_file_name}</StyledParagraph>
+                    </a>
+                </Tooltip>
+            )
         }, {
             key: 'model_id',
             title: 'Model',
