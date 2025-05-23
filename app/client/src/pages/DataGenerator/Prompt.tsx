@@ -191,12 +191,21 @@ const Prompt = () => {
                         <StyledFormItem
                             name='custom_prompt'
                             label={
-                                <FormLabel level={4}>
-                                    <Space>
-                                        <>{'Prompt'}</>
-                                        <TooltipIcon message={'Enter a prompt to describe your dataset'}/>
-                                    </Space>
-                                </FormLabel>
+                                <Flex align='center'>
+                                    <FormLabel level={4}>
+                                        <Space>
+                                            <>{'Prompt'}</>
+                                            <TooltipIcon message={'Enter a prompt to describe your dataset'}/>
+                                        </Space>
+                                    </FormLabel>
+                                    <CustomPromptButton
+                                        model_id={model_id}
+                                        inference_type={inference_type}
+                                        caii_endpoint={caii_endpoint}
+                                        use_case={useCase}
+                                        setPrompt={setPrompt}
+                                    />
+                                </Flex>
                             }
                             labelCol={{ span: 24 }}
                             wrapperCol={{ span: 24 }}
@@ -230,16 +239,6 @@ const Prompt = () => {
                         >
                             {'Restore'}
                         </RestoreDefaultBtn>
-                        {(form.getFieldValue('use_case') === Usecases.CUSTOM.toLowerCase() ||
-                            workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) &&  
-                            <CustomPromptButton 
-                                model_id={model_id}
-                                inference_type={inference_type}
-                                caii_endpoint={caii_endpoint}
-                                use_case={useCase}
-                                setPrompt={setPrompt}
-                            />
-                        }
                     </div>
                     {((workflow_type === WorkflowType.CUSTOM_DATA_GENERATION && !isEmpty(doc_paths)) ||
                     (workflow_type === WorkflowType.SUPERVISED_FINE_TUNING && !isEmpty(doc_paths))) && 
