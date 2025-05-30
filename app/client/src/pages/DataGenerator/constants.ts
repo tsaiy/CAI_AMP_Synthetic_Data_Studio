@@ -2,7 +2,9 @@ import { ModelProviders, ModelProvidersDropdownOpts } from './types';
 
 export const MODEL_PROVIDER_LABELS = {
   [ModelProviders.BEDROCK]: 'AWS Bedrock',
-  [ModelProviders.CAII]: 'Cloudera AI Inference Service'
+  [ModelProviders.CAII]: 'Cloudera AI Inference Service',
+  [ModelProviders.GOOGLE_GEMINI]: 'Google Gemini',
+  [ModelProviders.AZURE_OPENAI]: 'Azure OpenAI',
 };
 
 export const MIN_SEED_INSTRUCTIONS = 1
@@ -19,7 +21,8 @@ export const USECASE_OPTIONS = [
 
 export const WORKFLOW_OPTIONS = [
     { label: 'Supervised Fine-Tuning', value: 'sft' },
-    { label: 'Custom Data Generation', value: 'custom' }
+    { label: 'Custom Data Generation', value: 'custom' },
+    { label: 'Freeform Data Generation', value: 'freeform' }
 ];
 
 export const MODEL_TYPE_OPTIONS: ModelProvidersDropdownOpts = [

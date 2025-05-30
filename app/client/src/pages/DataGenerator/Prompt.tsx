@@ -15,6 +15,7 @@ import { useWizardCtx } from './utils';
 import { useDatasetSize, useGetPromptByUseCase } from './hooks';
 import CustomPromptButton from './CustomPromptButton';
 import get from 'lodash/get';
+import TextArea from 'antd/es/input/TextArea';
 
 const { Title } = Typography;
 
@@ -25,6 +26,13 @@ const FormLabel = styled(Title)`
 const StyledFormItem = styled(Form.Item)`
     margin-bottom: 0px;
 `;
+
+const StyledPromptFormItem = styled(StyledFormItem)`
+    label {
+        width: 100%;
+    }
+`;
+
 const RestoreDefaultBtn = styled(Button)`
     max-width: fit-content;
 `;
@@ -77,12 +85,12 @@ const Prompt = () => {
     const output_key = form.getFieldValue('output_key');
     const caii_endpoint = form.getFieldValue('caii_endpoint');
     
-    const { data: defaultPrompt, loading: promptsLoading } = useFetchDefaultPrompt(useCase);
+    const { data: defaultPrompt, loading: promptsLoading } = useFetchDefaultPrompt(useCase, workflow_type);
 
     // Page Bootstrap requests and useEffect
     const { data: defaultTopics, loading: topicsLoading } = usefetchTopics(useCase);
     const { data: defaultSchema, loading: schemaLoading } = useFetchDefaultSchema();
-    const { data: dataset_size, isLoading: datasetSizeLoadin, isError, error } = useDatasetSize(
+    const { data: dataset_size, isLoading: datasetSizeLoading, isError, error } = useDatasetSize(
         workflow_type,
         doc_paths,
         input_key,
@@ -153,7 +161,8 @@ const Prompt = () => {
         
     }, [selectedTopics, numQuestions, datasetSize]);
 
-    const onTopicTextChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const onTopicTextChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+        console.log('onTopicTextChange:', event.target.value);
         setCustomTopic(event.target.value);
     };
 
@@ -163,6 +172,7 @@ const Prompt = () => {
 
     const addItem = (e: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => {
         e.preventDefault();
+        console.log('Adding custom topic:', customTopic);
         if (!customTopic || items.includes(customTopic)) {
             return; // Prevent adding duplicate or empty topics
         }
@@ -188,22 +198,37 @@ const Prompt = () => {
             <LeftCol span={17}>
                 <Flex vertical gap={14}>
                     <div>
-                        <StyledFormItem
+                        <StyledPromptFormItem
                             name='custom_prompt'
                             label={
-                                <FormLabel level={4}>
+                                <div style={{ width: '100%', height: '32px', display: 'flex' }}>
+                                <FormLabel level={4} style={{ width: '240px'}}>
                                     <Space>
                                         <>{'Prompt'}</>
                                         <TooltipIcon message={'Enter a prompt to describe your dataset'}/>
                                     </Space>
                                 </FormLabel>
+                                <Flex style={{ flexDirection: 'row-reverse', width: '100%' }}>
+                                    {(form.getFieldValue('use_case') === Usecases.CUSTOM.toLowerCase() ||
+                                        workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) &&  
+                                        <CustomPromptButton 
+                                            model_id={model_id}
+                                            inference_type={inference_type}
+                                            caii_endpoint={caii_endpoint}
+                                            use_case={useCase}
+                                            example_path={form.getFieldValue('example_path') || null}
+                                            setPrompt={setPrompt}
+                                        />
+                                    }
+                                    </Flex>
+                                </div>
                             }
                             labelCol={{ span: 24 }}
                             wrapperCol={{ span: 24 }}
                             shouldUpdate
                         >
                             <StyledTextArea autoSize placeholder={'Enter a prompt'}/>
-                        </StyledFormItem>
+                        </StyledPromptFormItem>
                         <RestoreDefaultBtn
                             onClick={() => {
                                 return Modal.warning({
@@ -226,20 +251,10 @@ const Prompt = () => {
                                     ),
                                     maskClosable: true,
                                 })
-                            }}
-                        >
-                            {'Restore'}
+                            }}>
+                                {'Restore'}
                         </RestoreDefaultBtn>
-                        {(form.getFieldValue('use_case') === Usecases.CUSTOM.toLowerCase() ||
-                            workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) &&  
-                            <CustomPromptButton 
-                                model_id={model_id}
-                                inference_type={inference_type}
-                                caii_endpoint={caii_endpoint}
-                                use_case={useCase}
-                                setPrompt={setPrompt}
-                            />
-                        }
+                        
                     </div>
                     {((workflow_type === WorkflowType.CUSTOM_DATA_GENERATION && !isEmpty(doc_paths)) ||
                     (workflow_type === WorkflowType.SUPERVISED_FINE_TUNING && !isEmpty(doc_paths))) && 
@@ -266,7 +281,8 @@ const Prompt = () => {
                         </StyledFormItem>    
                     }
                     {isEmpty(doc_paths) && (workflow_type === WorkflowType.SUPERVISED_FINE_TUNING ||
-                        workflow_type === WorkflowType.CUSTOM_DATA_GENERATION) &&
+                        workflow_type === WorkflowType.CUSTOM_DATA_GENERATION ||
+                        workflow_type === WorkflowType.FREE_FORM_DATA_GENERATION) &&
                     <Flex gap={20} vertical>
                         <StyledFormItem
                             name={'topics'}
@@ -305,7 +321,7 @@ const Prompt = () => {
                                             <StyledFormItem
                                                 name={'customTopic'}
                                                 rules={[
-                                                    { validator: (_: any, value: string) => {
+                                                    { validator: (_: unknown, value: string) => {
                                                         if (items.includes(value)) {
                                                             return Promise.reject('This seed instruction already exists in the list')
                                                         }
@@ -314,9 +330,10 @@ const Prompt = () => {
                                                 ]}
                                             >
                                                 <Space.Compact block>
-                                                    <Input
+                                                    <TextArea
                                                         disabled={selectedTopics?.length === MAX_SEED_INSTRUCTIONS}
                                                         placeholder="Enter custom seed instruction"
+                                                        rows={4}
                                                         ref={customTopicRef}
                                                         value={customTopic}
                                                         onChange={onTopicTextChange}
@@ -329,6 +346,7 @@ const Prompt = () => {
                                                         }
                                                     >
                                                         <Button
+                                                            style={{ marginLeft: '12px' }}
                                                             disabled={items.includes(customTopic) ||
                                                                 selectedTopics?.length === MAX_SEED_INSTRUCTIONS ||
                                                                 customTopic.length === 0}

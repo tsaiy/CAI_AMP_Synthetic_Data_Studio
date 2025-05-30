@@ -1,6 +1,7 @@
 import os
 import boto3
 from datetime import datetime, timezone
+from typing import Any, Dict
 from botocore.config import Config
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse
@@ -9,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+import pandas as pd
+import numpy as np
 from typing import Dict, List, Optional
 import subprocess
 import asyncio
@@ -22,7 +25,12 @@ from urllib3.exceptions import ReadTimeoutError
 import sys
 import json
 import uuid 
-print(os.getcwd())
+from fastapi.encoders import jsonable_encoder
+
+from fastapi import Query
+
+
+#print(os.getcwd())
 # Setup absolute paths
 ROOT_DIR = Path(__file__).parent.parent  # Goes up one level from app/main.py to reach project root
 print("root: ", Path(__file__))
@@ -48,6 +56,7 @@ from app.services.aws_bedrock import get_bedrock_client
 from app.migrations.alembic_manager import AlembicMigrationManager
 from app.core.config import responses, caii_check
 from app.core.path_manager import PathManager
+from app.core.model_endpoints import collect_model_catalog, sort_unique_models, list_bedrock_models
 
 # from app.core.telemetry_middleware import TelemetryMiddleware
 # from app.routes.telemetry_routes import router as telemetry_router
@@ -180,7 +189,34 @@ def restart_application():
         print(f"Error restarting application: {e}")
         raise
 
-
+def deep_sanitize_nans(obj: Any) -> Any:
+    """
+    Recursively traverse all data structures and replace NaN with None.
+    This handles all nested structures.
+    """
+    if isinstance(obj, dict):
+        return {k: deep_sanitize_nans(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [deep_sanitize_nans(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple(deep_sanitize_nans(item) for item in obj)
+    elif isinstance(obj, set):
+        return {deep_sanitize_nans(item) for item in obj}
+    elif isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    elif isinstance(obj, (pd.Timestamp, np.datetime64)):
+        return obj.isoformat()
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        if np.isnan(obj) or np.isinf(obj):
+            return None
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return deep_sanitize_nans(obj.tolist())
+    elif pd.isna(obj):
+        return None
+    return obj
 
 
 # Add these models
@@ -276,7 +312,9 @@ def get_timeout_for_request(request: Request) -> float:
     if path.endswith("/generate"):
         return 200.0  # 2 minutes for generation
     elif path.endswith("/freeform"):
-        return 200.0  # 2 minutes for generation
+        return 300.0  # 5 minutes for generation
+    elif path.endswith("/create_custom_prompt"):
+        return 300.0  # 5 minutes for generation
     elif path.endswith("/evaluate"):
         return 200.0  # 2 minutes for evaluation
     elif path.endswith("/export_results"):
@@ -284,7 +322,7 @@ def get_timeout_for_request(request: Request) -> float:
     elif "health" in path:
         return 5.0    # Quick timeout for health checks
     elif path.endswith("/upgrade"):
-        return 1200  # timeout increase for upgrade  
+        return 2000  # timeout increase for upgrade  
     else:
         return 60.0   # Default timeout
 
@@ -362,6 +400,8 @@ async def get_dataset_size(request:JsonDataSize):
                 )
             
     return {"dataset_size": len(inputs)}
+
+
 
 @app.post("/json/get_content", include_in_schema=True, responses = responses,
           description = "get json content")
@@ -486,13 +526,21 @@ async def generate_freeform_data(request: SynthesisRequest):
                 core = 2
     
     if is_demo:
-        return await synthesis_service.generate_freeform(request, is_demo=is_demo, request_id=request_id )
+        result = await synthesis_service.generate_freeform(request, is_demo=is_demo, request_id=request_id )
+          # Apply our deep sanitization to handle all NaN values
+        sanitized_result = deep_sanitize_nans(result)
+        
+        # Then use jsonable_encoder for FastAPI-specific conversions
+        final_result = jsonable_encoder(sanitized_result)
+
+        return final_result
     else:
         # Pass additional parameter to indicate this is a freeform request
         request_dict = request.model_dump()
         freeform = True
         # Convert back to SynthesisRequest object
         freeform_request = SynthesisRequest(**request_dict)
+
         return synthesis_job.generate_job(freeform_request, core, mem, request_id=request_id, freeform = freeform)
 
 @app.post("/synthesis/evaluate", 
@@ -605,8 +653,9 @@ async def create_custom_prompt(request: CustomPromptRequest, request_id = None):
         prompt = PromptBuilder.build_custom_prompt(
                 model_id=request.model_id,
                 custom_prompt=request.custom_prompt,
+                example_path= request.example_path
             )
-        #print(prompt)
+        print(prompt)
         prompt_gen = model_handler.generate_response(prompt, request_id=request_id)
 
         return {"generated_prompt":prompt_gen}
@@ -614,277 +663,48 @@ async def create_custom_prompt(request: CustomPromptRequest, request_id = None):
         raise HTTPException(status_code=500, detail=str(e))
     
 
-def sort_unique_models(model_list):
-    def get_sort_key(model_name):
-        # Strip any provider prefix
-        name = model_name.split('.')[-1] if '.' in model_name else model_name
-        parts = name.split('-')
-        
-        # Extract version
-        version = '0'
-        for part in parts:
-            if part.startswith('v') and any(c.isdigit() for c in part):
-                version = part[1:]
-                if ':' in version:
-                    version = version.split(':')[0]
-        
-        # Extract date
-        date = '00000000'
-        for part in parts:
-            if len(part) == 8 and part.isdigit():
-                date = part
-        
-        return (float(version), date)
-    
-    # Remove duplicates while preserving original names
-    unique_models = set()
-    filtered_models = []
-    for model in model_list:
-        base_name = model.split('.')[-1] if '.' in model else model
-        if base_name not in unique_models:
-            unique_models.add(base_name)
-            filtered_models.append(model)
-    
-    return sorted(filtered_models, key=get_sort_key, reverse=True)
+
 
 @app.get("/model/model_ID", include_in_schema=True)
 async def get_model_id():
-    region = os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION"))
-    new_target_region = "us-west-2"
-    retry_config = Config(
-        region_name=new_target_region,
-        retries={
-            "max_attempts": 2,
-            "mode": "standard",
-        },
-    )
-
-    
-
     try:
-        client_s = boto3.client(service_name="bedrock", region_name=region, config=retry_config)
-        
-        # Get foundation models
-        response = client_s.list_foundation_models()
-        all_models = response['modelSummaries']
+        bedrock_list = list_bedrock_models()
 
-        mod_list = [m['modelId']
-            for m in all_models 
-            if 'ON_DEMAND' in m['inferenceTypesSupported'] 
-            and 'TEXT' in m['inputModalities'] 
-            and 'TEXT' in m['outputModalities']
-            and m['providerName'] in ['Anthropic', 'Meta', 'Mistral AI']]
-        
-        # Get inference profiles with comprehensive error handling
-        try:
-            inference_models = client_s.list_inference_profiles()
-            inference_mod_list = []
-            if 'inferenceProfileSummaries' in inference_models:
-                inference_mod_list = [
-                    m['inferenceProfileId'] 
-                    for m in inference_models['inferenceProfileSummaries']
-                    if any(provider in m['inferenceProfileId'].lower() 
-                        for provider in ['meta', 'anthropic', 'mistral'])
-                ]
-        except client_s.exceptions.ResourceNotFoundException:
-            inference_mod_list = []
-        except client_s.exceptions.ValidationException as e:
-            print(f"Validation error: {str(e)}")
-            inference_mod_list = []
-        except client_s.exceptions.AccessDeniedException as e:
-            print(f"Access denied: {str(e)}")
-            inference_mod_list = []
-        except client_s.exceptions.ThrottlingException as e:
-            print(f"Request throttled: {str(e)}")
-            inference_mod_list = []
-        except client_s.exceptions.InternalServerException as e:
-            print(f"Bedrock internal error: {str(e)}")
-            inference_mod_list = []
-        
-        # Combine and sort the lists
-        bedrock_list = sort_unique_models(inference_mod_list + mod_list)
-        
-        models = {
-            "aws_bedrock": bedrock_list,
-            "CAII": ['meta/llama-3_1-8b-instruct', 'mistralai/mistral-7b-instruct-v0.3']
-        }
-
-        return {"models": models}
-    
-
-    
-    except client_s.exceptions.ValidationException as e:
-        print(f"Validation error: {str(e)}")
-        raise
-    except client_s.exceptions.AccessDeniedException as e:
-        print(f"Access denied: {str(e)}")
-        raise
-    except client_s.exceptions.ThrottlingException as e:
-        print(f"Request throttled: {str(e)}")
-        raise
-    except client_s.exceptions.InternalServerException as e:
-        print(f"Bedrock internal error: {str(e)}")
-        raise
     except Exception as e:
-        print(f"Unexpected error occurred: {str(e)}")
-        raise
+        print(f"Error while listing Bedrock models: {str(e)}")
+        bedrock_list = []
+
+    models = {
+        "aws_bedrock": bedrock_list,
+        "CAII": []
+    }
+
+    return {"models": models}
+    
+
+    
+   
+
 @app.get("/model/model_id_filter", include_in_schema=True)
 async def get_model_id_filtered():
-    """
-    Get available models with health check, with results bifurcated into enabled and disabled lists.
-    Returns filtered model IDs categorized by their health/availability status.
-    """
-    region = os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION"))
-    new_target_region = "us-west-2"
-    retry_config = Config(
-        region_name=new_target_region,
-        retries={
-            "max_attempts": 2,
-            "mode": "standard",
-        },
-    )
 
+    """
+    Return two lists per provider: **enabled** (responds within 5 s) and **disabled**.
+    CAII is queried only when running inside a CDP project and it returns pair of endpoints and model IDs.
+    """
     try:
-        # Create Bedrock clients for listing and runtime checks
-        bedrock_client = boto3.client(service_name="bedrock", region_name=region, config=retry_config)
-        bedrock_runtime = boto3.client(service_name="bedrock-runtime", region_name=region, config=retry_config)
-        
-        # Get foundation models
-        response = bedrock_client.list_foundation_models()
-        all_models = response['modelSummaries']
-
-        mod_list = [m['modelId']
-            for m in all_models 
-            if 'ON_DEMAND' in m['inferenceTypesSupported'] 
-            and 'TEXT' in m['inputModalities'] 
-            and 'TEXT' in m['outputModalities']
-            and m['providerName'] in ['Anthropic', 'Meta', 'Mistral AI']]
-        
-        # Get inference profiles with comprehensive error handling
-        try:
-            inference_models = bedrock_client.list_inference_profiles()
-            inference_mod_list = []
-            if 'inferenceProfileSummaries' in inference_models:
-                inference_mod_list = [
-                    m['inferenceProfileId'] 
-                    for m in inference_models['inferenceProfileSummaries']
-                    if any(provider in m['inferenceProfileId'].lower() 
-                        for provider in ['meta', 'anthropic', 'mistral'])
-                ]
-        except (
-            bedrock_client.exceptions.ResourceNotFoundException,
-            bedrock_client.exceptions.ValidationException,
-            bedrock_client.exceptions.AccessDeniedException,
-            bedrock_client.exceptions.ThrottlingException,
-            bedrock_client.exceptions.InternalServerException
-        ) as e:
-            print(f"Error retrieving inference profiles: {str(e)}")
-            inference_mod_list = []
-        
-        # Combine and sort the lists
-        bedrock_list = sort_unique_models(inference_mod_list + mod_list)
-        
-        # Perform health checks in parallel
-        import asyncio
-        from app.models.request_models import ModelParameters
-        
-        # Define async function for checking a single model
-        async def check_model_health(model_id):
-            try:
-                # Create minimal model parameters for health check
-                minimal_params = ModelParameters(
-                    max_tokens=10,
-                    temperature=0,
-                    top_p=1,
-                    top_k=1
-                )
-                
-                # Check model health with a simple prompt
-                test_handler = UnifiedModelHandler(
-                    model_id=model_id,
-                    bedrock_client=bedrock_runtime,
-                    model_params=minimal_params
-                )
-                
-                # Use a lightweight health check prompt
-                health_check_prompt = "Return HEALTHY if you can process this message."
-                
-                try:
-                    # Create a task with timeout to avoid hanging on slow models
-                    response = await asyncio.wait_for(
-                        asyncio.to_thread(test_handler.generate_response, health_check_prompt, False),
-                        timeout=5.0  # 5 second timeout
-                    )
-                    
-                    # If we reach here, the model is considered healthy
-                    return (model_id, True)
-                    
-                except (asyncio.TimeoutError, Exception) as e:
-                    print(f"Health check failed for {model_id}: {str(e)}")
-                    return (model_id, False)
-                
-            except Exception as e:
-                print(f"Model {model_id} health check failed: {str(e)}")
-                return (model_id, False)
-        
-        # Run all health checks in parallel with concurrency limit
-        # Using a semaphore to limit concurrent requests and avoid overwhelming the API
-        sem = asyncio.Semaphore(10)  # Allow up to 10 concurrent requests
-        
-        async def bounded_check(model_id):
-            async with sem:
-                return await check_model_health(model_id)
-        
-        # Launch all tasks and wait for them to complete
-        tasks = [bounded_check(model_id) for model_id in bedrock_list]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        # Process results
-        enabled_models = []
-        disabled_models = []
-        
-        for result in results:
-            if isinstance(result, tuple) and len(result) == 2:
-                model_id, is_healthy = result
-                if is_healthy:
-                    enabled_models.append(model_id)
-                else:
-                    disabled_models.append(model_id)
-            else:
-                # Handle case where the task itself raised an exception
-                print(f"Health check task failed with exception: {result}")
-                # We don't have the model_id in this case, but that's ok since
-                # all models are already in bedrock_list
-        
-        # Create the response structure with bifurcated lists
+        models = await collect_model_catalog()
+    except Exception as exc:
+        # Fail closed – return *something* so the UI never breaks
         models = {
-            "aws_bedrock": {
-                "enabled": enabled_models,
-                "disabled": disabled_models
-            },
-            "CAII": {
-                "enabled": ['meta/llama-3_1-8b-instruct', 'mistralai/mistral-7b-instruct-v0.3'],
-                
-            }
+            "aws_bedrock": {"enabled": [], "disabled": []},
+            "CAII":        {"enabled": [], "disabled": []},
         }
+        # Log for operators
+        print("Error while building model catalog: ", exc)
 
-        return {"models": models}
+    return {"models": models}
     
-    except Exception as e:
-        print(f"Unexpected error in model filter endpoint: {str(e)}")
-        # Return empty structure in case of failure
-        return {
-            "models": {
-                "aws_bedrock": {
-                    "enabled": [],
-                    "disabled": bedrock_list if 'bedrock_list' in locals() else []
-                },
-                "CAII": {
-                    "enabled": ['meta/llama-3_1-8b-instruct', 'mistralai/mistral-7b-instruct-v0.3']
-                    
-                }
-            }
-        }
 
 @app.get("/use-cases", include_in_schema=True)
 async def get_use_cases():
@@ -1091,20 +911,48 @@ async def customise_prompt():
         raise HTTPException(status_code=500, detail=str(e))
    
 @app.get("/generations/history", include_in_schema=True)
-async def get_generation_history():
-    """Get history of all generations"""
+async def get_generation_history(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(10, ge=1, le=100, description="Items per page")
+):
+    """Get history of all generations with pagination"""
     pending_job_ids = db_manager.get_pending_generate_job_ids()
-
-    if not pending_job_ids:
-        return db_manager.get_all_generate_metadata()
-
-    job_status_map = {
-            job_id: get_job_status(job_id) 
+    
+    if pending_job_ids:
+        job_status_map = {
+            job_id: get_job_status(job_id)
             for job_id in pending_job_ids
         }
-    db_manager.update_job_statuses_generate(job_status_map)
+        db_manager.update_job_statuses_generate(job_status_map)
     
-    return db_manager.get_all_generate_metadata()
+    # Get paginated data
+    total_count, results = db_manager.get_paginated_generate_metadata(page, page_size)
+    
+    # Return in the structure expected by the frontend
+    return {
+        "data": results,  # Changed from "datasets" to "data" for consistency
+        "pagination": {
+            "total": total_count,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": (total_count + page_size - 1) // page_size
+        }
+    }
+# @app.get("/generations/history", include_in_schema=True)
+# async def get_generation_history():
+#     """Get history of all generations"""
+#     pending_job_ids = db_manager.get_pending_generate_job_ids()
+
+#     if not pending_job_ids:
+#         return db_manager.get_all_generate_metadata()
+
+#     job_status_map = {
+#             job_id: get_job_status(job_id) 
+#             for job_id in pending_job_ids
+#         }
+#     db_manager.update_job_statuses_generate(job_status_map)
+    
+#     return db_manager.get_all_generate_metadata()
 
 @app.get("/generations/{file_name}", include_in_schema=True)
 async def get_generation_by_filename(file_name: str):
@@ -1134,38 +982,62 @@ async def get_dataset(file_path: str):
     elif 'qa_pairs' in file_path:
             return {'generation': data[0:100]}
 
-@app.get("/exports/history", include_in_schema =True)
-def get_exports_history():
+@app.get("/exports/history", include_in_schema=True)
+def get_exports_history(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(10, ge=1, le=100, description="Items per page")
+):
+    """Get history of all exports with pagination"""
     pending_job_ids = db_manager.get_pending_export_job_ids()
-
-    if not pending_job_ids:
-        return db_manager.get_all_export_metadata()
-
-    job_status_map = {
-            job_id: get_job_status(job_id) 
+    
+    if pending_job_ids:
+        job_status_map = {
+            job_id: get_job_status(job_id)
             for job_id in pending_job_ids
         }
-    db_manager.update_job_statuses_export(job_status_map)
+        db_manager.update_job_statuses_export(job_status_map)
     
-    return db_manager.get_all_export_metadata()
+    # Get paginated data
+    total_count, results = db_manager.get_paginated_export_metadata(page, page_size)
+    
+    return {
+        "data": results,  # Keep the same response format for backward compatibility
+        "pagination": {
+            "total": total_count,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": (total_count + page_size - 1) // page_size
+        }
+    }
     
 
 @app.get("/evaluations/history", include_in_schema=True)
-async def get_evaluation_history():
-    """Get history of all generations"""
+async def get_evaluation_history(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(10, ge=1, le=100, description="Items per page")
+):
+    """Get history of all evaluations with pagination"""
     pending_job_ids = db_manager.get_pending_evaluate_job_ids()
-
-    if not pending_job_ids:
-        return db_manager.get_all_evaluate_metadata()
-
-    job_status_map = {
-            job_id: get_job_status(job_id) 
+    
+    if pending_job_ids:
+        job_status_map = {
+            job_id: get_job_status(job_id)
             for job_id in pending_job_ids
         }
-    db_manager.update_job_statuses_evaluate(job_status_map)
+        db_manager.update_job_statuses_evaluate(job_status_map)
     
+    # Get paginated data
+    total_count, results = db_manager.get_paginated_evaluate_metadata(page, page_size)
     
-    return db_manager.get_all_evaluate_metadata()
+    return {
+        "data": results,  # Keep the same response format for backward compatibility
+        "pagination": {
+            "total": total_count,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": (total_count + page_size - 1) // page_size
+        }
+    }
 
 
 @app.get("/evaluations/{file_name}", include_in_schema=True)

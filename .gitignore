@@ -4,6 +4,7 @@ metadata.db
 document_upload
 test.json
 cml_test.ipynb
+practice.ipynb
 /app/khauneesh_test.ipynb
 .env
 *.pyc
